@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Borderify",
   "version": "1.0",
 
@@ -11,20 +11,27 @@
 
   "content_scripts": [
     {
-      "matches":[ "*://*/*"]
+      "matches":[ "https://archiveofourown.org/*"]
     }
   ],
-  "permissions": ["activeTab"],
-
-  "browser_action": {
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://archiveofourown.org/*"
+  ],
+  
+  "action": {
     "default_icon": "icons/border-48.png",
     "default_title": "Beastify",
-    "default_popup": "popup/choose_beast.html"
+    "default_popup": "popup/popup.html"
   },
 
-  "web_accessible_resources": [
-    "beasts/frog.jpg",
-    "beasts/turtle.jpg",
-    "beasts/snake.jpg"
-  ]
+  "background" : {
+    "service_worker" : "background.js",
+    "type": "module"
+  }
 }
