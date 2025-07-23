@@ -13,6 +13,7 @@
   }
 
   const keys = [
+    'commit',
     'work_search[sort_column]',
     'work_search[other_tag_names]',
     'work_search[excluded_tag_names]',
@@ -24,7 +25,6 @@
     'work_search[date_to]',
     'work_search[query]',
     'work_search[language_id]',
-    'commit',
     'tag_id',
     'page'
     ];
@@ -46,18 +46,19 @@
     'page': '1'
   };
 
-  const filterValueToRegex = {
-    'revised_at': 'Updated:',
-    'word_count': 'Words',
-    'hits': 'Hits',
-    'kudos_count': 'Kudos',
-    'comments_count': 'Comments',
-    'bookmarks_count': 'Bookmarks'
+  const filterRegexMap = {
+    'word_count': /Words:\s*([\d,]+)/,
+    'comments_count': /Comments:\s*(\d+)/,
+    'kudos_count': /Kudos:\s*(\d+)/,
+    'bookmarks_count': /Bookmarks:\s*(\d+)/,
+    'hits': /Hits:\s*(\d+)/,
+    'revised_at': /\b(\d{1,2} \w+ \d{4})\b/,
+    'authors_to_sort_on': /by\s+([^\n]+)/,
+    'title_to_sort_on': /^(.+?)\s+by\s+/
   };
 
   function getParams(baseUrl) {
-    const params = baseUrl.searchParams;     
-   
+    const params = baseUrl.searchParams; 
     const searchParams = {};
     
     for (const key of keys) {
@@ -86,7 +87,10 @@
   function buildQuery(paramsObj) {
     return Object.entries(paramsObj)
       .filter(([key, _]) => key != 'page')
-      .map(([key, value]) => `${key}=${value == null ? '' : value}`)
+      .map(([key, value]) => `${key}=${value == null 
+        ? '' : value.includes('&') 
+        ? superEncodeURI(value) 
+        : value}`)
       .join('&');
   }
 
@@ -105,12 +109,14 @@
   let clickedOnce = false;
 
   function getBlockedUrl(e) {
-    const text = e.target.text;
     const baseUrl = new URL(e.target.baseURI);
 
     let searchParams = getParams(baseUrl);
-    searchParams = addValue(searchParams, 'work_search[excluded_tag_names]', text);
-    searchParams = setValue(searchParams, 'tag_id', extractTagNameFromUrl(decodeURI(e.target.baseURI)));
+    
+    searchParams = addValue(searchParams, 'work_search[excluded_tag_names]', e.target.innerText);
+    if (searchParams['tag_id'] == '') {
+      searchParams = setValue(searchParams, 'tag_id', extractTagNameFromUrl(decodeURI(e.target.baseURI)));
+    }
     
     return {
       url: `https://archiveofourown.org/works?${buildQuery(searchParams)}`,
@@ -119,29 +125,75 @@
     };
   }
 
+  function extractString(workText, filterType) {
+    const regex = filterRegexMap[filterType];
+    if (!regex) {
+      console.warn("No regex found for filterType:", filterType);
+      return null;
+    }
+    const match = workText.match(regex);
+    if (!match) {
+      console.warn("No match found for", filterType, "in text:", workText);
+      return null;
+    }
+    return match[1].trim();
+  }
+
+  function extractDate(workText, filterType) {
+    const raw = extractString(workText, filterType)
+    
+    const parseDate = new Date(raw);
+    return isNaN(parseDate) ? raw : parseDate;
+  }
+
+  function extractNumber(workText, filterType) {
+    const raw = extractString(workText, filterType)
+    const numVal = raw.replace(/,/g, '');
+    return parseInt(numVal, 10);
+  }
+
   function extractRelevantData(workText, filterType) {
-    return workText;
+    if (filterType === 'revised_at') {
+      return extractDate(workText, filterType);
+    } else if (filterType == 'authors_to_sort_on' 
+      || filterType =='title_to_sort_on') {
+      return extractString(workText, filterType);
+    } else {
+      return extractNumber(workText, filterType);
+    }
+  }
+
+  function isValid(relevantData, extractedData) {
+    return extractedData > relevantData;
   }
 
   async function handleTagClick(e) {
-    if (!e.target.matches('a[href*="/tags/"][href*="/works"]')) return;
+    // console.log("Clicked element outerHTML:", e.target.outerHTML);
+    // console.dir(e.target); 
+    // console.log("Href:", e.target.href);
+
+    if (!e.target.matches('a[href*="/tags/"][href*="/works"]')) {
+      console.warn('Did not click a tag.');
+      return;
+    };
     if (clickedOnce) {
+      console.warn("Clicked once already.");
       return;
     }
-    clickedOnce = true;
-    const {url, page, filterType} = getBlockedUrl(e);
     
-    console.log("Going to new link: ", url);
+    const {url, page, filterType} = getBlockedUrl(e);
     e.preventDefault();
     e.stopImmediatePropagation();
+    clickedOnce = true;
 
     if (page == '1' || filterType == 'created_at') {
+      console.log("Going to new link: ", url);
       window.location.href = url;
       return;
     }
 
     const workText = e.target.offsetParent.innerText;
-    const relevantData = extractRelevantData(workText, filterType)
+    const relevantData = extractRelevantData(workText, filterType);
 
     try {      
       const correctPage = await binarySearchWorks(url, relevantData, filterType, page);
@@ -152,16 +204,26 @@
     }
   }
 
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   async function binarySearchWorks(tagUrl, relevantData, filterType, maxPages = 100) {
     let low = 1, high = maxPages;
     let result = 1;
 
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
-      const testUrl = `${tagUrl}?page=${mid}`;
+      const testUrl = `${tagUrl}&page=${mid}`;
       
-      const exists = await checkPageForWork(testUrl, relevantData, filterType);
-      exists ? (high = mid - 1, result = mid) : (low = mid + 1);
+      const isValidPage = await checkPageForWork(testUrl, relevantData, filterType);
+      await sleep(4000);
+      if (isValidPage) {
+        low = mid + 1;
+        result = Math.max(result, mid);
+      } else {
+        high = mid - 1;
+      }
     }
 
     return result;
@@ -174,11 +236,16 @@
       iframe.src = url;
       iframe.onload = () => {
         try {
-          // TODO: check if page has work that is updated just before relevant data
-          const exists = iframe.contentDocument.querySelector(
-            SELECTORS.workLink(workId)
-          ) !== null;
-          resolve(exists);
+          const works = iframe.contentDocument.querySelectorAll('.work');
+          for (let i = 1; i < works.length; i++) {
+            const work = works[i];
+            const extractedData = extractRelevantData(work.textContent, filterType);
+            if (isValid(relevantData, extractedData)) {
+              resolve(true);
+              return;
+            }
+          }
+          resolve(false);
         } finally {
           iframe.remove();
         }

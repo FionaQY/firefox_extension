@@ -3,10 +3,10 @@
    "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
-  "name": "Borderify",
+  "name": "AO3 QOF",
   "version": "1.0",
 
-  "description": "Adds a red border to all webpages matching mozilla.org.",
+  "description": "Adds features to better my ao3 experience",
 
   "icons": {
     "48": "icons/border-48.png"
