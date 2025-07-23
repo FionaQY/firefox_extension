@@ -19,10 +19,10 @@ document.getElementById('mode').addEventListener('change', async (e) => {
           target: { tabId: tab.id },
           files: [modeToScriptMap.block]
         }),
-        browser.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ["/content_scripts/find_work.js"]
-        })
+        // browser.scripting.executeScript({
+        //   target: { tabId: tab.id },
+        //   files: ["/content_scripts/find_work.js"]
+        // })
       ]);
     } else {
       // For other modes, inject single script

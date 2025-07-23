@@ -33,6 +33,13 @@
     }
   }
 
+  function buildAO3Query(paramsObj) {
+    return Object.entries(paramsObj)
+      .map(([key, value]) => `${key}=${value == null ? '' : value}`)
+      .join('&');
+  }
+
+
   let clickedOnce = false;
 
   async function handleTagClick(e) {
@@ -43,6 +50,7 @@
     const work = e.target.offsetParent.innerText;
     const text = e.target.text;
     const baseUrl = decodeURI(e.target.baseURI);
+    console.log("baseUrl: ", baseUrl);
 
     const workText = e.target.textContent.trim();
 
@@ -50,17 +58,52 @@
     const params = testbaseUrl.searchParams;     
     console.log(params.get("work_search[excluded_tag_names]"));
 
-    
-    const parts = baseUrl.split("&work_search[crossover]=", 2); 
-    console.log(parts);
-    var newStr = parts[0];
-    if (parts.length != 2) {
-      newStr = "https://archiveofourown.org/works?work_search[sort_column]=revised_at&work_search[other_tag_names]=&work_search[excluded_tag_names]=" + text + "&work_search[crossover]=&work_search[complete]=&work_search[words_from]=&work_search[words_to]=&work_search[date_from]=&work_search[date_to]=&work_search[query]=&work_search[language_id]=&commit=Sort and Filter&tag_id=" + decodeURI(extractTagNameFromUrl(baseUrl));
-    } else if (newStr[newStr.length - 1] != "=") {
-      newStr = newStr + "," + superEncodeURI(text) + "&work_search[crossover]=" + parts[1];
-    } else {
-      newStr = newStr + superEncodeURI(text) + "&work_search[crossover]=" + parts[1];
+    const keys = [
+      'work_search[sort_column]',
+      'work_search[other_tag_names]',
+      'work_search[excluded_tag_names]',
+      'work_search[crossover]',
+      'work_search[complete]',
+      'work_search[words_from]',
+      'work_search[words_to]',
+      'work_search[date_from]',
+      'work_search[date_to]',
+      'work_search[query]',
+      'work_search[language_id]',
+      'tag_id'
+    ];
+
+    const searchParams = {};
+
+    for (const key of keys) {
+      searchParams[key] = params.get(key) || '';
     }
+
+    searchParams['work_search[sort_column]'] = 'revised_at'; // force override
+    searchParams['commit'] = 'Sort and Filter';
+    const rawTags = searchParams['work_search[excluded_tag_names]'] || '';
+    const blockedTags = rawTags
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+    blockedTags.push(text);
+    searchParams['work_search[excluded_tag_names]'] = blockedTags.join(",");
+    console.log(blockedTags);
+
+    console.log("https://archiveofourown.org/works?", buildAO3Query(searchParams));
+    const newStr = "https://archiveofourown.org/works?" + buildAO3Query(searchParams);
+
+    
+    // const parts = baseUrl.split("&work_search[crossover]=", 2); 
+    // console.log(parts);
+    // var newStr = parts[0];
+    // if (parts.length != 2) {
+    //   newStr = "https://archiveofourown.org/works?work_search[sort_column]=revised_at&work_search[other_tag_names]=&work_search[excluded_tag_names]=" + text + "&work_search[crossover]=&work_search[complete]=&work_search[words_from]=&work_search[words_to]=&work_search[date_from]=&work_search[date_to]=&work_search[query]=&work_search[language_id]=&commit=Sort and Filter&tag_id=" + decodeURI(extractTagNameFromUrl(baseUrl));
+    // } else if (newStr[newStr.length - 1] != "=") {
+    //   newStr = newStr + "," + superEncodeURI(text) + "&work_search[crossover]=" + parts[1];
+    // } else {
+    //   newStr = newStr + superEncodeURI(text) + "&work_search[crossover]=" + parts[1];
+    // }
     
     console.log(newStr);
     e.preventDefault();
