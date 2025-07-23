@@ -1,31 +1,32 @@
-html,
 body {
-  width: 100px;
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 14px;
+  color: #333;
+  background-color: #fff;
+  margin: 15px;
+  width: 250px;
+}
+
+select {
+  width: 100%;
+  padding: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background-color: #fdfdfd;
+  color: #333;
+  margin-bottom: 10px;
 }
 
 .hidden {
   display: none;
 }
 
-button {
-  border: none;
-  width: 100%;
-  margin: 3% auto;
-  padding: 4px;
-  text-align: center;
-  font-size: 1.5em;
-  cursor: pointer;
-  background-color: #e5f2f2;
-}
-
-button:hover {
-  background-color: #cff2f2;
-}
-
-button[type="reset"] {
-  background-color: #fbfbc9;
-}
-
-button[type="reset"]:hover {
-  background-color: #eaea9d;
+#error-content {
+  border: 1px solid #990000;
+  background-color: #f9e6e6;
+  color: #990000;
+  padding: 8px;
+  border-radius: 4px;
 }
