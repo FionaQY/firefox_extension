@@ -3,11 +3,6 @@
   if (window.hasRun) return;
   window.hasRun = true;
 
-  // const SELECTORS = {
-  //   tagLink: 'a[href*="/tags/"][href*="/works"]', // More specific tag matching
-  //   workLink: (workId) => `a[href^="/works/${workId}"]` // Exact work matching
-  // };
-
   function superEncodeURI(str) {
     return new URLSearchParams({ text: str }).toString().replace(/^text=/, '');
   }
@@ -128,32 +123,32 @@
   function extractString(workText, filterType) {
     const regex = filterRegexMap[filterType];
     if (!regex) {
-      console.warn("No regex found for filterType:", filterType);
+      console.warn(`No regex found for filterType: ${filterType}`);
       return null;
     }
     const match = workText.match(regex);
     if (!match) {
-      console.warn("No match found for", filterType, "in text:", workText);
-      return null;
+      console.warn(`No match found for ${filterType} in text given`);
+      return '';
     }
     return match[1].trim();
   }
 
   function extractDate(workText, filterType) {
     const raw = extractString(workText, filterType)
-    
     const parseDate = new Date(raw);
     return isNaN(parseDate) ? raw : parseDate;
   }
 
   function extractNumber(workText, filterType) {
-    const raw = extractString(workText, filterType)
+    const raw = extractString(workText, filterType);
+    if (raw.length == 0) return 0;
     const numVal = raw.replace(/,/g, '');
     return parseInt(numVal, 10);
   }
 
   function extractRelevantData(workText, filterType) {
-    if (filterType === 'revised_at') {
+    if (filterType == 'revised_at') {
       return extractDate(workText, filterType);
     } else if (filterType == 'authors_to_sort_on' 
       || filterType =='title_to_sort_on') {
@@ -168,10 +163,6 @@
   }
 
   async function handleTagClick(e) {
-    // console.log("Clicked element outerHTML:", e.target.outerHTML);
-    // console.dir(e.target); 
-    // console.log("Href:", e.target.href);
-
     if (!e.target.matches('a[href*="/tags/"][href*="/works"]')) {
       console.warn('Did not click a tag.');
       return;
@@ -192,9 +183,7 @@
       return;
     }
 
-    const workText = e.target.offsetParent.innerText;
-    const relevantData = extractRelevantData(workText, filterType);
-
+    const relevantData = extractRelevantData(e.target.offsetParent.innerText, filterType);
     try {      
       const correctPage = await binarySearchWorks(url, relevantData, filterType, page);
       window.location.href = `${url}&page=${correctPage}`;
@@ -213,14 +202,15 @@
     let result = 1;
 
     while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
+      const mid = low + Math.floor((high - low) / 2);
       const testUrl = `${tagUrl}&page=${mid}`;
-      
+      console.log(`Checking page ${mid}`);
       const isValidPage = await checkPageForWork(testUrl, relevantData, filterType);
       await sleep(4000);
+
       if (isValidPage) {
         low = mid + 1;
-        result = Math.max(result, mid);
+        result = mid;
       } else {
         high = mid - 1;
       }
