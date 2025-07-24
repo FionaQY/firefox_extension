@@ -1,5 +1,6 @@
 const modeToScriptMap = {
   block: "/content_scripts/block_mode.js",
+  forgot: "/content_scripts/forgot_mode.js",
   // jump: "/content_scripts/jump_mode.js"
 };
 
@@ -13,24 +14,25 @@ document.getElementById('mode').addEventListener('change', async (e) => {
       currentWindow: true 
     });
 
-    if (mode === 'block') {
-      await Promise.all([
-        browser.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: [modeToScriptMap.block]
-        }),
-        // browser.scripting.executeScript({
-        //   target: { tabId: tab.id },
-        //   files: ["/content_scripts/find_work.js"]
-        // })
-      ]);
-    } else {
-      // For other modes, inject single script
-      await browser.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: [modeToScriptMap[mode]]
-      });
-    }
+    await browser.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: [modeToScriptMap[mode]]
+    });
+
+    // if (mode === 'block') {
+    //   await Promise.all([
+    //     browser.scripting.executeScript({
+    //       target: { tabId: tab.id },
+    //       files: [modeToScriptMap.block]
+    //     })
+    //   ]);
+    // } else {
+    //   // For other modes, inject single script
+    //   await browser.scripting.executeScript({
+    //     target: { tabId: tab.id },
+    //     files: [modeToScriptMap[mode]]
+    //   });
+    // }
     
     window.close();
     
