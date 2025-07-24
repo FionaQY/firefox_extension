@@ -3,6 +3,11 @@
    "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ao3qof@example.com"
+    }
+  },
   "name": "AO3 QOF",
   "version": "1.0",
 
@@ -30,7 +35,7 @@
   
   "action": {
     "default_icon": "icons/border-48.png",
-    "default_title": "Beastify",
+    "default_title": "AO3 QOF",
     "default_popup": "popup/popup.html"
   }
 }
