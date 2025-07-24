@@ -11,7 +11,11 @@
   }
 
   function parseUrl(url) {
-    return url;
+    if (url.includes('/chapters/')) {
+      return url.split('/chapters/', 2)[0];
+    } else {
+      return url;
+    }
   }
 
   async function getSummaryFromWork(url) {
@@ -24,25 +28,20 @@
         try {
           const doc = iframe.contentDocument;
           console.log(doc);
+          const summary = doc.querySelector('div.summary.module').innerText;
+          console.log(summary);
 
-          const summaryElement = doc.querySelector('.summary blockquote');
-          const summary = summaryElement ? summaryElement.textContent.trim() : '';
+          const tags = [...doc.querySelectorAll('a.tag')].map(x => x.innerText);
+          console.log(tags);
 
-          // const tags = {
-          //   rating: getTagText(doc, 'rating'),
-          //   warning: getTagText(doc, 'warning'),
-          //   category: getTagText(doc, 'category'),
-          //   fandom: getTagText(doc, 'fandom'),
-          //   relationship: getTagText(doc, 'relationship'),
-          //   character: getTagText(doc, 'character'),
-          //   freeform: getTagText(doc, 'freeform'),
-          // };
-
-          resolve({ summary, tags });
+          const title = doc.querySelector('h2.title.heading').innerText.trim();
+          const author = doc.querySelector('a[rel="author"]').innerText.trim();
+          const heading = `${title} by ${author}`
+          resolve({ heading, summary, tags });
 
         } catch (err) {
           console.error('Error parsing work in iframe:', err);
-          resolve({ null, null });
+          resolve(null);
         } finally {
           iframe.remove();
         }
@@ -50,17 +49,12 @@
 
       document.body.appendChild(iframe);
     });
-
-    // function getTagText(doc, tagType) {
-    //   const selector = `.tags .${tagType} .tag`;
-    //   return Array.from(doc.querySelectorAll(selector)).map(el => el.textContent.trim());
-    // }
   }
 
 
   async function getSummary() {
     const workUrl = parseUrl(window.location.href);
-    const { summary, tags } = await getSummaryFromWork(workUrl);
+    const { heading, summary, tags } = await getSummaryFromWork(workUrl);
 
     if (!summary) {
       console.warn('No summary found in other work.');
@@ -72,15 +66,20 @@
       position: fixed;
       top: 20px;
       right: 20px;
-      background: white;
-      color: black;
+      background: #2F4F4F;
+      color: white;
       border: 2px solid red;
       padding: 1em;
       max-width: 300px;
+      max-height: 400px;
+      overflow-y: auto;
       z-index: 9999;
       box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       font-family: sans-serif;
+      scrollbar-width: thin;
+      scrollbar-color: #999 #eee;
     `;
+
 
     const buttonClose = document.createElement('button');
     buttonClose.textContent = '×';
@@ -97,18 +96,14 @@
     popup.appendChild(buttonClose);
 
     const summaryEl = document.createElement('div');
-    summaryEl.innerHTML = `<strong>Other Work Summary:</strong><br>${summary}`;
+    summaryEl.innerHTML = `<strong>${heading}:</strong><br>${summary}`;
     popup.appendChild(summaryEl);
 
     if (tags && Object.keys(tags).length > 0) {
       const tagList = document.createElement('div');
       tagList.style.marginTop = '1em';
       tagList.innerHTML = '<strong>Tags:</strong><ul style="margin:0; padding-left:1.2em;">';
-      for (const [type, tagArray] of Object.entries(tags)) {
-        if (tagArray.length > 0) {
-          tagList.innerHTML += `<li><em>${type}:</em> ${tagArray.join(', ')}</li>`;
-        }
-      }
+      tagList.innerHTML += `<li>${tags.join(', ')}</li>`;
       tagList.innerHTML += '</ul>';
       popup.appendChild(tagList);
     }

@@ -19,21 +19,6 @@ document.getElementById('mode').addEventListener('change', async (e) => {
       files: [modeToScriptMap[mode]]
     });
 
-    // if (mode === 'block') {
-    //   await Promise.all([
-    //     browser.scripting.executeScript({
-    //       target: { tabId: tab.id },
-    //       files: [modeToScriptMap.block]
-    //     })
-    //   ]);
-    // } else {
-    //   // For other modes, inject single script
-    //   await browser.scripting.executeScript({
-    //     target: { tabId: tab.id },
-    //     files: [modeToScriptMap[mode]]
-    //   });
-    // }
-    
     window.close();
     
   } catch (error) {
