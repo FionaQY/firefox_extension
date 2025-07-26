@@ -20,6 +20,9 @@
   "content_scripts": [
     {
       "matches":[ "https://archiveofourown.org/*"],
+      "js": [
+        "/content_scripts/global.js",
+        "/content_scripts/scroll.js"],
       "run_at": "document_end"
     }
   ],

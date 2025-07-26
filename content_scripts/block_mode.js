@@ -1,11 +1,10 @@
+window.hasRun = false;
+
 (() => {
-  console.log('AO3 Blocker: Script injected successfully!');
   if (window.hasRun) return;
   window.hasRun = true;
 
-  function superEncodeURI(str) {
-    return new URLSearchParams({ text: str }).toString().replace(/^text=/, '');
-  }
+  console.log('AO3 Blocker: Script injected successfully!');
 
   const keys = [
     'commit',
@@ -43,10 +42,10 @@
 
   const filterRegexMap = {
     'word_count': /Words:\s*([\d,]+)/,
-    'comments_count': /Comments:\s*(\d+)/,
-    'kudos_count': /Kudos:\s*(\d+)/,
-    'bookmarks_count': /Bookmarks:\s*(\d+)/,
-    'hits': /Hits:\s*(\d+)/,
+    'comments_count': /Comments:\s*([\d,]+)/,
+    'kudos_count': /Kudos:\s*([\d,]+)/,
+    'bookmarks_count': /Bookmarks:\s*([\d,]+)/,
+    'hits': /Hits:\s*([\d,]+)/,
     'revised_at': /\b(\d{1,2} \w+ \d{4})\b/,
     'authors_to_sort_on': /by\s+([^\n]+)/,
     'title_to_sort_on': /^(.+?)\s+by\s+/
@@ -120,46 +119,59 @@
     };
   }
 
-  function extractString(workText, filterType) {
-    const regex = filterRegexMap[filterType];
-    if (!regex) {
-      console.warn(`No regex found for filterType: ${filterType}`);
-      return null;
-    }
-    const match = workText.match(regex);
-    if (!match) {
-      console.warn(`No match found for ${filterType} in text given`);
-      return '';
-    }
-    return match[1].trim();
-  }
-
-  function extractDate(workText, filterType) {
-    const raw = extractString(workText, filterType)
-    const parseDate = new Date(raw);
-    return isNaN(parseDate) ? raw : parseDate;
-  }
-
-  function extractNumber(workText, filterType) {
-    const raw = extractString(workText, filterType);
-    if (raw.length == 0) return 0;
-    const numVal = raw.replace(/,/g, '');
-    return parseInt(numVal, 10);
-  }
-
-  function extractRelevantData(workText, filterType) {
-    if (filterType == 'revised_at') {
-      return extractDate(workText, filterType);
-    } else if (filterType == 'authors_to_sort_on' 
-      || filterType =='title_to_sort_on') {
-      return extractString(workText, filterType);
-    } else {
-      return extractNumber(workText, filterType);
-    }
-  }
-
   function isValid(relevantData, extractedData) {
     return extractedData > relevantData;
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function binarySearchWorks(tagUrl, relevantData, filterType, maxPages = 100) {
+    let low = 1, high = maxPages;
+    let result = 1;
+
+    while (low <= high) {
+      const mid = low + Math.floor((high - low) / 2);
+      const testUrl = `${tagUrl}&page=${mid}`;
+      console.log(`Checking page ${mid}`);
+      const isValidPage = await checkPageForWork(testUrl, relevantData, filterType);
+      await sleep(5000);
+
+      if (isValidPage) {
+        low = mid + 1;
+        result = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    return result;
+  }
+
+  async function checkPageForWork(url, relevantData, filterType) {
+    return new Promise((resolve) => {
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;';
+      iframe.src = url;
+      iframe.onload = async () => {
+        try {
+          const works = iframe.contentDocument.querySelectorAll('.work');
+          for (let i = 1; i < works.length; i++) {
+            const work = works[i];
+            const extractedData = window.AO3Blocker.extractRelevantData(work.textContent, filterType);
+            if (window.AO3Blocker.isValid(relevantData, extractedData)) {
+              resolve(true);
+              return;
+            }
+          }
+          resolve(false);
+        } finally {
+          iframe.remove();
+        }
+      };
+      document.body.appendChild(iframe);
+    });
   }
 
   async function handleTagClick(e) {
@@ -183,65 +195,18 @@
       return;
     }
 
-    const relevantData = extractRelevantData(e.target.offsetParent.innerText, filterType);
+    const relevantData = window.AO3Blocker.extractRelevantData(e.target.offsetParent.innerText, filterType);
     try {      
       const correctPage = await binarySearchWorks(url, relevantData, filterType, page);
+      localStorage.setItem('ao3_target_filter_type', filterType);
+      localStorage.setItem('ao3_target_value', JSON.stringify(relevantData));
+      localStorage.setItem('just_blocked', true);
+      await sleep(5000);
       window.location.href = `${url}&page=${correctPage}`;
       return;
     } catch (error) {
       console.error('AO3 Blocker error:', error);
     }
-  }
-
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  async function binarySearchWorks(tagUrl, relevantData, filterType, maxPages = 100) {
-    let low = 1, high = maxPages;
-    let result = 1;
-
-    while (low <= high) {
-      const mid = low + Math.floor((high - low) / 2);
-      const testUrl = `${tagUrl}&page=${mid}`;
-      console.log(`Checking page ${mid}`);
-      const isValidPage = await checkPageForWork(testUrl, relevantData, filterType);
-      await sleep(4000);
-
-      if (isValidPage) {
-        low = mid + 1;
-        result = mid;
-      } else {
-        high = mid - 1;
-      }
-    }
-
-    return result;
-  }
-
-  async function checkPageForWork(url, relevantData, filterType) {
-    return new Promise((resolve) => {
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;';
-      iframe.src = url;
-      iframe.onload = () => {
-        try {
-          const works = iframe.contentDocument.querySelectorAll('.work');
-          for (let i = 1; i < works.length; i++) {
-            const work = works[i];
-            const extractedData = extractRelevantData(work.textContent, filterType);
-            if (isValid(relevantData, extractedData)) {
-              resolve(true);
-              return;
-            }
-          }
-          resolve(false);
-        } finally {
-          iframe.remove();
-        }
-      };
-      document.body.appendChild(iframe);
-    });
   }
 
   document.addEventListener('click', handleTagClick, { capture: true });
