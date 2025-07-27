@@ -1,23 +1,49 @@
+:root {
+  --bg: #1e1e2f;
+  --bg-light: #2a2a3d;
+  --fg: #eee;
+  --fg-muted: #aaa;
+  --border: #444;
+  --accent: #f7f7f7;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
 body {
-  font-family: Georgia, "Times New Roman", Times, serif;
-  font-size: 14px;
-  color: #333;
-  background-color: #fff;
+  font-family: system-ui, sans-serif;
+  font-size: 15px;
+  color: var(--fg);
+  background-color: var(--bg);
   margin: 0;
-  padding: 0.6rem;
   max-width: 100%;
   box-sizing: border-box;
 }
 
+.container {
+  max-width: 400px;
+  padding: 1rem 1rem;
+  box-shadow: 0 4px 20px var(--shadow);
+  border-radius: 8px;
+  background-color: var(--bg-light);
+  height: auto;
+  border: 1px solid var(--border);
+}
+
 select {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.3rem;
   font-family: inherit;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  background-color: #fdfdfd;
-  color: #333;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: var(--bg);
+  color: var(--fg);
+  min-height: 2.4rem;
+  touch-action: manipulation;
+}
+
+select option {
+  background-color: var(--bg);
+  color: var(--fg);
 }
 
 .hidden {
@@ -25,26 +51,16 @@ select {
 }
 
 #error-content {
-  border: 1px solid #990000;
-  background-color: #f9e6e6;
-  color: #990000;
+  border: 1px solid var(--accent);
+  background-color: #3b1f1f;
+  color: var(--accent);
   padding: 0.75rem;
   border-radius: 4px;
   font-size: 0.9rem;
+  margin-top: 1rem;
 }
 
-.container {
-  max-width: 400px;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  border-radius: 8px;
-  background-color: white;
-  height: auto;
+html {
+  font-size: clamp(14px, 2.5vw, 16px);
 }
 
-@media (max-width: 600px) {
-  .container {
-    max-height: 100vh;
-    overflow-y: auto;
-  }
-}

@@ -65,18 +65,19 @@ window.hasRun = false;
       position: fixed;
       top: 20px;
       right: 20px;
-      background: #2F4F4F;
-      color: white;
-      border: 2px solid red;
+      background: #1e1e2f;
+      color: #eee;
+      border: 1px solid #444;
+      border-radius: 8px;
       padding: 1em;
-      max-width: 300px;
-      max-height: 400px;
+      max-width: 450px;
+      max-height: 80vh;
       overflow-y: auto;
       z-index: 9999;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
       font-family: sans-serif;
       scrollbar-width: thin;
-      scrollbar-color: #999 #eee;
+      scrollbar-color: #555 #2e2e3e;
     `;
 
 
@@ -84,28 +85,36 @@ window.hasRun = false;
     buttonClose.textContent = '×';
     buttonClose.style.cssText = `
       position: absolute;
-      top: 4px;
-      right: 6px;
+      top: 6px;
+      right: 10px;
       background: transparent;
       border: none;
       font-size: 1.2em;
+      font-weight: bold;
+      color: #aaa;
       cursor: pointer;
     `;
     buttonClose.onclick = () => popup.remove();
     popup.appendChild(buttonClose);
 
     const summaryEl = document.createElement('div');
-    summaryEl.innerHTML = `<strong>${heading}:</strong><br>${summary}`;
+    summaryEl.innerHTML = `<div style="margin-bottom: 0.5em; font-weight: bold;">${heading}</div><div>${summary}</div>`;
     popup.appendChild(summaryEl);
 
     if (tags && Object.keys(tags).length > 0) {
       const tagList = document.createElement('div');
       tagList.style.marginTop = '1em';
-      tagList.innerHTML = '<strong>Tags:</strong><ul style="margin:0; padding-left:1.2em;">';
-      tagList.innerHTML += `<li>${tags.join(', ')}</li>`;
-      tagList.innerHTML += '</ul>';
+      tagList.innerHTML = `
+        <div style="margin-bottom: 0.25em; font-weight: bold;">Tags:</div>
+        <div style="font-size: 0.9em; line-height: 1.4;">${tags.join(', ')}</div>
+      `;
       popup.appendChild(tagList);
     }
+    document.addEventListener('click', (e) => {
+      if (!popup.contains(e.target)) {
+        popup.remove();
+      }
+    });
 
     document.body.appendChild(popup);
   }
