@@ -4,18 +4,18 @@
 
   console.log('AO3 Scrolling injected successfully!');
 
+  const currentUrl = window.location.href;
+  if (!currentUrl.includes('archiveofourown.org/works?')) {
+    console.warn('Current page is not an AO3 page');
+    return;
+  }
+
   const justBlocked = localStorage.getItem('just_blocked');
   if (!justBlocked) {
     console.log('Tag is not yet blocked');
     removeLocalStorage();
     return
   };
-
-  const currentUrl = window.location.href;
-  if (!currentUrl.includes('archiveofourown.org/works?')) {
-    console.warn('Current page is not an AO3 page');
-    return;
-  }
 
   function removeLocalStorage() {
     localStorage.removeItem('ao3_target_filter_type');

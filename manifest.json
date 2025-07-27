@@ -9,12 +9,15 @@
     }
   },
   "name": "AO3 QOF",
-  "version": "1.0",
+  "version": "1.2",
 
   "description": "Adds features to better my ao3 experience",
 
   "icons": {
-    "48": "icons/border-48.png"
+    "16": "icons/border-16.png",
+    "24": "icons/border-24.png",
+    "32": "icons/border-32.png",
+    "64": "icons/border-64.png"
   },
 
   "content_scripts": [
@@ -30,14 +33,15 @@
     "tabs",
     "activeTab",
     "scripting",
-    "webNavigation"
+    "webNavigation",
+    "storage"
   ],
   "host_permissions": [
     "https://archiveofourown.org/*"
   ],
   
   "action": {
-    "default_icon": "icons/border-48.png",
+    "default_icon": "icons/border-32.png",
     "default_title": "AO3 QOF",
     "default_popup": "popup/popup.html"
   }

@@ -1,8 +1,9 @@
+window.hasRun = false;
 (() => {
-  console.log('AO3 Forgot Script injected successfully!');
-
   if (window.hasRun) return;
   window.hasRun = true;
+
+  console.log('AO3 Forgot Script injected successfully!');
 
   const currentUrl = window.location.href;
   if (!currentUrl.includes('archiveofourown.org/works/')) {
@@ -27,15 +28,12 @@
       iframe.onload = () => {
         try {
           const doc = iframe.contentDocument;
-          console.log(doc);
           const summary = doc.querySelector('div.summary.module').innerText;
-          console.log(summary);
+          const tags = [...doc.querySelectorAll('a.tag')].map(x => `<a href="${x.href}">${x.innerText}</a>`);
 
-          const tags = [...doc.querySelectorAll('a.tag')].map(x => x.innerText);
-          console.log(tags);
-
-          const title = doc.querySelector('h2.title.heading').innerText.trim();
-          const author = doc.querySelector('a[rel="author"]').innerText.trim();
+          const title = `<a href="${url}">${doc.querySelector('h2.title.heading').innerText.trim()}</a>`;
+          const authorTemp = doc.querySelector('a[rel="author"]');
+          const author = `<a href="${authorTemp.href}">${authorTemp.innerText.trim()}</a>`;
           const heading = `${title} by ${author}`
           resolve({ heading, summary, tags });
 
@@ -54,6 +52,7 @@
 
   async function getSummary() {
     const workUrl = parseUrl(window.location.href);
+    console.log(`Getting summary from ${workUrl}`);
     const { heading, summary, tags } = await getSummaryFromWork(workUrl);
 
     if (!summary) {

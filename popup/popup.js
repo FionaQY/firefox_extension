@@ -1,7 +1,7 @@
 const modeToScriptMap = {
   block: "/content_scripts/block_mode.js",
   forgot: "/content_scripts/forgot_mode.js",
-  // jump: "/content_scripts/jump_mode.js"
+  save: "/content_scripts/save_mode.js"
 };
 
 document.getElementById('mode').addEventListener('change', async (e) => {
