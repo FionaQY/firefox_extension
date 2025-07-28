@@ -199,6 +199,6 @@
     document.body.appendChild(popup);
   }
 
+  window.AO3SaveHandler = openTagPopup;
   openTagPopup();
-  
 })();

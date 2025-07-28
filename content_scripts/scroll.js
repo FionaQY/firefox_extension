@@ -1,7 +1,4 @@
 (() => {
-  if (window.hasRun) return;
-  window.hasRun = true;
-
   console.log('AO3 Scrolling injected successfully!');
 
   const currentUrl = window.location.href;

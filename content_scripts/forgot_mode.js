@@ -1,7 +1,8 @@
-window.hasRun = false;
 (() => {
-  if (window.hasRun) return;
-  window.hasRun = true;
+  if (typeof window.AO3SummaryHandler === 'function') {
+    console.log('Forgot Script already ran, exiting');
+    return;
+  }
 
   console.log('AO3 Forgot Script injected successfully!');
 
@@ -32,8 +33,7 @@ window.hasRun = false;
           const tags = [...doc.querySelectorAll('a.tag')].map(x => `<a href="${x.href}">${x.innerText}</a>`);
 
           const title = `<a href="${url}">${doc.querySelector('h2.title.heading').innerText.trim()}</a>`;
-          const authorTemp = doc.querySelector('a[rel="author"]');
-          const author = `<a href="${authorTemp.href}">${authorTemp.innerText.trim()}</a>`;
+          const author = doc.querySelector('h3.byline.heading').innerHTML.trim();
           const heading = `${title} by ${author}`
           resolve({ heading, summary, tags });
 
@@ -119,5 +119,6 @@ window.hasRun = false;
     document.body.appendChild(popup);
   }
 
+  window.AO3SummaryHandler = getSummary;
   getSummary();
 })();

@@ -1,112 +1,24 @@
-window.hasRun = false;
-
 (() => {
-  if (window.hasRun) return;
-  window.hasRun = true;
+  if (typeof window.AO3BlockerHandler === 'function') {
+    console.log('Block Script already ran, exiting');
+    return;
+  }
 
   console.log('AO3 Blocker: Script injected successfully!');
-
-  const keys = [
-    'commit',
-    'work_search[sort_column]',
-    'work_search[other_tag_names]',
-    'work_search[excluded_tag_names]',
-    'work_search[crossover]',
-    'work_search[complete]',
-    'work_search[words_from]',
-    'work_search[words_to]',
-    'work_search[date_from]',
-    'work_search[date_to]',
-    'work_search[query]',
-    'work_search[language_id]',
-    'tag_id',
-    'page'
-    ];
-  
-  const defaultValues = {
-    'work_search[sort_column]': 'revised_at',
-    'work_search[other_tag_names]': '',
-    'work_search[excluded_tag_names]': '',
-    'work_search[crossover]': '',
-    'work_search[complete]': '',
-    'work_search[words_from]': '',
-    'work_search[words_to]': '',
-    'work_search[date_from]': '',
-    'work_search[date_to]': '',
-    'work_search[query]': '',
-    'work_search[language_id]': '',
-    'commit': 'Sort and Filter',
-    'tag_id': '',
-    'page': '1'
-  };
-
-  function getParams(baseUrl) {
-    const params = baseUrl.searchParams; 
-    const searchParams = {};
-    
-    for (const key of keys) {
-      searchParams[key] = params.get(key) ?? defaultValues[key];
-    }
-    return searchParams
-  }
-
-  function setValue(searchParams, key, val) {
-    searchParams[key] = val;
-    return searchParams
-  }
-
-  function addValue(searchParams, key, val) {
-    const rawTags = searchParams[key] || '';
-    const blockedTags = rawTags
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
-    if (!blockedTags.includes(val)) {
-      blockedTags.push(val);
-    }
-    return setValue(searchParams, key, blockedTags.join(","));
-  }
-
-  function superEncodeURI(str) {
-    return new URLSearchParams({ text: str }).toString().replace(/^text=/, '');
-  }
-
-  function buildQuery(paramsObj) {
-    return Object.entries(paramsObj)
-      .filter(([key, _]) => key != 'page')
-      .map(([key, value]) => `${key}=${value == null 
-        ? '' : value.includes('&') 
-        ? superEncodeURI(value) 
-        : value}`)
-      .join('&');
-  }
-
-  function extractTagNameFromUrl(url) {
-    try {
-      const urlObj = new URL(url);
-      const parts = urlObj.pathname.split('/');
-      const tagIndex = parts.findIndex(part => part === 'tags') + 1;
-      return parts[tagIndex];
-    } catch (e) {
-      console.error("Error parsing URL:", e);
-      return null;
-    }
-  }
 
   let clickedOnce = false;
 
   function getBlockedUrl(e) {
-    const baseUrl = new URL(e.target.baseURI);
+    const baseUrl = e.target.baseURI;
 
-    let searchParams = getParams(baseUrl);
-    
-    searchParams = addValue(searchParams, 'work_search[excluded_tag_names]', e.target.innerText);
+    let searchParams = window.AO3Parser.getParams(new URL(baseUrl));
+    searchParams = window.AO3Parser.addValue(searchParams, 'work_search[excluded_tag_names]', e.target.innerText);
     if (searchParams['tag_id'] == '') {
-      searchParams = setValue(searchParams, 'tag_id', extractTagNameFromUrl(decodeURI(e.target.baseURI)));
+      searchParams = window.AO3Parser.addTagId(searchParams, baseUrl);
     }
     
     return {
-      url: `https://archiveofourown.org/works?${buildQuery(searchParams)}`,
+      url: `https://archiveofourown.org/works?${window.AO3Parser.buildQuery(searchParams)}`,
       page: searchParams['page'],
       filterType: searchParams['work_search[sort_column]']
     };
@@ -155,7 +67,10 @@ window.hasRun = false;
             }
           }
           resolve(false);
-        } finally {
+        } catch (err) {
+          console.error("Iframe loading failed", err);
+          resolve(false);
+        }finally {
           iframe.remove();
         }
       };
@@ -188,8 +103,9 @@ window.hasRun = false;
     try {      
       const correctPage = await binarySearchWorks(url, relevantData, filterType, page);
       const target = `${url}&page=${correctPage}`;
-      await sleep(5000);
       
+      await sleep(5000);
+
       browser.runtime.sendMessage({
         action: 'scrollPage',
         targetUrl: target,
@@ -205,5 +121,6 @@ window.hasRun = false;
     }
   }
 
+  window.AO3BlockerHandler = handleTagClick;
   document.addEventListener('click', handleTagClick, { capture: true });
 })();
