@@ -11,23 +11,13 @@
   }
 
   browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-    if (message.action === 'initialize') {
-      console.log('Received data from background:', message.data);
-      goToWork(data.filterType, data.targetValue)
+    if (msg.action === 'initialize') {
+      goToWork(msg.data.filterType, msg.data.targetValue)
     }
   });
 
-
-  // function removeLocalStorage() {
-  //   localStorage.removeItem('ao3_target_filter_type');
-  //   localStorage.removeItem('ao3_target_value');
-  //   localStorage.removeItem('just_blocked');
-  // }
-
   async function goToWork(filterType, targetValue) {
-    console.log('Scrolling to work now...')
-    // const filterType = localStorage.getItem('ao3_target_filter_type');
-    // let relevantData = JSON.parse(localStorage.getItem('ao3_target_value') || 'null');
+    console.log('Scrolling to work now...');
     let relevantData = JSON.parse(targetValue || 'null');
 
     if (!filterType || relevantData == null) return;
@@ -47,8 +37,6 @@
         break;
       }
     }
-    removeLocalStorage();
   }
 
-  // goToWork();
 })();

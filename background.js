@@ -5,23 +5,20 @@ const modeToScriptMap = {
   apply: "/content_scripts/apply_mode.js",
 };
 
-browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-    if (message.action === 'executeMode') {
-        const [tab] = await browser.tabs.query({ 
-            active: true, 
-            currentWindow: true 
-        });
-        await browser.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ["/content_scripts/global.js", modeToScriptMap[mode]]
-        });
-    }
-});
-
 let pendingInjection = null;
 
 browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-    if (message.action === 'scrollPage') {
+    const [tab] = await browser.tabs.query({ 
+        active: true, 
+        currentWindow: true 
+    });
+
+    if (msg.action === 'executeMode') {
+        await browser.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ["/content_scripts/global.js", modeToScriptMap[msg.mode]]
+        });
+    } else if (msg.action === 'scrollPage') {
         pendingInjection = {
             data: msg.data,
             tabId: tab.id
@@ -31,19 +28,19 @@ browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (pendingInjection &&
-        pendingInjection.tabId = tabId &&
+        pendingInjection.tabId == tabId &&
         changeInfo.status === 'complete'
     ) {
         try {
             await browser.scripting.executeScript({
                 target: { tabId: tab.id },
-                files: ["/content_scripts/scroll.js"]
+                files: ["/content_scripts/global.js", "/content_scripts/scroll.js"]
             });
             await browser.tabs.sendMessage(tabId, {
                 action: 'initialize',
                 data: pendingInjection.data
             });
-        } catch (err) {
+        } catch (error) {
             console.error('Error injecting script:', error);
         } finally {
             pendingInjection = null;

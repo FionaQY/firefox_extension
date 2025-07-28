@@ -31,7 +31,7 @@
       label: 'Crossovers',
       type: 'select',
       options: {
-        '': 'Include Crossovers', 
+        '': 'All', 
         F: 'Exclude Crossovers', 
         T: 'Show only Crossovers',
       },
@@ -40,7 +40,7 @@
       label: 'Completed',
       type: 'select',
       options: {
-        '': 'Include Crossovers', 
+        '': 'All', 
         T: 'Completed Works only',
         F: 'Exclude Crossovers', 
       },

@@ -187,10 +187,8 @@ window.hasRun = false;
     const relevantData = window.AO3Blocker.extractRelevantData(e.target.offsetParent.innerText, filterType);
     try {      
       const correctPage = await binarySearchWorks(url, relevantData, filterType, page);
-      // localStorage.setItem('ao3_target_filter_type', filterType);
-      // localStorage.setItem('ao3_target_value', JSON.stringify(relevantData));
-      // localStorage.setItem('just_blocked', true);
       const target = `${url}&page=${correctPage}`;
+      await sleep(5000);
       
       browser.runtime.sendMessage({
         action: 'scrollPage',
@@ -200,7 +198,6 @@ window.hasRun = false;
           targetValue: JSON.stringify(relevantData)
         }
       });
-      await sleep(5000);
       window.location.href = target;
       return;
     } catch (error) {

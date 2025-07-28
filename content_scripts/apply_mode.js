@@ -5,12 +5,45 @@ window.hasRun = false;
 
   console.log('AO3 Apply Script injected successfully!');
   
-
   const justSet = ['sort_column', 'crossover', 'complete', 'words_from', 'words_to', 'date_from', 'date_to']
 
+  const keys = [
+    'commit',
+    'work_search[sort_column]',
+    'work_search[other_tag_names]',
+    'work_search[excluded_tag_names]',
+    'work_search[crossover]',
+    'work_search[complete]',
+    'work_search[words_from]',
+    'work_search[words_to]',
+    'work_search[date_from]',
+    'work_search[date_to]',
+    'work_search[query]',
+    'work_search[language_id]',
+    'tag_id',
+    'page'
+    ];
+  
+  const defaultValues = {
+    'work_search[sort_column]': 'revised_at',
+    'work_search[other_tag_names]': '',
+    'work_search[excluded_tag_names]': '',
+    'work_search[crossover]': '',
+    'work_search[complete]': '',
+    'work_search[words_from]': '',
+    'work_search[words_to]': '',
+    'work_search[date_from]': '',
+    'work_search[date_to]': '',
+    'work_search[query]': '',
+    'work_search[language_id]': '',
+    'commit': 'Sort and Filter',
+    'tag_id': '',
+    'page': '1'
+  };
+  
   async function getValue(key) {
     const res = await browser.storage.local.get(key);
-    return res[key] || '';
+    return res[key] ? res[key].trim() : '';
   }
 
   function getParams(baseUrl) {
@@ -51,19 +84,25 @@ window.hasRun = false;
     const queryStr = await getValue('query');
     if (queryStr) queries.push(queryStr);
 
-    const includedLanguages = (await getValue('includedLanguage')).split(',').map(x => `language_id:${getLangAbb(x)}`).join(' OR ');
-    if (includedLanguages) queries.push(includedLanguages);
+    const languages = await getValue('includedLanguage');
+    if (languages.length != 0) {
+      queries.push(languages.split(',').map(x => `language_id:${getLangAbb(x)}`).join(' OR '));
+    }
 
-    const excludedLanguages = (await getValue('excludedLanguage')).split(',').map(x => `-language_id:${getLangAbb(x)}`).join(' ')
-    if (excludedLanguages) queries.push(excludedLanguages);
+    const excluLanguages = await getValue('excludedLanguage');
+    if (excluLanguages.length != 0) {
+      queries.push(excluLanguages.split(',').map(x => `-language_id:${getLangAbb(x)}`).join(' '));
+    }
 
     const isSingleChapter = await getValue('isSingleChapter');
     if (isSingleChapter) queries.push(isSingleChapter);
 
-    const excludedCreators = (await getValue('excludedCreators')).split(',').map(x => `-creators:${getLangAbb(x)}`).join(' ')
-    if (excludedCreators) queries.push(excludedCreators);
+    const excludedCreators = await getValue('excludedCreators');
+    if (excludedCreators.length != 0) {
+      queries.push(excludedCreators.split(',').map(x => `-creators:${getLangAbb(x)}`).join(' '));
+    }
 
-    return queries.toString();
+    return queries.join(' ');
   } 
 
   async function justSetVals(searchParams) {
