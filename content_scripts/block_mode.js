@@ -40,17 +40,6 @@ window.hasRun = false;
     'page': '1'
   };
 
-  const filterRegexMap = {
-    'word_count': /Words:\s*([\d,]+)/,
-    'comments_count': /Comments:\s*([\d,]+)/,
-    'kudos_count': /Kudos:\s*([\d,]+)/,
-    'bookmarks_count': /Bookmarks:\s*([\d,]+)/,
-    'hits': /Hits:\s*([\d,]+)/,
-    'revised_at': /\b(\d{1,2} \w+ \d{4})\b/,
-    'authors_to_sort_on': /by\s+([^\n]+)/,
-    'title_to_sort_on': /^(.+?)\s+by\s+/
-  };
-
   function getParams(baseUrl) {
     const params = baseUrl.searchParams; 
     const searchParams = {};
@@ -76,6 +65,10 @@ window.hasRun = false;
       blockedTags.push(val);
     }
     return setValue(searchParams, key, blockedTags.join(","));
+  }
+
+  function superEncodeURI(str) {
+    return new URLSearchParams({ text: str }).toString().replace(/^text=/, '');
   }
 
   function buildQuery(paramsObj) {
@@ -117,10 +110,6 @@ window.hasRun = false;
       page: searchParams['page'],
       filterType: searchParams['work_search[sort_column]']
     };
-  }
-
-  function isValid(relevantData, extractedData) {
-    return extractedData > relevantData;
   }
 
   function sleep(ms) {
@@ -198,11 +187,21 @@ window.hasRun = false;
     const relevantData = window.AO3Blocker.extractRelevantData(e.target.offsetParent.innerText, filterType);
     try {      
       const correctPage = await binarySearchWorks(url, relevantData, filterType, page);
-      localStorage.setItem('ao3_target_filter_type', filterType);
-      localStorage.setItem('ao3_target_value', JSON.stringify(relevantData));
-      localStorage.setItem('just_blocked', true);
+      // localStorage.setItem('ao3_target_filter_type', filterType);
+      // localStorage.setItem('ao3_target_value', JSON.stringify(relevantData));
+      // localStorage.setItem('just_blocked', true);
+      const target = `${url}&page=${correctPage}`;
+      
+      browser.runtime.sendMessage({
+        action: 'scrollPage',
+        targetUrl: target,
+        data: {
+          filterType: filterType,
+          targetValue: JSON.stringify(relevantData)
+        }
+      });
       await sleep(5000);
-      window.location.href = `${url}&page=${correctPage}`;
+      window.location.href = target;
       return;
     } catch (error) {
       console.error('AO3 Blocker error:', error);

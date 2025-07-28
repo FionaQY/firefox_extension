@@ -6,18 +6,21 @@ const modeToScriptMap = {
 
 document.getElementById('mode').addEventListener('change', async (e) => {
   const mode = e.target.value;
-  console.log('Mode changed:', e.target.value);
   
   try {
-    const [tab] = await browser.tabs.query({ 
-      active: true, 
-      currentWindow: true 
-    });
+    await browser.runtime.sendMessage({
+      action: 'executeMode',
+      mode: mode
+    })
+    // const [tab] = await browser.tabs.query({ 
+    //   active: true, 
+    //   currentWindow: true 
+    // });
 
-    await browser.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: [modeToScriptMap[mode]]
-    });
+    // await browser.scripting.executeScript({
+    //   target: { tabId: tab.id },
+    //   files: [modeToScriptMap[mode]]
+    // });
 
     window.close();
     

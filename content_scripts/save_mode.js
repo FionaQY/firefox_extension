@@ -2,31 +2,48 @@
   console.log('AO3 Save Script injected successfully!');
 
   const fields = {
-    plain: {
+    query: {
       label: 'Plain Search',
       type: 'text',
     },
-    sortBy: {
+    sort_column: {
       label: 'Sort By',
       type: 'select',
-      options: ['Date Updated', 'Date Published', 'Word Count', 'Hits', 'Kudos', 'Comments', 'Bookmarks'],
+      options: {
+        created_at: 'Date Updated',
+        revised_at: 'Date Published', 
+        word_count: 'Word Count', 
+        hits: 'Hits', 
+        kudos: 'Kudos', 
+        comments: 'Comments',
+        bookmarks: 'Bookmarks',
+      },
     },
-    includedTags: {
+    other_tag_names: {
       label: 'Included Tags',
       type: 'text',
     },
-    excludedTags: {
+    excluded_tag_names: {
       label: 'Excluded Tags',
       type: 'text',
     },
-    crossovers: {
+    crossover: {
       label: 'Crossovers',
       type: 'select',
-      options: ['Include Crossovers', 'Exclude Crossovers', 'Show only Crossovers'],
+      options: {
+        '': 'Include Crossovers', 
+        F: 'Exclude Crossovers', 
+        T: 'Show only Crossovers',
+      },
     },
     complete: {
       label: 'Completed',
-      type: 'checkbox',
+      type: 'select',
+      options: {
+        '': 'Include Crossovers', 
+        T: 'Completed Works only',
+        F: 'Exclude Crossovers', 
+      },
     },
     includedLanguage: {
       label: 'Included Language',
@@ -37,36 +54,33 @@
       type: 'textarea',
     },
     isSingleChapter: {
-      label: 'Is Single Chapter',
-      type: 'checkbox',
+      label: 'Number of Chapters',
+      type: 'select',
+      options: {
+        '': 'All', 
+        'expected_number_of_chapters:1': 'Single-Chapter only',
+        '-expected_number_of_chapters:1': 'Multi-Chapter only', 
+      },
     },
-    wordFrom: {
+    words_from: {
       label: 'Word Count From',
       type: 'number',
     },
-    wordTo: {
+    words_to: {
       label: 'Word Count To',
       type: 'number',
     },
-    dateFrom: {
+    date_from: {
       label: 'Date Updated From',
       type: 'date',
     },
-    dateTo: {
+    date_to: {
       label: 'Date Updated To',
       type: 'date',
-    },
-    includedCreator: {
-      label: 'Included Creators',
-      type: 'text',
     },
     excludedCreators: {
       label: 'Excluded Creators',
       type: 'text',
-    },
-    isCollection: {
-      label: 'Is Part Of Collection',
-      type: 'checkbox',
     },
   };
 
@@ -91,6 +105,9 @@
       scrollbar-color: #555 #2e2e3e;
     `;
 
+    const headery = document.createElement('div');
+    headery.innerHTML = `<div style="margin-bottom: 0.5em; font-weight: bold;">If multiple values, please put a comma after each value.</div>`;
+    popup.appendChild(headery);
 
     for (const [key, config] of Object.entries(fields)) {
       const container = document.createElement('div');
@@ -115,9 +132,9 @@
       switch (config.type) {
         case 'select': 
           input = document.createElement('select');
-          for (const opt of config.options) {
+          for (const [val, opt] of Object.entries(config.options)) {
             const option = document.createElement('option');
-            option.value = opt;
+            option.value = val;
             option.textContent = opt;
             input.appendChild(option);
           }
@@ -169,12 +186,15 @@
       container.appendChild(input);
       popup.appendChild(container);
     }
-  
-    document.addEventListener('click', (e) => {
+
+    const handleClickOutside = (e) => {
       if (!popup.contains(e.target)) {
         popup.remove();
+        document.removeEventListener('click', handleClickOutside);
       }
-    });
+    };
+
+    document.addEventListener('click', handleClickOutside);
 
     document.body.appendChild(popup);
   }
