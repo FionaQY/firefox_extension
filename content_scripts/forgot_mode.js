@@ -80,20 +80,36 @@
       scrollbar-color: #555 #2e2e3e;
     `;
 
-
     const buttonClose = document.createElement('button');
     buttonClose.textContent = '×';
     buttonClose.style.cssText = `
       position: absolute;
-      top: 6px;
-      right: 10px;
-      background: transparent;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.1);
       border: none;
-      font-size: 1.2em;
+      border-radius: 50%;
+      font-size: 18px;
       font-weight: bold;
-      color: #aaa;
+      color: #ccc;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
     `;
+    buttonClose.addEventListener('mouseenter', () => {
+      buttonClose.style.background = 'rgba(255, 255, 255, 0.2)';
+      buttonClose.style.color = '#fff';
+    });
+
+    buttonClose.addEventListener('mouseleave', () => {
+      buttonClose.style.background = 'rgba(255, 255, 255, 0.1)';
+      buttonClose.style.color = '#ccc';
+    });
+    
     buttonClose.onclick = () => popup.remove();
     popup.appendChild(buttonClose);
 
@@ -110,11 +126,6 @@
       `;
       popup.appendChild(tagList);
     }
-    document.addEventListener('click', (e) => {
-      if (!popup.contains(e.target)) {
-        popup.remove();
-      }
-    });
 
     document.body.appendChild(popup);
   }

@@ -23,6 +23,11 @@ browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
             data: msg.data,
             tabId: tab.id
         };
+    } else if (msg.action == 'applyFilters') {
+        await browser.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ["/content_scripts/global.js", "/content_scripts/apply_mode.js"]
+        });
     }
 });
 

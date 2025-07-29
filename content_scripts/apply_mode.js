@@ -1,9 +1,4 @@
 (() => {
-  if (typeof window.AO3ApplyHandler === 'function') {
-    console.log('Apply Script already ran, exiting');
-    return;
-  }
-
   console.log('AO3 Apply Script injected successfully!');
     
   async function getStorageValue(key) {
@@ -85,6 +80,5 @@
     return;
   }
 
-  window.AO3ApplyHandler = applyFilters;
   applyFilters();
 })();

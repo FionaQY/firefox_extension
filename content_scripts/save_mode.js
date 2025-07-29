@@ -86,44 +86,47 @@
 
   async function openTagPopup() {
     const popup = document.createElement('div');
+    const isMobile = window.innerWidth <= 768;
     popup.style.cssText = `
       position: fixed;
-      top: 20px;
-      right: 20px;
+      ${isMobile ? 
+        'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; border-radius: 0;' : 
+        'top: 20px; right: 20px; max-width: 450px; border-radius: 8px;'
+      }
       background: #1e1e2f;
       color: #eee;
       border: 1px solid #444;
-      border-radius: 8px;
       padding: 1em;
-      max-width: 450px;
-      max-height: 80vh;
+      ${isMobile ? 'padding-top: 2em;' : ''}
+      max-height: ${isMobile ? '100vh' : '80vh'};
       overflow-y: auto;
       z-index: 9999;
       box-shadow: 0 4px 20px rgba(0,0,0,0.4);
       font-family: sans-serif;
       scrollbar-width: thin;
       scrollbar-color: #555 #2e2e3e;
+      -webkit-overflow-scrolling: touch;
     `;
 
     const headery = document.createElement('div');
-    headery.innerHTML = `<div style="margin-bottom: 0.5em; font-weight: bold;">If multiple values, please put a comma after each value.</div>`;
+    headery.innerHTML = `<div style="margin-bottom: 0.5em; font-weight: bold; margin-right: 2em;">If multiple values, please put a comma after each value.</div>`;
     popup.appendChild(headery);
 
     for (const [key, config] of Object.entries(fields)) {
       const container = document.createElement('div');
       container.style.cssText = `
         display: flex;
-        align-items: center;
+        ${isMobile ? 'flex-direction: column; gap: 0.5em;' : 'align-items: center;'}
         margin-bottom: 0.75em;
       `;
       
       const label = document.createElement('label');
       label.textContent = `${config.label}:`;
       label.style.cssText = `
-        min-width: 160px;
+        ${isMobile ? '' : 'min-width: 160px;'}
         font-weight: bold;
         color: #ccc;
-        font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+        font-size: ${isMobile ? '1rem' : 'clamp(0.95rem, 2.5vw, 1.1rem)'};
       `;
       
       let input;
@@ -149,24 +152,22 @@
           input.type = config.type;
       }
 
-      if (config.type !== 'checkbox') {
-        input.style.cssText = `
-          flex: 1;
-          padding: 6px 8px;
-          font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+      input.style.cssText = config.type !== 'checkbox' 
+          ? `
+          ${isMobile ? 'width: 100%;' : 'flex: 1;'}
+          padding: ${isMobile ? '12px' : '6px 8px'};
+          font-size: ${isMobile ? '16px' : 'clamp(0.95rem, 2.5vw, 1.1rem)'};
           border: 1px solid #555;
           border-radius: 4px;
           background-color: #2a2a3d;
           color: white;
-        `;
-      } else {
-        input.style.cssText = `
-            width: 18px;
-            height: 18px;
-            accent-color: #ee5555;
-            cursor: pointer;
+          box-sizing: border-box;
+          ` : `
+          width: ${isMobile ? '24px' : '18px'};
+          height: ${isMobile ? '24px' : '18px'};
+          accent-color: #ee5555;
+          cursor: pointer;
           `;
-      }
 
       await browser.storage.local.get(key).then(res => {
         if (config.type == 'checkbox') {
@@ -193,12 +194,37 @@
         document.removeEventListener('click', handleClickOutside);
       }
     };
-
     document.addEventListener('click', handleClickOutside);
 
+    const buttonApply = document.createElement('button');
+    buttonApply.textContent = 'Apply Filters';
+    buttonApply.style.cssText = `
+      width: 100%;
+      margin-top: 1em;
+      padding: ${isMobile ? '16px 12px' : '8px 12px'};
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: ${isMobile ? '18px' : '1rem'};
+      cursor: pointer;
+      touch-action: manipulation;
+    `;
+    buttonApply.addEventListener('mouseenter', () => {
+      buttonApply.style.background = '#357abd';
+    });
+    buttonApply.addEventListener('mouseleave', () => {
+      buttonApply.style.background = '#4a90e2';
+    });
+    buttonApply.onclick = () => {
+      browser.runtime.sendMessage({
+        action: 'applyFilters',
+      });
+    };
+    popup.appendChild(buttonApply);
+    
     document.body.appendChild(popup);
   }
 
-  window.AO3SaveHandler = openTagPopup;
   openTagPopup();
 })();

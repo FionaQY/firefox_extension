@@ -11,17 +11,8 @@ document.getElementById('mode').addEventListener('change', async (e) => {
     await browser.runtime.sendMessage({
       action: 'executeMode',
       mode: mode
-    })
-    // const [tab] = await browser.tabs.query({ 
-    //   active: true, 
-    //   currentWindow: true 
-    // });
-
-    // await browser.scripting.executeScript({
-    //   target: { tabId: tab.id },
-    //   files: [modeToScriptMap[mode]]
-    // });
-
+    });
+    
     window.close();
     
   } catch (error) {
