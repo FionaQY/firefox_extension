@@ -47,11 +47,11 @@
     },
     includedLanguage: {
       label: 'Included Language',
-      type: 'textarea',
+      type: 'text',
     },
     excludedLanguage: {
       label: 'Excluded Language',
-      type: 'textarea',
+      type: 'text',
     },
     isSingleChapter: {
       label: 'Number of Chapters',
@@ -90,14 +90,13 @@
     popup.style.cssText = `
       position: fixed;
       ${isMobile ? 
-        'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; border-radius: 0;' : 
-        'top: 20px; right: 20px; max-width: 450px; border-radius: 8px;'
+        'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; border-radius: 0; padding-top: 2em;' : 
+        'top: 20px; right: 20px; width: 380px; border-radius: 8px;' 
       }
       background: #1e1e2f;
       color: #eee;
       border: 1px solid #444;
       padding: 1em;
-      ${isMobile ? 'padding-top: 2em;' : ''}
       max-height: ${isMobile ? '100vh' : '80vh'};
       overflow-y: auto;
       z-index: 9999;
@@ -108,6 +107,39 @@
       -webkit-overflow-scrolling: touch;
     `;
 
+    const buttonClose = document.createElement('button');
+    buttonClose.textContent = '×';
+    buttonClose.style.cssText = `
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 50%;
+      font-size: 18px;
+      font-weight: bold;
+      color: #ccc;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    `;
+    buttonClose.addEventListener('mouseenter', () => {
+      buttonClose.style.background = 'rgba(255, 255, 255, 0.2)';
+      buttonClose.style.color = '#fff';
+    });
+
+    buttonClose.addEventListener('mouseleave', () => {
+      buttonClose.style.background = 'rgba(255, 255, 255, 0.1)';
+      buttonClose.style.color = '#ccc';
+    });
+    
+    buttonClose.onclick = () => popup.remove();
+    popup.appendChild(buttonClose);
+
     const headery = document.createElement('div');
     headery.innerHTML = `<div style="margin-bottom: 0.5em; font-weight: bold; margin-right: 2em;">If multiple values, please put a comma after each value.</div>`;
     popup.appendChild(headery);
@@ -116,7 +148,8 @@
       const container = document.createElement('div');
       container.style.cssText = `
         display: flex;
-        ${isMobile ? 'flex-direction: column; gap: 0.5em;' : 'align-items: center;'}
+        flex-direction: column;
+        gap: 0.4em;
         margin-bottom: 0.75em;
       `;
       
@@ -127,6 +160,7 @@
         font-weight: bold;
         color: #ccc;
         font-size: ${isMobile ? '1rem' : 'clamp(0.95rem, 2.5vw, 1.1rem)'};
+        display: block;
       `;
       
       let input;
@@ -142,11 +176,6 @@
             input.appendChild(option);
           }
           break;
-        case 'textarea':
-          input = document.createElement('textarea');
-          input.rows = 2;
-          input.style.width = '100%';
-          break;
         default:
           input = document.createElement('input');
           input.type = config.type;
@@ -154,8 +183,8 @@
 
       input.style.cssText = config.type !== 'checkbox' 
           ? `
-          ${isMobile ? 'width: 100%;' : 'flex: 1;'}
-          padding: ${isMobile ? '12px' : '6px 8px'};
+          width: 100%;
+          padding: 8px;
           font-size: ${isMobile ? '16px' : 'clamp(0.95rem, 2.5vw, 1.1rem)'};
           border: 1px solid #555;
           border-radius: 4px;
@@ -163,8 +192,8 @@
           color: white;
           box-sizing: border-box;
           ` : `
-          width: ${isMobile ? '24px' : '18px'};
-          height: ${isMobile ? '24px' : '18px'};
+          width: 18px;
+          height: 18px;
           accent-color: #ee5555;
           cursor: pointer;
           `;
@@ -199,8 +228,9 @@
     const buttonApply = document.createElement('button');
     buttonApply.textContent = 'Apply Filters';
     buttonApply.style.cssText = `
-      width: 100%;
-      margin-top: 1em;
+      display: block;
+      margin: 1em auto 0;
+      width: 200px;
       padding: ${isMobile ? '16px 12px' : '8px 12px'};
       background: #4a90e2;
       color: white;
