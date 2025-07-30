@@ -5,20 +5,21 @@
   }
 
   console.log('AO3 Blocker: Script injected successfully!');
+  const WAITTIME = 5000;
+  const AO3Extractor = window.AO3Extractor;
+  const AO3Parser = window.AO3Parser;
 
   let clickedOnce = false;
 
   function getBlockedUrl(e) {
     const baseUrl = e.target.baseURI;
 
-    let searchParams = window.AO3Parser.getParams(new URL(baseUrl));
-    searchParams = window.AO3Parser.addValue(searchParams, 'work_search[excluded_tag_names]', e.target.innerText);
-    if (searchParams['tag_id'] == '') {
-      searchParams = window.AO3Parser.addTagId(searchParams, baseUrl);
-    }
+    let searchParams = AO3Parser.getParams(new URL(baseUrl));
+    searchParams = AO3Parser.addValue(searchParams, 'work_search[excluded_tag_names]', e.target.innerText);
+    searchParams = AO3Parser.addTagId(searchParams, baseUrl);
     
     return {
-      url: `https://archiveofourown.org/works?${window.AO3Parser.buildQuery(searchParams)}`,
+      url: `https://archiveofourown.org/works?${AO3Parser.buildQuery(searchParams)}`,
       page: searchParams['page'],
       filterType: searchParams['work_search[sort_column]']
     };
@@ -36,8 +37,8 @@
       const mid = low + Math.floor((high - low) / 2);
       const testUrl = `${tagUrl}&page=${mid}`;
       console.log(`Checking page ${mid}`);
+      await sleep(WAITTIME);
       const isValidPage = await checkPageForWork(testUrl, relevantData, filterType);
-      await sleep(5000);
 
       if (isValidPage) {
         low = mid + 1;
@@ -60,8 +61,8 @@
           const works = iframe.contentDocument.querySelectorAll('.work');
           for (let i = 1; i < works.length; i++) {
             const work = works[i];
-            const extractedData = window.AO3Blocker.extractRelevantData(work.textContent, filterType);
-            if (window.AO3Blocker.isValid(relevantData, extractedData)) {
+            const extractedData = AO3Extractor.extractRelevantData(work.textContent, filterType);
+            if (AO3Extractor.isValid(relevantData, extractedData)) {
               resolve(true);
               return;
             }
@@ -93,19 +94,24 @@
     e.stopImmediatePropagation();
     clickedOnce = true;
 
-    if (page == '1' || filterType == 'created_at') {
+    if (filterType == 'created_at') {
       console.log("Going to new link: ", url);
-      window.location.href = url;
+      window.location.href = `${url}&page=1`;
       return;
     }
 
-    const relevantData = window.AO3Blocker.extractRelevantData(e.target.offsetParent.innerText, filterType);
-    try {      
-      const correctPage = await binarySearchWorks(url, relevantData, filterType, page);
+    const relevantData = AO3Extractor.extractRelevantData(e.target.offsetParent.innerText, filterType);
+    try {
+      let correctPage = page
+      if (page != 1) {
+        const isValidPage = await checkPageForWork(`${url}&page=${page}`, relevantData, filterType);
+        if (!isValidPage) {
+          correctPage = await binarySearchWorks(url, relevantData, filterType, page-1);
+        }
+      }
       const target = `${url}&page=${correctPage}`;
       
-      await sleep(5000);
-
+      await sleep(WAITTIME);
       browser.runtime.sendMessage({
         action: 'scrollPage',
         targetUrl: target,

@@ -1,12 +1,11 @@
 (() => {
-  if (window.AO3Blocker && window.AO3Parser) {
+  if (window.AO3Extractor && window.AO3Parser) {
     console.log('Global script already loaded, skipping');
     return;
   }
-
   console.log('Global script loaded');
 
-  window.AO3Blocker = window.AO3Blocker || {
+  window.AO3Extractor = window.AO3Extractor || {
     extractString(workText, filterType) {
       const filterRegexMap = {
         'word_count': /Words:\s*([\d,]+)/,
@@ -91,9 +90,13 @@
       return searchParams
     },
 
+    getValue(searchParams, key) {
+      return searchParams[key] || '';
+    },
+
     addValue(searchParams, key, val) {
-      const rawTags = searchParams[key] || '';
-      const blockedTags = rawTags
+      const rawStr = this.getValue(searchParams, key);
+      const blockedTags = rawStr
         .split(',')
         .map(t => t.trim())
         .filter(t => t.length > 0);
@@ -103,7 +106,7 @@
       return this.setValue(searchParams, key, blockedTags.join(","));
     },
 
-    superEncodeURI(str) {
+    superEncodeURI(str) { // important
       return new URLSearchParams({ text: str }).toString().replace(/^text=/, '');
     },
 
@@ -118,7 +121,7 @@
     },
 
     extractTagNameFromUrl(url) {
-      try {
+      try {       
         const urlObj = new URL(url);
         const parts = urlObj.pathname.split('/');
         const tagIndex = parts.findIndex(part => part === 'tags') + 1;
@@ -130,6 +133,9 @@
     },
 
     addTagId(searchParams, baseUrl) {
+      if (searchParams['tag_id'] != '') {
+        return searchParams;
+      }
       const tagName = this.extractTagNameFromUrl(decodeURI(baseUrl));
       return this.setValue(searchParams, 'tag_id', tagName);
     }

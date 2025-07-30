@@ -17,6 +17,8 @@ document.getElementById('mode').addEventListener('change', async (e) => {
     
   } catch (error) {
     console.error("Error injecting scripts:", error);
-    document.getElementById('error-content').classList.remove('hidden');
+    const errorBox = document.getElementById('error-content');
+    errorBox.classList.remove('hidden');
+    errorBox.querySelector('p').textContent += `\n${error}`;
   }
 });

@@ -26,9 +26,10 @@
     const works = document.querySelectorAll('.work.blurb.group');
     for (let i = works.length - 1; i  > 0; i--) {
       const work = works[i];
-      
-      const extractedData = window.AO3Blocker.extractRelevantData(work.textContent, filterType);
-      if (window.AO3Blocker.isValid(relevantData, extractedData)) {
+
+      const AO3Extractor = window.AO3Extractor;
+      const extractedData = AO3Extractor.extractRelevantData(work.textContent, filterType);
+      if (AO3Extractor.isValid(relevantData, extractedData)) {
         console.log("Scrolling to work", extractedData);
         work.scrollIntoView({behavior: 'smooth', block: 'center'});
         break;
