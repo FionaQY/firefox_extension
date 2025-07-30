@@ -3,11 +3,11 @@
 
   const fields = {
     query: {
-      label: 'Plain Search',
+      label: '🔍 Plain Search',
       type: 'text',
     },
     sort_column: {
-      label: 'Sort By',
+      label: '⇅ Sort By',
       type: 'select',
       options: {
         created_at: 'Date Updated',
@@ -20,15 +20,15 @@
       },
     },
     other_tag_names: {
-      label: 'Included Tags',
+      label: '🏷️ Included Tags',
       type: 'text',
     },
     excluded_tag_names: {
-      label: 'Excluded Tags',
+      label: '🚫 Excluded Tags',
       type: 'text',
     },
     crossover: {
-      label: 'Crossovers',
+      label: '🔗 Crossovers',
       type: 'select',
       options: {
         '': 'All', 
@@ -37,48 +37,48 @@
       },
     },
     complete: {
-      label: 'Completed',
+      label: '🏁/⏳ Completed',
       type: 'select',
       options: {
         '': 'All', 
-        T: 'Completed Works only',
-        F: 'Exclude Crossovers', 
+        T: '🏁 Completed only',
+        F: '⏳ In-Progress only', 
       },
     },
     language_id: {
-      label: 'Included Language',
+      label: '🈹 Included Language',
       type: 'text',
     },
     "-language_id": {
-      label: 'Excluded Language',
+      label: '🤫 Excluded Language',
       type: 'text',
     },
     major_version: {
-      label: 'Current Number of Chapters*',
+      label: '📖 Current Chapter Count*',
       type: 'numberSpecial',
     },
     expected_number_of_chapters: {
-      label: 'Expected Number of Chapters',
+      label: '📕 Total Number of Chapters',
       type: 'numberSpecial',
     },
     words_from: {
-      label: 'Word Count From',
+      label: '📏 Word Count From',
       type: 'number',
     },
     words_to: {
-      label: 'Word Count To',
+      label: '📏 Word Count To',
       type: 'number',
     },
     date_from: {
-      label: 'Date Updated From',
+      label: '📅 Date Updated From',
       type: 'date',
     },
     date_to: {
-      label: 'Date Updated To',
+      label: '📅 Date Updated To',
       type: 'date',
     },
     "-creators": {
-      label: 'Excluded Creators',
+      label: '	🚫👤 Excluded Creators',
       type: 'text',
     },
   };
@@ -149,12 +149,16 @@
 
     const contentContainer = document.createElement('div');
     contentContainer.style.cssText = isMobile ? `
-      flex: 1;
-      overflow-y: auto;
-      padding-bottom: 1em;
-      -webkit-overflow-scrolling: touch;
-      min-height: 0;
-    ` : '';
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        min-height: 0;
+        padding-top: 1em;
+      ` : `
+        padding-top: 1em;
+        padding-left: 0.75em;
+        padding-right: 0.75em;
+      `;
 
     const headery = document.createElement('div');
     headery.innerHTML = `<div style="margin-bottom: 0.5em; font-weight: bold; margin-right: 2em;">If multiple values, please put a comma after each value.</div>`;
@@ -165,17 +169,16 @@
       container.style.cssText = `
         display: flex;
         flex-direction: column;
+        padding-bottom: 0.5em;
         gap: 0.4em;
-        margin-bottom: 0.75em;
       `;
       
       const label = document.createElement('label');
       label.textContent = `${config.label}:`;
       label.style.cssText = `
         ${isMobile ? '' : 'min-width: 160px;'}
-        font-weight: bold;
         color: #ccc;
-        font-size: ${isMobile ? '1rem' : 'clamp(0.95rem, 2.5vw, 1.1rem)'};
+        font-size: ${isMobile ? '0.9rem' : '0.95rem'};
         display: block;
       `;
       
@@ -195,7 +198,7 @@
         case 'numberSpecial':
           input = document.createElement('input');
           input.type = 'text';
-          input.placeholder = 'e.g. >1, =1, >1000, 1000, ([5 TO 20] !(7 || 13))';
+          input.placeholder = 'e.g. >1, 1, ([5 TO 20] !(7 || 13))';
           break;
         default:
           input = document.createElement('input');
@@ -206,7 +209,7 @@
           ? `
           width: 100%;
           padding: 8px;
-          font-size: ${isMobile ? '16px' : 'clamp(0.95rem, 2.5vw, 1.1rem)'};
+          font-size: ${isMobile ? '16px' : '0.95rem'};
           border: 1px solid #555;
           border-radius: 4px;
           background-color: #2a2a3d;
@@ -237,30 +240,28 @@
       container.appendChild(input);
       contentContainer.appendChild(container);
     }
-
-    const handleClickOutside = (e) => {
-      if (!popup.contains(e.target)) {
-        popup.remove();
-        document.removeEventListener('click', handleClickOutside);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      gap: 1em;
+      padding: 1em;
+      ${isMobile ? 'flex-direction: column;' : ''}
+    `;
 
     const buttonApply = document.createElement('button');
-    buttonApply.textContent = 'Apply Filters';
+    buttonApply.textContent = 'Apply Filters Now';
     buttonApply.style.cssText = `
-      display: block;
-      margin: 1em auto ${isMobile ? '1em' : '0'};
-      width: 200px;
+      flex: 1;
       padding: ${isMobile ? '16px 12px' : '8px 12px'};
       background: #4a90e2;
       color: white;
       border: none;
       border-radius: 4px;
-      font-size: ${isMobile ? '18px' : '1rem'};
+      font-size: ${isMobile ? '16px' : '0.95rem'};
       cursor: pointer;
       touch-action: manipulation;
-      ${isMobile ? 'min-height: 50px; flex-shrink: 0;' : ''}
     `;
     buttonApply.addEventListener('mouseenter', () => {
       buttonApply.style.background = '#357abd';
@@ -274,41 +275,31 @@
       });
     };
     const buttonReset = document.createElement('button');
-      buttonReset.textContent = 'Reset All Filters';
-      buttonReset.style.cssText = `
-        display: block;
-        margin: 0.5em auto 1.5em;
-        width: 200px;
-        padding: 8px 12px;
-        background: #ee5555;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 1rem;
-        cursor: pointer;
-      `;
-      buttonReset.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to clear all saved filter values?')) {
-          await browser.storage.local.clear();
-          const inputs = contentContainer.querySelectorAll('input');
-          Array.from(inputs).forEach(x => {
-            if (x.type === 'checkbox') {
-              x.checked = false;
-            } else {
-              x.value = '';
-            }
-          });
-          const selects = contentContainer.querySelectorAll('select');
-          Array.from(selects).forEach(x => {
-            x.selectedIndex = 0;
-          });
-        }
-      });
+    buttonReset.textContent = 'Reset All Filters';
+    buttonReset.style.cssText = `
+      flex: 1;
+      padding: ${isMobile ? '16px 12px' : '8px 12px'};
+      background: #ee5555;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: ${isMobile ? '18px' : '1rem'};
+      cursor: pointer;
+    `;
+    buttonReset.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to clear all saved filter values?')) {
+        await browser.storage.local.clear();
+        const inputs = contentContainer.querySelectorAll('input');
+        Array.from(inputs).forEach(x => x.type === 'checkbox' ? x.checked = false : x.value = '');
+        const selects = contentContainer.querySelectorAll('select');
+        Array.from(selects).forEach(x => x.selectedIndex = 0);
+      }
+    });
 
-
+    buttonContainer.appendChild(buttonApply);
+    buttonContainer.appendChild(buttonReset);
     popup.appendChild(contentContainer);
-    popup.appendChild(buttonApply);
-    popup.appendChild(buttonReset);
+    popup.appendChild(buttonContainer);
     
     document.body.appendChild(popup);
   }

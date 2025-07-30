@@ -155,13 +155,17 @@
       .join(' ');
     if (excludedCreators) queries.push(excludedCreators);
 
-    // chapterNums
-    const chapterNums = `${chapPref}:${chapterNumRaw}`;
-    queries = replaceQueryWithPref(chapPref, queries, chapterNums);
-
-    // expectedChapters
-    const expectedChapters = `${expChapPref}:${expectedChaptersRaw}`;
-    queries = replaceQueryWithPref(expChapPref, queries, expectedChapters);
+    // current number of chapters
+    if (chapterNumRaw) {
+      const chapterNums = `${chapPref}:${chapterNumRaw}`;
+      queries = replaceQueryWithPref(chapPref, queries, chapterNums);
+    }
+    
+    // total number of chapters
+    if (expectedChaptersRaw) {
+      const expectedChapters = `${expChapPref}:${expectedChaptersRaw}`;
+      queries = replaceQueryWithPref(expChapPref, queries, expectedChapters);
+    }
 
     console.log('Final query string:', queries.join(' '));
     return queries.join(' ');
