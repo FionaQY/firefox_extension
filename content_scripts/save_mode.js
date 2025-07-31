@@ -14,9 +14,11 @@
         revised_at: 'Date Published', 
         word_count: 'Word Count', 
         hits: 'Hits', 
-        kudos: 'Kudos', 
-        comments: 'Comments',
-        bookmarks: 'Bookmarks',
+        kudos_count: 'Kudos', 
+        comments_count: 'Comments',
+        bookmarks_count: 'Bookmarks',
+        authors_to_sort_on: 'Author',
+        title_to_sort_on: 'Title'
       },
     },
     other_tag_names: {
@@ -121,9 +123,8 @@
       right: ${isMobile ? '12px' : '8px'};
       width: ${isMobile ? '32px' : '24px'};
       height: ${isMobile ? '32px' : '24px'};
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 50%;
+      background: none;
+      border:none;
       font-size: ${isMobile ? '24px' : '18px'};
       font-weight: bold;
       color: #ccc;

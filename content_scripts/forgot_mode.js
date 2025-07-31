@@ -85,14 +85,13 @@
     buttonClose.textContent = '×';
     buttonClose.style.cssText = `
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 24px;
-      height: 24px;
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 50%;
-      font-size: 18px;
+      top: ${isMobile ? '12px' : '8px'};
+      right: ${isMobile ? '12px' : '8px'};
+      width: ${isMobile ? '32px' : '24px'};
+      height: ${isMobile ? '32px' : '24px'};
+      background: none;
+      border:none;
+      font-size: ${isMobile ? '24px' : '18px'};
       font-weight: bold;
       color: #ccc;
       cursor: pointer;
@@ -100,6 +99,7 @@
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
+      z-index: 10000;
     `;
     buttonClose.addEventListener('mouseenter', () => {
       buttonClose.style.background = 'rgba(255, 255, 255, 0.2)';

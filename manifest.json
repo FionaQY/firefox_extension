@@ -1,20 +1,19 @@
 {
-  "manifest_version": 3,
-   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  },
+  "manifest_version": 2,
+   "content_security_policy":  "script-src 'self'; object-src 'self'",
   "browser_specific_settings": {
     "gecko": {
       "id": "ao3qof@example.com"
     }
   },
   "name": "AO3 QOF",
-  "version": "1.4.2",
+  "version": "1.4.3",
 
   "description": "Adds features to better my ao3 experience",
 
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["background.js"],
+    "persistent": false
   },
 
   "icons": {
@@ -34,16 +33,12 @@
   "permissions": [
     "tabs",
     "activeTab",
-    "scripting",
     "webNavigation",
-    "storage"
-  ],
-
-  "host_permissions": [
+    "storage",
     "https://archiveofourown.org/*"
   ],
   
-  "action": {
+  "browser_action": {
     "default_icon": "icons/border-32.png",
     "default_title": "AO3 QOF",
     "default_popup": "popup/popup.html"

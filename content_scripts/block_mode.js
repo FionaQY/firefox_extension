@@ -5,7 +5,7 @@
   }
 
   console.log('AO3 Blocker: Script injected successfully!');
-  const WAITTIME = 5000;
+  const WAITTIME = 4000;
   const AO3Extractor = window.AO3Extractor;
   const AO3Parser = window.AO3Parser;
 
@@ -35,10 +35,9 @@
 
     while (low <= high) {
       const mid = low + Math.floor((high - low) / 2);
-      const testUrl = `${tagUrl}&page=${mid}`;
       console.log(`Checking page ${mid}`);
       await sleep(WAITTIME);
-      const isValidPage = await checkPageForWork(testUrl, relevantData, filterType);
+      const isValidPage = await checkPageForWork(tagUrl, mid, relevantData, filterType);
 
       if (isValidPage) {
         low = mid + 1;
@@ -51,11 +50,13 @@
     return result;
   }
 
-  async function checkPageForWork(url, relevantData, filterType) {
+  async function checkPageForWork(url, page, relevantData, filterType) {
+    console.log(`Checking page ${page}`);
+    const currUrl = `${url}&page=${page}`;
     return new Promise((resolve) => {
       const iframe = document.createElement('iframe');
       iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;';
-      iframe.src = url;
+      iframe.src = currUrl;
       iframe.onload = async () => {
         try {
           const works = iframe.contentDocument.querySelectorAll('.work');
@@ -63,6 +64,7 @@
             const work = works[i];
             const extractedData = AO3Extractor.extractRelevantData(work.textContent, filterType);
             if (AO3Extractor.isValid(relevantData, extractedData)) {
+              console.log(`Page ${page} is valid`);
               resolve(true);
               return;
             }
@@ -104,7 +106,7 @@
     try {
       let correctPage = page
       if (page != 1) {
-        const isValidPage = await checkPageForWork(`${url}&page=${page}`, relevantData, filterType);
+        const isValidPage = await checkPageForWork(url, correctPage, relevantData, filterType);
         if (!isValidPage) {
           correctPage = await binarySearchWorks(url, relevantData, filterType, page-1);
         }

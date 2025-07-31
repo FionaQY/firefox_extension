@@ -8,6 +8,7 @@
   }
 
   browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+    console.log("aer")
     if (msg.action === 'initialize') {
       goToWork(msg.data.filterType, msg.data.targetValue)
     }
@@ -37,4 +38,8 @@
     }
   }
 
+setTimeout(() => {
+  console.log("Sending ready message");
+  browser.runtime.sendMessage({action: 'scrollScriptReady'});
+}, 100);
 })();
