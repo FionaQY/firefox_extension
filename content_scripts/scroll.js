@@ -8,7 +8,6 @@
   }
 
   browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
-    console.log("aer")
     if (msg.action === 'initialize') {
       goToWork(msg.data.filterType, msg.data.targetValue)
     }
@@ -24,6 +23,7 @@
       relevantData = new Date(relevantData);
     }
 
+    window.AO3Popup.createNotifPopup(`Scrolling to work now...`);
     const works = document.querySelectorAll('.work.blurb.group');
     for (let i = works.length - 1; i  > 0; i--) {
       const work = works[i];
@@ -31,7 +31,6 @@
       const AO3Extractor = window.AO3Extractor;
       const extractedData = AO3Extractor.extractRelevantData(work.textContent, filterType);
       if (AO3Extractor.isValid(relevantData, extractedData)) {
-        console.log("Scrolling to work", extractedData);
         work.scrollIntoView({behavior: 'smooth', block: 'center'});
         break;
       }
@@ -40,6 +39,6 @@
 
 setTimeout(() => {
   console.log("Sending ready message");
-  browser.runtime.sendMessage({action: 'scrollScriptReady'});
+  browser.runtime.sendMessage({action: 'scrollContentScriptReady'});
 }, 100);
 })();

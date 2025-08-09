@@ -1,5 +1,5 @@
 (() => {
-  if (window.AO3Extractor && window.AO3Parser) {
+  if (window.AO3Extractor && window.AO3UrlParser) {
     console.log('Global script already loaded, skipping');
     return;
   }
@@ -58,7 +58,7 @@
     }
   };
 
-  window.AO3Parser = window.AO3Parser || {
+  window.AO3UrlParser = window.AO3UrlParser || {
     getParams(baseUrl) {
       const defaultValues = {
         'work_search[sort_column]': 'revised_at',
@@ -74,7 +74,9 @@
         'work_search[language_id]': '',
         'commit': 'Sort and Filter',
         'tag_id': '',
-        'page': '1'
+        'page': '1',
+        'pseud_id': '',
+        'user_id': ''
       };
       const params = baseUrl.searchParams; 
       const searchParams = {};
@@ -111,8 +113,11 @@
     },
 
     buildQuery(paramsObj) {
+      const isBookmarks = paramsObj.user_id != '';
       return Object.entries(paramsObj)
         .filter(([key, _]) => key != 'page')
+        .filter(([key, val]) => !(key == 'pseud_id' && val == ''))
+        .filter(([key, _]) => isBookmarks ? key != 'tag_id' : key != 'user_id')
         .map(([key, value]) => `${key}=${value == null 
           ? '' : value.includes('&') 
           ? this.superEncodeURI(value) 
@@ -132,12 +137,96 @@
       }
     },
 
-    addTagId(searchParams, baseUrl) {
+    addTagId(searchParams, tagName) {
       if (searchParams['tag_id'] != '') {
         return searchParams;
       }
-      const tagName = this.extractTagNameFromUrl(decodeURI(baseUrl));
       return this.setValue(searchParams, 'tag_id', tagName);
+    },
+
+    addUserId(searchParams, userId, pseudId) {
+      if (searchParams['user_id'] != '') {
+        return searchParams;
+      }
+      let temp = this.setValue(searchParams, 'user_id', userId);
+      return this.setValue(temp, 'pseud_id', pseudId);
+    },
+
+    addMissingId(searchParams, baseUrl) {
+      try {       
+        const urlObj = new URL(decodeURI(baseUrl));
+        const parts = urlObj.pathname.split('/');
+        if (parts.includes("tags")) {
+          const tagIndex = parts.findIndex(part => part === 'tags') + 1;
+          return this.addTagId(searchParams, parts[tagIndex]);
+        } else if (parts.includes("users")) {
+          const userIndex = parts.findIndex(part => part === 'users') + 1;
+          const pseudId = parts.includes("pseuds") ? parts.findIndex(part => part === 'pseuds') + 1 : userIndex;
+          return this.addUserId(searchParams, parts[userIndex], parts[pseudId]);
+        }
+        return searchParams;
+      } catch (e) {
+        console.error("Error parsing URL:", e);
+        return null;
+      } 
+    },
+
+    getWorkUrl(url) {
+      const match = url.match(/\/works\/(\d+)/);
+      if (match) {
+        const workId = match[1]; 
+        return `https://archiveofourown.org/works/${workId}`        
+      } else {
+        return '';
+      }
     }
+  };
+
+  window.AO3Popup = window.AO3Popup || {
+    createNotifPopup(msg) {
+      const popupId = 'ao3-notif-popup';
+      const tempPopup = document.getElementById(popupId);
+      if (tempPopup) tempPopup.remove();
+
+      const popup = document.createElement('div');
+      popup.id = popupId;
+      popup.textContent = msg;
+
+      popup.style.cssText = `
+        position: fixed;
+        background: #1e1e2f;
+        color: #eee;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 0.5em 1em;
+        max-width: 280px;
+        font-family: sans-serif;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        z-index: 9999;
+        cursor: default;
+        user-select: text;
+        white-space: pre-wrap;
+        word-break: break-word;
+      `;
+
+      document.body.appendChild(popup);
+      const popupRect = popup.getBoundingClientRect();
+
+      const maxLeft = window.innerWidth - popupRect.width - 20;
+      const maxTop = window.innerHeight - popupRect.height - 20;
+      const randomLeft = Math.floor(Math.random() * maxLeft) + 10;
+      const randomTop = Math.floor(Math.random() * maxTop) + 10;
+
+      popup.style.left = `${randomLeft}px`;
+      popup.style.top = `${randomTop}px`;
+      popup.style.position = 'fixed';
+      popup.style.paddingRight = '2em';
+      setTimeout(() => popup.remove(), 3000)
+      document.body.addEventListener('click', (e) => {
+        popup.remove();
+      })       
+    }
+      
   }
+
 })();

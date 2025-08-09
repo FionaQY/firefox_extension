@@ -10,8 +10,8 @@
       label: '⇅ Sort By',
       type: 'select',
       options: {
-        created_at: 'Date Updated',
-        revised_at: 'Date Published', 
+        revised_at: 'Date Updated',
+        created_at: 'Date Published', 
         word_count: 'Word Count', 
         hits: 'Hits', 
         kudos_count: 'Kudos', 

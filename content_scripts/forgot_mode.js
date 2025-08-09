@@ -2,22 +2,15 @@
   console.log('AO3 Forgot Script injected successfully!');
 
   const currentUrl = window.location.href;
-  if (!currentUrl.includes('archiveofourown.org/works/')) {
-    console.warn('Current page is not an AO3 work page');
+  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
+  if (workUrl == '') {
+    window.AO3Popup.createNotifPopup('Cannot get work ID');
     return;
   }
   const popupId = 'ao3-summary-popup';
   const tempPopup = document.getElementById(popupId);
   if (tempPopup) {
     tempPopup.remove();
-  }
-
-  function parseUrl(url) {
-    if (url.includes('/chapters/')) {
-      return url.split('/chapters/', 2)[0];
-    } else {
-      return url;
-    }
   }
 
   async function getSummaryFromWork(url) {
@@ -49,13 +42,12 @@
     });
   }
 
-
   async function getSummary() {
-    const workUrl = parseUrl(window.location.href);
-    console.log(`Getting summary from ${workUrl}`);
+    window.AO3Popup.createNotifPopup(`Getting summary from ${workUrl}...`);
     const { heading, summary, tags } = await getSummaryFromWork(workUrl);
 
     if (!summary) {
+      window.AO3Popup.createNotifPopup('No summary found.');
       console.warn('No summary found in other work.');
       return;
     }
@@ -80,6 +72,7 @@
       scrollbar-color: #555 #2e2e3e;
     `;
     popup.id = popupId;
+    const isMobile = window.innerWidth <= 768;
 
     const buttonClose = document.createElement('button');
     buttonClose.textContent = '×';

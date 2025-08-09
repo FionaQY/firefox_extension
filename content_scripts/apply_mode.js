@@ -1,6 +1,5 @@
 (() => {
-  console.log('AO3 Apply Script injected successfully!');
-  const AO3Parser = window.AO3Parser;
+  const AO3UrlParser = window.AO3UrlParser;
 
   const languageCodeMap = {'english': 'en','español': 'es', 'spanish': 'es','français': 'fr','french': 'fr','deutsch': 'de','german': 'de',
     'italiano': 'it','italian': 'it','português': 'pt','portuguese': 'pt','中文': 'zh','chinese': 'zh','日本語': 'ja','japanese': 'ja',
@@ -167,7 +166,6 @@
       queries = replaceQueryWithPref(expChapPref, queries, expectedChapters);
     }
 
-    console.log('Final query string:', queries.join(' '));
     return queries.join(' ');
   }
 
@@ -175,34 +173,34 @@
     const justSet = ['sort_column', 'crossover', 'complete', 'date_from', 'date_to', 'words_from', 'words_to'];
     for (const opt of justSet) {
       const value = await getStorageValue(opt);
-      searchParams = AO3Parser.setValue(searchParams, `work_search[${opt}]`, value);
+      searchParams = AO3UrlParser.setValue(searchParams, `work_search[${opt}]`, value);
     }
     return searchParams;
   }
 
   async function formParams() {
     const baseUrl = window.location.href;
-    let searchParams = AO3Parser.getParams(new URL(baseUrl));
+    let searchParams = AO3UrlParser.getParams(new URL(baseUrl));
     searchParams = await justSetVals(searchParams);
 
     // append tags
     const excluTagName = 'excluded_tag_names';
     const excludedTags = await getStorageList(excluTagName);
     for (const tag of excludedTags) {
-      searchParams = AO3Parser.addValue(searchParams, `work_search[${excluTagName}]`, tag);
+      searchParams = AO3UrlParser.addValue(searchParams, `work_search[${excluTagName}]`, tag);
     }
 
     const incluTagName = 'other_tag_names';
     const includedTags = await getStorageList(incluTagName);
     for (const tag of includedTags) {
-      searchParams = AO3Parser.addValue(searchParams, `work_search[${incluTagName}]`, tag);
+      searchParams = AO3UrlParser.addValue(searchParams, `work_search[${incluTagName}]`, tag);
     }
     
     // set tag id
-    searchParams = AO3Parser.addTagId(searchParams, baseUrl);
+    searchParams = AO3UrlParser.addMissingId(searchParams, baseUrl);
     
-    const initialQuery = AO3Parser.getValue(searchParams, 'work_search[query]');
-    searchParams = AO3Parser.setValue(
+    const initialQuery = AO3UrlParser.getValue(searchParams, 'work_search[query]');
+    searchParams = AO3UrlParser.setValue(
       searchParams,
       'work_search[query]' , 
       await getQueryString(initialQuery));
@@ -210,9 +208,9 @@
   }
 
   async function applyFilters() {
+    window.AO3Popup.createNotifPopup("Applying filters now...");
     const params = await formParams();
-    const newUrl = `https://archiveofourown.org/works?${AO3Parser.buildQuery(params)}`
-    console.log(`Going to url: ${newUrl}`);
+    const newUrl = `https://archiveofourown.org/works?${AO3UrlParser.buildQuery(params)}`
     window.location.href = newUrl;
     return;
   }

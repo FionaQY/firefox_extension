@@ -4,22 +4,23 @@
     return;
   }
 
-  console.log('AO3 Blocker: Script injected successfully!');
   const WAITTIME = 4000;
   const AO3Extractor = window.AO3Extractor;
-  const AO3Parser = window.AO3Parser;
+  const AO3UrlParser = window.AO3UrlParser;
 
   let clickedOnce = false;
 
   function getBlockedUrl(e) {
     const baseUrl = e.target.baseURI;
 
-    let searchParams = AO3Parser.getParams(new URL(baseUrl));
-    searchParams = AO3Parser.addValue(searchParams, 'work_search[excluded_tag_names]', e.target.innerText);
-    searchParams = AO3Parser.addTagId(searchParams, baseUrl);
+    let searchParams = AO3UrlParser.getParams(new URL(baseUrl));
+    const blockedTag = e.target.innerText;
+    window.AO3Popup.createNotifPopup(`Blocking tag ${blockedTag}...`);
+    searchParams = AO3UrlParser.addValue(searchParams, 'work_search[excluded_tag_names]', blockedTag);
+    searchParams = AO3UrlParser.addMissingId(searchParams, baseUrl);
     
     return {
-      url: `https://archiveofourown.org/works?${AO3Parser.buildQuery(searchParams)}`,
+      url: `https://archiveofourown.org/works?${AO3UrlParser.buildQuery(searchParams)}`,
       page: searchParams['page'],
       filterType: searchParams['work_search[sort_column]']
     };
@@ -29,13 +30,12 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async function binarySearchWorks(tagUrl, relevantData, filterType, maxPages = 100) {
-    let low = 1, high = maxPages;
+  async function binarySearchWorks(tagUrl, relevantData, filterType, minPages, maxPages = 100) {
+    let low = minPages, high = maxPages;
     let result = 1;
 
     while (low <= high) {
       const mid = low + Math.floor((high - low) / 2);
-      console.log(`Checking page ${mid}`);
       await sleep(WAITTIME);
       const isValidPage = await checkPageForWork(tagUrl, mid, relevantData, filterType);
 
@@ -51,7 +51,6 @@
   }
 
   async function checkPageForWork(url, page, relevantData, filterType) {
-    console.log(`Checking page ${page}`);
     const currUrl = `${url}&page=${page}`;
     return new Promise((resolve) => {
       const iframe = document.createElement('iframe');
@@ -59,6 +58,7 @@
       iframe.src = currUrl;
       iframe.onload = async () => {
         try {
+          window.AO3Popup.createNotifPopup(`Checking page ${page}..`);
           const works = iframe.contentDocument.querySelectorAll('.work');
           for (let i = 1; i < works.length; i++) {
             const work = works[i];
@@ -97,7 +97,6 @@
     clickedOnce = true;
 
     if (filterType == 'created_at') {
-      console.log("Going to new link: ", url);
       window.location.href = `${url}&page=1`;
       return;
     }
@@ -106,9 +105,14 @@
     try {
       let correctPage = page
       if (page != 1) {
-        const isValidPage = await checkPageForWork(url, correctPage, relevantData, filterType);
+        let isValidPage = await checkPageForWork(url, correctPage, relevantData, filterType);
         if (!isValidPage) {
-          correctPage = await binarySearchWorks(url, relevantData, filterType, page-1);
+          correctPage = correctPage - 1;
+          isValidPage = await checkPageForWork(url, correctPage, relevantData, filterType);
+        }
+
+        if (!isValidPage) {
+          correctPage = await binarySearchWorks(url, relevantData, filterType, 2, page-2);
         }
       }
       const target = `${url}&page=${correctPage}`;
