@@ -12,13 +12,13 @@
     }
   };
 
-  async function saveFilterValue(filters, key, value) {
-    filters[key] = value;
-    await browser.storage.local.set({ filters });
+  async function saveFilterValue(settings, key, value) {
+    settings[key] = value;
+    await browser.storage.local.set({ settings });
   }
 
   async function openSettingsPopup() {
-    const { filters = {} } = await browser.storage.local.get('settings');
+    const { settings = {} } = await browser.storage.local.get('settings');
 
     const popup = document.createElement('div');
     popup.id = popupId;
@@ -26,13 +26,13 @@
     popup.style.cssText = `
       position: fixed;
       ${isMobile ? 
-        'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; border-radius: 0; padding: 1em 1em 0; padding-top: 3em;' : 
+        'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 70%; border-radius: 0; padding: 1em 1em 0; margin: 0 auto;' : 
         'top: 20px; right: 20px; width: 380px; border-radius: 8px;' 
       }
       background: #1e1e2f;
       color: #eee;
       border: 1px solid #444;
-      max-height: ${isMobile ? '100vh' : '80vh'};
+      max-height: ${isMobile ? '100vh' : '50vh'};
       overflow: ${isMobile ? 'hidden' : 'auto'};
       z-index: 9999;
       box-shadow: 0 4px 20px rgba(0,0,0,0.4);
@@ -108,7 +108,7 @@
       label.style.cssText = `
         ${isMobile ? '' : 'min-width: 160px;'}
         color: #ccc;
-        font-size: ${isMobile ? '0.9rem' : '0.95rem'};
+        font-size: '0.9rem;
         display: block;
       `;
       
@@ -151,16 +151,17 @@
           accent-color: #ee5555;
           cursor: pointer;
           `;
+          
       if (config.type == 'checkbox') {
-        input.value = filters[key] || false;
+        input.checked = settings[key] || false;
       } else {
-        input.value = filters[key] || '';
+        input.value = settings[key] || input.value || '';
       }
-      
       
       input.addEventListener('change', () => {
           const value = (config.type == 'checkbox') ? input.checked : input.value;
-          saveFilterValue(filters, key, value);
+          saveFilterValue(settings, key, value);
+          console.log("new val,", value);
         });
 
       container.appendChild(label);
@@ -174,14 +175,13 @@
       justify-content: space-between;
       gap: 1em;
       padding: 1em;
-      ${isMobile ? 'flex-direction: column;' : ''}
     `;
     
     const buttonReset = document.createElement('button');
-    buttonReset.textContent = 'Reset All Filters';
+    buttonReset.textContent = 'Reset All Settings';
     buttonReset.style.cssText = `
       flex: 1;
-      padding: ${isMobile ? '16px 12px' : '8px 12px'};
+      padding: '8px 12px';
       background: #ee5555;
       color: white;
       border: none;

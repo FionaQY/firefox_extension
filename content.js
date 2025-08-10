@@ -13,31 +13,50 @@
 
   const modeTextMap = {
     '': '',
-    'block': 'Block a tag',
-    'forgot': 'I forgor',
-    'apply': 'Apply default filters',
-    'save': 'Set default filters',
-    'settings': 'Settings'
-    };
+    'block': '🚫 Block a tag',
+    'forgot': '🤔 I forgor',
+    'apply': '✅ Apply default filters',
+    'save': '💾 Set default filters',
+    'settings': '⚙️ Settings'
+  };
+
   
   function showPopup() {
     const popup = document.createElement('div');
     popup.id = popupId;
     const isMobile = window.innerWidth <= 768;
     popup.style.cssText = `
-        position: fixed;
-        ${isMobile
-        ? 'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; border-radius: 0; padding: 1em 1em 0; padding-top: 3em;'
-        : 'top: 20px; right: 20px; width: 300px; border-radius: 8px;'
-        }
-        background: #1e1e2f;
-        color: #eee;
-        border: 1px solid #444;
-        z-index: 9999;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        font-family: sans-serif;
-        box-sizing: border-box;
-        ${isMobile ? 'display: flex; flex-direction: column;' : ''}
+      position: fixed;
+      ${isMobile
+        ? `
+          top: 0; 
+          left: 0; 
+          right: 0; 
+          bottom: 0; 
+          width: 100%; 
+          max-height: 20vh;   /* max height: 80% viewport height */
+          border-radius: 0; 
+          padding: 1em 1em 0; 
+          display: flex; 
+          flex-direction: column;
+          overflow-y: auto;
+        `
+        : `
+          top: 20px; 
+          right: 20px; 
+          width: 300px; 
+          max-height: 70vh;
+          border-radius: 8px;
+          overflow-y: auto;
+        `
+      }
+      background: #1e1e2f;
+      color: #eee;
+      border: 1px solid #444;
+      z-index: 9999;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      font-family: sans-serif;
+      box-sizing: border-box;
     `;
 
     const buttonClose = document.createElement('button');
@@ -108,17 +127,15 @@
         browser.runtime.sendMessage({
             action: 'executeMode',
             mode: input.value,
+        }).then(() => {
+            popup.remove();
+          });
         });
-    });
 
     content.appendChild(input);
 
     popup.appendChild(content);
-    document.body.addEventListener('click', (e) => {
-        popup.remove();
-    })
     document.body.appendChild(popup);
   }
-
 
 })();

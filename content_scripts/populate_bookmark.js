@@ -1,10 +1,15 @@
 (() => {
+  if (typeof window.AO3BookmarkHandler === 'function') {
+    return;
+  }
+
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
   if (workUrl == '') {
     console.warn('Current page is not an AO3 work page. Unable to obtain workUrl');
     return;
   }
+
 
   function cleanTagList(tags) {
     const cleanedTags = [];
@@ -14,6 +19,8 @@
       for (const x of newTags) {
         if (cleanedTags.length < 5) {
           cleanedTags.push(x.innerText)
+        } else {
+          break;
         }
       }
     });
@@ -39,8 +46,8 @@
 
                 const tempTitle = doc.querySelector('h2.title.heading')?.innerHTML.trim() || '';
                 const title = `<a href="${url}">${tempTitle}</a>`
-                const authorHref = doc.querySelector('h3.byline.heading')?.href.trim() || '';
-                const authorRegex = /^\/author\/([^\/]+)/;
+                const authorHref = Array.from(doc.querySelectorAll('h3.byline.heading a')).map(x => x.href.trim() || '').join(', ') || '';
+                const authorRegex = /^\/users\/([^\/]+)/;
                 const match = authorHref.match(authorRegex);
                 const authorName = match ? ` by ${match[1]}` : '';
                 const heading = `${title}${authorName}`
@@ -101,18 +108,21 @@
   function isVisible() {
     const bookmarkForm = document.getElementById("bookmark_form_placement");
     if (!bookmarkForm || bookmarkForm.style.display == 'none') {
-      console.log("Bookmark field not yet visible.");
       return false;
     }
     return true;
   }
 
   async function populateBookmark() {
-    window.AO3Popup.createNotifPopup("Getting bookmark info...");
+    const { settings = {} } = await browser.storage.local.get('settings');
+    if (!settings['populateBookmark']) {
+      return;
+    }
+
     const bookmarkTextBox = document.getElementById("bookmark_notes");
     if (bookmarkTextBox.value.trim().length === 0) {
-      newNotes = await getBookmarkHtml();
-      bookmarkTextBox.value = newNotes;
+      window.AO3Popup.createNotifPopup("Getting bookmark info...");
+      bookmarkTextBox.value = await getBookmarkHtml();
       window.AO3Popup.createNotifPopup("Bookmark textbox populated.");
     } else {
       window.AO3Popup.createNotifPopup("No population as textbox is already populated");
@@ -120,22 +130,16 @@
   }
   
   async function handleBookmarkClick() {
-    const bookmarkButtons = document.querySelectorAll('a.bookmark_form_placement_open');
-    if (bookmarkButtons) {
-        Array.from(bookmarkButtons).forEach(butt => butt.addEventListener('click', e => isVisible() ? populateBookmark() : null));
-    } else {
-        console.warn("Bookmark buttons not found.");
-    }
+    if (handleBookmarkClick.listenerAdded) return;
+    
+    document.addEventListener('click', e => {
+      if (e.target.matches('a.bookmark_form_placement_open') && isVisible()) {
+        populateBookmark();
+      }
+    });
+    handleBookmarkClick.listenerAdded = true;
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', handleBookmarkClick, { capture: true });
-  } else {
-    if (isVisible()) {
-      populateBookmark();
-    } else {
-      handleBookmarkClick();
-    }
-  }
-
+  window.AO3BookmarkHandler = handleBookmarkClick;
+  handleBookmarkClick();
 })();

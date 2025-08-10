@@ -102,13 +102,13 @@
     popup.style.cssText = `
       position: fixed;
       ${isMobile ? 
-        'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; border-radius: 0; padding: 1em 1em 0; padding-top: 3em;' : 
+        'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 70%; border-radius: 0; padding: 1em 1em 0; margin: 0 auto;' : 
         'top: 20px; right: 20px; width: 380px; border-radius: 8px;' 
       }
       background: #1e1e2f;
       color: #eee;
       border: 1px solid #444;
-      max-height: ${isMobile ? '100vh' : '80vh'};
+      max-height: ${isMobile ? '100vh' : '50vh'};
       overflow: ${isMobile ? 'hidden' : 'auto'};
       z-index: 9999;
       box-shadow: 0 4px 20px rgba(0,0,0,0.4);
@@ -184,7 +184,7 @@
       label.style.cssText = `
         ${isMobile ? '' : 'min-width: 160px;'}
         color: #ccc;
-        font-size: ${isMobile ? '0.9rem' : '0.95rem'};
+        font-size: '0.9rem;
         display: block;
       `;
       
@@ -222,7 +222,7 @@
           box-sizing: border-box;
           `;
 
-      input.value = filters[key] || '';
+      input.value = filters[key] || input.value || '';
       
       input.addEventListener('change', () => {
         saveFilterValue(filters, key, input.value);
@@ -239,14 +239,13 @@
       justify-content: space-between;
       gap: 1em;
       padding: 1em;
-      ${isMobile ? 'flex-direction: column;' : ''}
     `;
 
     const buttonApply = document.createElement('button');
     buttonApply.textContent = 'Apply Filters Now';
     buttonApply.style.cssText = `
       flex: 1;
-      padding: ${isMobile ? '16px 12px' : '8px 12px'};
+      padding: '8px 12px';
       background: #4a90e2;
       color: white;
       border: none;
@@ -270,7 +269,7 @@
     buttonReset.textContent = 'Reset All Filters';
     buttonReset.style.cssText = `
       flex: 1;
-      padding: ${isMobile ? '16px 12px' : '8px 12px'};
+      padding: '8px 12px';
       background: #ee5555;
       color: white;
       border: none;

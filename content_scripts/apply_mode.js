@@ -214,7 +214,6 @@
     window.AO3Popup.createNotifPopup("Applying filters now...");
     const params = await formParams();
     const newUrl = `https://archiveofourown.org/works?${AO3UrlParser.buildQuery(params)}`
-    window.AO3Popup.createNotifPopup("Applying filters now...");
     window.location.href = newUrl;
     return;
   }
