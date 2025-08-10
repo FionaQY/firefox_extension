@@ -1,7 +1,7 @@
 let pendingInjection = null;
 
-browser.browserAction.onClicked.addListener(() => {
-    console.log("Extension button clicked!");
+browser.browserAction.onClicked.addListener((tab) => {
+    browser.tabs.sendMessage(tab.id, {action: 'showPopup'})
 });
 
 function injectScript(tabId, scriptName) {

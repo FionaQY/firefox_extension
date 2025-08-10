@@ -39,8 +39,13 @@
 
                 const tempTitle = doc.querySelector('h2.title.heading')?.innerHTML.trim() || '';
                 const title = `<a href="${url}">${tempTitle}</a>`
+                const authorHref = doc.querySelector('h3.byline.heading')?.href.trim() || '';
+                const authorRegex = /^\/author\/([^\/]+)/;
+                const match = authorHref.match(authorRegex);
+                const authorName = match ? ` by ${match[1]}` : '';
+                const heading = `${title}${authorName}`
 
-                resolve({ title, summary, fandomTags, characterTags, freeformTags});
+                resolve({ heading, summary, fandomTags, characterTags, freeformTags});
             } catch (err) {
                 console.error('Error parsing work in iframe:', err);
                 resolve(null);
@@ -56,13 +61,13 @@
     const data = await getSummaryFromWork(workUrl);
     if (!data) return '';
 
-    const { title, summary, fandomTags, characterTags, freeformTags } = data;
+    const { heading, summary, fandomTags, characterTags, freeformTags } = data;
     return `
     <div class="bookmark-popup" style="font-family: sans-serif;">      
       ${summary.length > 0 ? `
         <details>
           <summary style="cursor: pointer; font-weight: bold;"><strong>Summary</strong></summary>
-          <div style="white-space: pre-wrap; margin-top: 0.5em;">${title}</div>
+          <div style="white-space: pre-wrap; margin-top: 0.5em;">${heading}</div>
           <div style="white-space: pre-wrap; margin-top: 0.5em;">${summary}</div>
         </details>
           ` : ''

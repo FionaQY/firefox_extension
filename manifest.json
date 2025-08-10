@@ -7,7 +7,7 @@
     }
   },
   "name": "AO3 QOF",
-  "version": "1.5",
+  "version": "1.6",
 
   "description": "Adds features to better my ao3 experience",
 
@@ -26,7 +26,8 @@
   "content_scripts": [
     {
       "matches":[ "https://archiveofourown.org/*"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "js": ["content.js"]
     }
   ],
 
@@ -40,7 +41,6 @@
   
   "browser_action": {
     "default_icon": "icons/border-32.png",
-    "default_title": "AO3 QOF",
-    "default_popup": "popup/popup.html"
+    "default_title": "AO3 QOF"
   }
 }

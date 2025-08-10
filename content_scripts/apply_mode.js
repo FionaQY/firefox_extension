@@ -18,13 +18,12 @@
     'اردو': 'ur','urdu': 'ur','cymraeg': 'cy','welsh': 'cy','gaelic': 'gd','scottish gaelic': 'gd','yiddish': 'yi',
   };
   
-  async function getStorageValue(key) {
-    const res = await browser.storage.local.get(key);
-    return res[key] ? res[key].trim() : '';
+  function getStorageValue(filters, key) {
+    return filters[key] || '';
   }
 
-  async function getStorageList(key) {
-    const obtainedList = await getStorageValue(key);
+  function getStorageList(filters, key) {
+    const obtainedList = getStorageValue(filters, key);
     if (obtainedList.length == 0) {
       return [];
     }
@@ -91,7 +90,7 @@
     return tokens;
   }
 
-  function replaceQueryWithPref(pref, queries, val, append=false) {
+  function replaceQueryWithPref(pref, queries, val, append) {
     if (!val || !val.trim()) {
       return queries;
     }
@@ -109,21 +108,20 @@
     return queries;
   }
 
-  async function getQueryString(initialQuery) {
+  function getQueryString(filters, initialQuery) {
     let queries = parseQuery(initialQuery);
     const [langPref, exLangPref, exCreatorPref, chapPref, expChapPref] = [
       'language_id', '-language_id', '-creators', 'major_version', 'expected_number_of_chapters'
     ];
 
-    const [queryStr, languagesRaw, excluLanguagesRaw, excludedCreatorsRaw, chapterNumRaw, expectedChaptersRaw] = 
-      await Promise.all([
-        getStorageValue('query'),
-        getStorageList(langPref),
-        getStorageList(exLangPref),
-        getStorageList(exCreatorPref),
-        getStorageValue(chapPref),
-        getStorageValue(expChapPref),
-      ]);
+    const [queryStr, languagesRaw, excluLanguagesRaw, excludedCreatorsRaw, chapterNumRaw, expectedChaptersRaw] = [
+      getStorageValue(filters, 'query'),
+      getStorageList(filters, langPref),
+      getStorageList(filters, exLangPref),
+      getStorageList(filters, exCreatorPref),
+      getStorageValue(filters, chapPref),
+      getStorageValue(filters, expChapPref),
+    ];
 
     // process queryStr
     const tokens = parseQuery(queryStr);
@@ -135,15 +133,19 @@
 
     // languagesList
     const languagesList = languagesRaw
-      .map(x => `${langPref}:${getLangAbb(x)}`)
-      .filter(x => x !== '' && !queries.includes(x));
+      .map(x => getLangAbb(x))
+      .filter(code => code.trim().length != 0)
+      .map(code => `${langPref}:${code}`)
+      .filter(entry => !queries.includes(entry))
     const languages = languagesList.join(' OR ');
-    queries = replaceQueryWithPref(langPref, queries, languages, append=true);
+    queries = replaceQueryWithPref(langPref, queries, languages, true);
 
     // excluLanguagesList
     const excluLanguagesList = excluLanguagesRaw
-      .map(x => `${exLangPref}:${getLangAbb(x)}`)
-      .filter(x => x !== '' && !queries.includes(x));
+      .map(x => getLangAbb(x))
+      .filter(code => code.trim().length != 0)
+      .map(x => `${exLangPref}:${x}`)
+      .filter(x => !queries.includes(x));
     const excluLanguages = excluLanguagesList.join(' ');
     if (excluLanguages) queries.push(excluLanguages);
 
@@ -157,41 +159,42 @@
     // current number of chapters
     if (chapterNumRaw) {
       const chapterNums = `${chapPref}:${chapterNumRaw}`;
-      queries = replaceQueryWithPref(chapPref, queries, chapterNums);
+      queries = replaceQueryWithPref(chapPref, queries, chapterNums, false);
     }
     
     // total number of chapters
     if (expectedChaptersRaw) {
       const expectedChapters = `${expChapPref}:${expectedChaptersRaw}`;
-      queries = replaceQueryWithPref(expChapPref, queries, expectedChapters);
+      queries = replaceQueryWithPref(expChapPref, queries, expectedChapters, false);
     }
 
     return queries.join(' ');
   }
 
-  async function justSetVals(searchParams) {
+  function justSearchParams(filters, searchParams) {
     const justSet = ['sort_column', 'crossover', 'complete', 'date_from', 'date_to', 'words_from', 'words_to'];
     for (const opt of justSet) {
-      const value = await getStorageValue(opt);
+      const value = getStorageValue(filters, opt);
       searchParams = AO3UrlParser.setValue(searchParams, `work_search[${opt}]`, value);
     }
     return searchParams;
   }
 
   async function formParams() {
+    const { filters = {} } = await browser.storage.local.get('filters');
     const baseUrl = window.location.href;
     let searchParams = AO3UrlParser.getParams(new URL(baseUrl));
-    searchParams = await justSetVals(searchParams);
+    searchParams = justSearchParams(filters, searchParams);
 
     // append tags
     const excluTagName = 'excluded_tag_names';
-    const excludedTags = await getStorageList(excluTagName);
+    const excludedTags = getStorageList(filters, excluTagName);
     for (const tag of excludedTags) {
       searchParams = AO3UrlParser.addValue(searchParams, `work_search[${excluTagName}]`, tag);
     }
 
     const incluTagName = 'other_tag_names';
-    const includedTags = await getStorageList(incluTagName);
+    const includedTags = getStorageList(filters, incluTagName);
     for (const tag of includedTags) {
       searchParams = AO3UrlParser.addValue(searchParams, `work_search[${incluTagName}]`, tag);
     }
@@ -203,7 +206,7 @@
     searchParams = AO3UrlParser.setValue(
       searchParams,
       'work_search[query]' , 
-      await getQueryString(initialQuery));
+      getQueryString(filters, initialQuery));
     return searchParams;
   }
 
@@ -211,6 +214,7 @@
     window.AO3Popup.createNotifPopup("Applying filters now...");
     const params = await formParams();
     const newUrl = `https://archiveofourown.org/works?${AO3UrlParser.buildQuery(params)}`
+    window.AO3Popup.createNotifPopup("Applying filters now...");
     window.location.href = newUrl;
     return;
   }

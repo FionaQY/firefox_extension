@@ -1,100 +1,24 @@
 (() => {
-  const fields = {
-    query: {
-      label: '🔍 Plain Search',
-      type: 'text',
-    },
-    sort_column: {
-      label: '⇅ Sort By',
-      type: 'select',
-      options: {
-        revised_at: 'Date Updated',
-        created_at: 'Date Published', 
-        word_count: 'Word Count', 
-        hits: 'Hits', 
-        kudos_count: 'Kudos', 
-        comments_count: 'Comments',
-        bookmarks_count: 'Bookmarks',
-        authors_to_sort_on: 'Author',
-        title_to_sort_on: 'Title'
-      },
-    },
-    other_tag_names: {
-      label: '🏷️ Included Tags',
-      type: 'text',
-    },
-    excluded_tag_names: {
-      label: '🚫 Excluded Tags',
-      type: 'text',
-    },
-    crossover: {
-      label: '🔗 Crossovers',
-      type: 'select',
-      options: {
-        '': 'All', 
-        F: 'Exclude Crossovers', 
-        T: 'Show only Crossovers',
-      },
-    },
-    complete: {
-      label: '🏁/⏳ Completed',
-      type: 'select',
-      options: {
-        '': 'All', 
-        T: '🏁 Completed only',
-        F: '⏳ In-Progress only', 
-      },
-    },
-    language_id: {
-      label: '🈹 Included Language',
-      type: 'text',
-    },
-    "-language_id": {
-      label: '🤫 Excluded Language',
-      type: 'text',
-    },
-    major_version: {
-      label: '📖 Current Chapter Count*',
-      type: 'numberSpecial',
-    },
-    expected_number_of_chapters: {
-      label: '📕 Total Number of Chapters',
-      type: 'numberSpecial',
-    },
-    words_from: {
-      label: '📏 Word Count From',
-      type: 'number',
-    },
-    words_to: {
-      label: '📏 Word Count To',
-      type: 'number',
-    },
-    date_from: {
-      label: '📅 Date Updated From',
-      type: 'date',
-    },
-    date_to: {
-      label: '📅 Date Updated To',
-      type: 'date',
-    },
-    "-creators": {
-      label: '	🚫👤 Excluded Creators',
-      type: 'text',
-    },
-  };
-  const popupId = 'ao3-filter-popup';
+  const popupId = 'ao3-settings-popup';
   const tempPopup = document.getElementById(popupId);
   if (tempPopup) {
     tempPopup.remove();
   }
-  
+
+  const fields = {
+    populateBookmark: {
+      label: 'Automatically Populate Bookmark',
+      type: 'checkbox',
+    }
+  };
+
   async function saveFilterValue(filters, key, value) {
     filters[key] = value;
     await browser.storage.local.set({ filters });
   }
 
-  async function openFilterPopup() {
-    const { filters = {} } = await browser.storage.local.get('filters');
+  async function openSettingsPopup() {
+    const { filters = {} } = await browser.storage.local.get('settings');
 
     const popup = document.createElement('div');
     popup.id = popupId;
@@ -211,7 +135,8 @@
           input.type = config.type;
       }
 
-      input.style.cssText = `
+      input.style.cssText = config.type !== 'checkbox' 
+          ? `
           width: 100%;
           padding: 8px;
           font-size: ${isMobile ? '16px' : '0.95rem'};
@@ -220,13 +145,23 @@
           background-color: #2a2a3d;
           color: white;
           box-sizing: border-box;
+          ` : `
+          width: 18px;
+          height: 18px;
+          accent-color: #ee5555;
+          cursor: pointer;
           `;
-
-      input.value = filters[key] || '';
+      if (config.type == 'checkbox') {
+        input.value = filters[key] || false;
+      } else {
+        input.value = filters[key] || '';
+      }
+      
       
       input.addEventListener('change', () => {
-        saveFilterValue(filters, key, input.value);
-      });
+          const value = (config.type == 'checkbox') ? input.checked : input.value;
+          saveFilterValue(filters, key, value);
+        });
 
       container.appendChild(label);
       container.appendChild(input);
@@ -241,31 +176,7 @@
       padding: 1em;
       ${isMobile ? 'flex-direction: column;' : ''}
     `;
-
-    const buttonApply = document.createElement('button');
-    buttonApply.textContent = 'Apply Filters Now';
-    buttonApply.style.cssText = `
-      flex: 1;
-      padding: ${isMobile ? '16px 12px' : '8px 12px'};
-      background: #4a90e2;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: ${isMobile ? '16px' : '0.95rem'};
-      cursor: pointer;
-      touch-action: manipulation;
-    `;
-    buttonApply.addEventListener('mouseenter', () => {
-      buttonApply.style.background = '#357abd';
-    });
-    buttonApply.addEventListener('mouseleave', () => {
-      buttonApply.style.background = '#4a90e2';
-    });
-    buttonApply.onclick = () => {
-      browser.runtime.sendMessage({
-        action: 'applyFilters',
-      });
-    };
+    
     const buttonReset = document.createElement('button');
     buttonReset.textContent = 'Reset All Filters';
     buttonReset.style.cssText = `
@@ -279,16 +190,15 @@
       cursor: pointer;
     `;
     buttonReset.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to clear all saved filter values?')) {
-        await browser.storage.local.remove('filters');
+      if (confirm('Are you sure you want to reset settings?')) {
+        await browser.storage.local.remove('settings');
         const inputs = contentContainer.querySelectorAll('input');
-        Array.from(inputs).forEach(x => x.value = '');
+        Array.from(inputs).forEach(x => x.type === 'checkbox' ? x.checked = false : x.value = '');
         const selects = contentContainer.querySelectorAll('select');
         Array.from(selects).forEach(x => x.selectedIndex = 0);
       }
     });
 
-    buttonContainer.appendChild(buttonApply);
     buttonContainer.appendChild(buttonReset);
     popup.appendChild(contentContainer);
     popup.appendChild(buttonContainer);
@@ -296,5 +206,5 @@
     document.body.appendChild(popup);
   }
 
-  openFilterPopup();
+  openSettingsPopup();
 })();
