@@ -1,6 +1,4 @@
 (() => {
-  console.log('AO3 Forgot Script injected successfully!');
-
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
   if (workUrl == '') {
@@ -48,7 +46,6 @@
 
     if (!summary) {
       window.AO3Popup.createNotifPopup('No summary found.');
-      console.warn('No summary found in other work.');
       return;
     }
 

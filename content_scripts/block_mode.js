@@ -1,6 +1,5 @@
 (() => {
   if (typeof window.AO3BlockerHandler === 'function') {
-    console.log('Block Script already ran, exiting');
     return;
   }
 
@@ -26,17 +25,17 @@
     };
   }
 
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  function sleep() {
+    return new Promise(resolve => setTimeout(resolve, WAITTIME));
   }
 
   async function binarySearchWorks(tagUrl, relevantData, filterType, minPages, maxPages = 100) {
     let low = minPages, high = maxPages;
-    let result = 1;
+    let result = low;
 
     while (low <= high) {
       const mid = low + Math.floor((high - low) / 2);
-      await sleep(WAITTIME);
+      await sleep();
       const isValidPage = await checkPageForWork(tagUrl, mid, relevantData, filterType);
 
       if (isValidPage) {
@@ -64,7 +63,6 @@
             const work = works[i];
             const extractedData = AO3Extractor.extractRelevantData(work.textContent, filterType);
             if (AO3Extractor.isValid(relevantData, extractedData)) {
-              console.log(`Page ${page} is valid`);
               resolve(true);
               return;
             }
@@ -84,6 +82,7 @@
   async function handleTagClick(e) {
     if (!e.target.matches('a[href*="/tags/"][href*="/works"]')) {
       console.warn('Did not click a tag.');
+      window.AO3Popup.createNotifPopup(`You did not click a tag...`);
       return;
     };
     if (clickedOnce) {
@@ -117,7 +116,7 @@
       }
       const target = `${url}&page=${correctPage}`;
       
-      await sleep(WAITTIME);
+      await sleep();
       browser.runtime.sendMessage({
         action: 'scrollPage',
         targetUrl: target,

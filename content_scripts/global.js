@@ -1,9 +1,7 @@
 (() => {
   if (window.AO3Extractor && window.AO3UrlParser) {
-    console.log('Global script already loaded, skipping');
     return;
   }
-  console.log('Global script loaded');
 
   window.AO3Extractor = window.AO3Extractor || {
     extractString(workText, filterType) {

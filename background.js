@@ -1,11 +1,8 @@
-const modeToScriptMap = {
-  block: "/content_scripts/block_mode.js",
-  forgot: "/content_scripts/forgot_mode.js",
-  save: "/content_scripts/save_mode.js",
-  apply: "/content_scripts/apply_mode.js",
-};
-
 let pendingInjection = null;
+
+browser.browserAction.onClicked.addListener(() => {
+    console.log("Extension button clicked!");
+});
 
 function injectScript(tabId, scriptName) {
     try {
@@ -28,13 +25,7 @@ browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     });
 
     if (msg.action === 'executeMode') {
-        browser.tabs.executeScript(tab.id, {
-            file: "/content_scripts/global.js"
-            }, () => {
-            browser.tabs.executeScript(tab.id, {
-                file: modeToScriptMap[msg.mode]
-            });
-            });
+        injectScript(tab.id, `${msg.mode}_mode`);
     } else if (msg.action === 'scrollPage') {
         pendingInjection = {
             data: msg.data,

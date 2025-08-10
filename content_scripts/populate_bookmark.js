@@ -1,10 +1,8 @@
 (() => {
-  console.log('AO3 Bookmark Population injected successfully!');
-
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
   if (workUrl == '') {
-    console.warn('Current page is not an AO3 work page');
+    console.warn('Current page is not an AO3 work page. Unable to obtain workUrl');
     return;
   }
 
@@ -32,23 +30,17 @@
         iframe.onload = () => {
             try {
                 const doc = iframe.contentDocument;
-                if (!doc) {
-                  console.warn('iframe document not accessible or null');
-                  resolve(null);
-                  return;
-                }
-
+                
                 const summary = Array.from(doc.querySelector('div.summary.module blockquote').querySelectorAll('p')).map(x => x.innerHTML.trim()).join('\n') || '';
 
                 const fandomTags = cleanTagList(doc.querySelectorAll('dd.fandom.tags'));
                 const characterTags = cleanTagList(doc.querySelectorAll('dd.character.tags'));
                 const freeformTags = cleanTagList(doc.querySelectorAll('dd.freeform.tags'));
 
-                const title = doc.querySelector('h2.title.heading')?.innerText.trim() || '';
-                const author = doc.querySelector('h3.byline.heading')?.innerHTML.trim() || '';
-                const heading = `${title} by ${author}`;
+                const tempTitle = doc.querySelector('h2.title.heading')?.innerHTML.trim() || '';
+                const title = `<a href="${url}">${tempTitle}</a>`
 
-                resolve({ heading, summary, fandomTags, characterTags, freeformTags});
+                resolve({ title, summary, fandomTags, characterTags, freeformTags});
             } catch (err) {
                 console.error('Error parsing work in iframe:', err);
                 resolve(null);
@@ -61,16 +53,16 @@
     }
 
   async function getBookmarkHtml() {
-    console.log(`Getting info from ${workUrl}`);
     const data = await getSummaryFromWork(workUrl);
     if (!data) return '';
 
-    const { heading, summary, fandomTags, characterTags, freeformTags } = data;
+    const { title, summary, fandomTags, characterTags, freeformTags } = data;
     return `
     <div class="bookmark-popup" style="font-family: sans-serif;">      
       ${summary.length > 0 ? `
         <details>
-          <summary style="cursor: pointer; font-weight: bold;"><strong>Summary</strong> - ${heading}</summary>
+          <summary style="cursor: pointer; font-weight: bold;"><strong>Summary</strong></summary>
+          <div style="white-space: pre-wrap; margin-top: 0.5em;">${title}</div>
           <div style="white-space: pre-wrap; margin-top: 0.5em;">${summary}</div>
         </details>
           ` : ''
@@ -101,21 +93,31 @@
     `;
   }
 
-  async function populateBookmark(e) {
+  function isVisible() {
+    const bookmarkForm = document.getElementById("bookmark_form_placement");
+    if (!bookmarkForm || bookmarkForm.style.display == 'none') {
+      console.log("Bookmark field not yet visible.");
+      return false;
+    }
+    return true;
+  }
+
+  async function populateBookmark() {
     window.AO3Popup.createNotifPopup("Getting bookmark info...");
     const bookmarkTextBox = document.getElementById("bookmark_notes");
-    if (bookmarkTextBox.innerHTML == '') {
+    if (bookmarkTextBox.value.trim().length === 0) {
       newNotes = await getBookmarkHtml();
-      bookmarkTextBox.innerHTML = newNotes;
+      bookmarkTextBox.value = newNotes;
+      window.AO3Popup.createNotifPopup("Bookmark textbox populated.");
     } else {
-      console.log('Bookmark notes already populated')
+      window.AO3Popup.createNotifPopup("No population as textbox is already populated");
     }
   }
   
   async function handleBookmarkClick() {
     const bookmarkButtons = document.querySelectorAll('a.bookmark_form_placement_open');
     if (bookmarkButtons) {
-        Array.from(bookmarkButtons).forEach(butt => butt.addEventListener('click', populateBookmark));
+        Array.from(bookmarkButtons).forEach(butt => butt.addEventListener('click', e => isVisible() ? populateBookmark() : null));
     } else {
         console.warn("Bookmark buttons not found.");
     }
@@ -124,6 +126,11 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', handleBookmarkClick, { capture: true });
   } else {
-    handleBookmarkClick();
+    if (isVisible()) {
+      populateBookmark();
+    } else {
+      handleBookmarkClick();
+    }
   }
+
 })();

@@ -1,6 +1,4 @@
 (() => {
-  console.log('AO3 Save Script injected successfully!');
-
   const fields = {
     query: {
       label: '🔍 Plain Search',
