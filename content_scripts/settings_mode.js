@@ -12,9 +12,95 @@
     }
   };
 
-  async function saveFilterValue(settings, key, value) {
-    settings[key] = value;
-    await browser.storage.local.set({ settings });
+  const modeTextMap = {
+    'block': '🚫 Block tag/author',
+    'forgot': '🤔 I forgor',
+    'apply': '✅ Apply default filters',
+    'save': '💾 Set default filters',
+  };
+
+  function createColumn(title) {
+    const col = document.createElement('div');
+    col.classList.add('drop-column');
+    col.style.cssText = `
+      flex: 1;
+      background: #2a2a3d;
+      padding: 0.5em;
+      border-radius: 6px;
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4em;
+    `;
+
+    const header = document.createElement('div');
+    header.textContent = title;
+    header.style.cssText = `font-weight: bold; margin-bottom: 0.5em;`;
+
+    col.appendChild(header);
+    return col;
+  }
+
+  function createItem(text, value) {
+    const item = document.createElement('div');
+    item.textContent = text;
+    // item.id = 'item-' + Math.random().toString(36).slice(2);
+    item.id = value;
+    item.draggable = true;
+    item.style.cssText = `
+      background: #3a3a4d;
+      padding: 0.4em 0.6em;
+      border-radius: 4px;
+      cursor: grab;
+    `;
+
+    item.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/id', item.id);
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => item.style.display = 'none', 0);
+    });
+
+    item.addEventListener('dragend', () => {
+      item.style.display = '';
+    });
+
+    return item;
+  }
+
+  function makeDroppable(col) {
+    col.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      col.style.background = '#38384d';
+    });
+    
+    col.addEventListener('dragleave', () => {
+      col.style.background = '#2a2a3d';
+    });
+    
+    col.addEventListener('drop', (e) => {
+      e.preventDefault();
+      col.style.background = '#2a2a3d';
+      
+      const id = e.dataTransfer.getData('text/id');
+      const draggedItem = document.getElementById(id);
+      if (draggedItem) {
+        col.appendChild(draggedItem);
+      }
+    });
+  }
+
+  function populateCols(settings, showCol, hideCol) {
+    const popupOptions = settings["popupOptions"] || Object.keys(modeTextMap);
+    showCol.innerHTML = '';
+    hideCol.innerHTML = '';
+    
+    for (const [val, opt] of Object.entries(modeTextMap)) {
+      if (popupOptions.includes(val)) {
+        showCol.appendChild(createItem(opt, val));
+      } else {
+        hideCol.appendChild(createItem(opt, val));
+      }
+    }
   }
 
   async function openSettingsPopup() {
@@ -94,6 +180,7 @@
     headery.innerHTML = `<div style="margin-bottom: 0.5em; font-weight: bold; margin-right: 2em;">If multiple values, please put a comma after each value.</div>`;
     contentContainer.appendChild(headery);
 
+    const inputsMap = {};
     for (const [key, config] of Object.entries(fields)) {
       const container = document.createElement('div');
       container.style.cssText = `
@@ -113,6 +200,7 @@
       `;
       
       let input;
+      
 
       switch (config.type) {
         case 'select': 
@@ -157,17 +245,30 @@
       } else {
         input.value = settings[key] || input.value || '';
       }
-      
-      input.addEventListener('change', () => {
-          const value = (config.type == 'checkbox') ? input.checked : input.value;
-          saveFilterValue(settings, key, value);
-          console.log("new val,", value);
-        });
+
+      inputsMap[key] = { input, type: config.type };
 
       container.appendChild(label);
       container.appendChild(input);
       contentContainer.appendChild(container);
     }
+
+    const dragDropContainer = document.createElement('div');
+    dragDropContainer.style.cssText = `
+      display: flex;
+      gap: 1em;
+      margin-top: 1em;
+    `;
+
+    const showCol = createColumn('Show');
+    const hideCol = createColumn('Hide');
+
+    [showCol, hideCol].forEach(makeDroppable);
+    populateCols(settings, showCol, hideCol);
+
+    dragDropContainer.appendChild(showCol);
+    dragDropContainer.appendChild(hideCol);
+    contentContainer.appendChild(dragDropContainer);
     
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = `
@@ -176,6 +277,28 @@
       gap: 1em;
       padding: 1em;
     `;
+
+    const buttonSave = document.createElement('button');
+    buttonSave.textContent = 'Save Settings';
+    buttonSave.style.cssText = `
+      flex: 1;
+      padding: '8px 12px';
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: ${isMobile ? '16px' : '0.95rem'};
+      cursor: pointer;
+      touch-action: manipulation;
+    `;
+    buttonSave.addEventListener('click', async () => {
+      for (const [key, {input, type}] of Object.entries(inputsMap)) {
+        settings[key] = (type == 'checkbox') ? input.checked : input.value;
+      }
+      const popupOptions = Array.from(showCol.childNodes).filter(x => x.id.length != 0).map(x => x.id);
+      settings["popupOptions"] = popupOptions;
+      await browser.storage.local.set({ settings }).then(() => popup.remove());
+    });
     
     const buttonReset = document.createElement('button');
     buttonReset.textContent = 'Reset All Settings';
@@ -196,9 +319,11 @@
         Array.from(inputs).forEach(x => x.type === 'checkbox' ? x.checked = false : x.value = '');
         const selects = contentContainer.querySelectorAll('select');
         Array.from(selects).forEach(x => x.selectedIndex = 0);
+        populateCols({}, showCol, hideCol);
       }
     });
 
+    buttonContainer.appendChild(buttonSave);
     buttonContainer.appendChild(buttonReset);
     popup.appendChild(contentContainer);
     popup.appendChild(buttonContainer);

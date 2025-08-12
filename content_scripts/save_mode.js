@@ -8,6 +8,7 @@
       label: '⇅ Sort By',
       type: 'select',
       options: {
+        '': "Don't Apply",
         revised_at: 'Date Updated',
         created_at: 'Date Published', 
         word_count: 'Word Count', 
@@ -31,7 +32,8 @@
       label: '🔗 Crossovers',
       type: 'select',
       options: {
-        '': 'All', 
+        '': "Don't Apply",
+        all: 'All', 
         F: 'Exclude Crossovers', 
         T: 'Show only Crossovers',
       },
@@ -40,7 +42,8 @@
       label: '🏁/⏳ Completed',
       type: 'select',
       options: {
-        '': 'All', 
+        '': "Don't Apply",
+        all: 'All', 
         T: '🏁 Completed only',
         F: '⏳ In-Progress only', 
       },

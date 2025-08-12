@@ -1,7 +1,7 @@
 (() => {
   browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     if (msg.action === 'showPopup') {
-      showPopup()      
+      await showPopup()      
     }
   });
 
@@ -13,15 +13,32 @@
 
   const modeTextMap = {
     '': '',
-    'block': '🚫 Block a tag',
+    'block': '🚫 Block tag/author',
     'forgot': '🤔 I forgor',
     'apply': '✅ Apply default filters',
     'save': '💾 Set default filters',
     'settings': '⚙️ Settings'
   };
 
+  function createOption(val) {
+    const option = document.createElement('option');
+    option.value = val;
+    option.textContent = modeTextMap[val];
+    return option;
+  }
+
   
-  function showPopup() {
+  async function showPopup() {
+    const { settings = {} } = await browser.storage.local.get('settings');
+    
+    let popupOptions = settings.popupOptions || [];
+    const allModes = Object.keys(modeTextMap);
+    if (popupOptions.length === 0) {
+      popupOptions = allModes;
+    } else if (popupOptions.length !== allModes.length) {
+      popupOptions = ["", ...popupOptions, "settings"];
+    }
+
     const popup = document.createElement('div');
     popup.id = popupId;
     const isMobile = window.innerWidth <= 768;
@@ -117,12 +134,8 @@
         box-sizing: border-box;
     `;
 
-    for (const [val, opt] of Object.entries(modeTextMap)) {
-        const option = document.createElement('option');
-        option.value = val;
-        option.textContent = opt;
-        input.appendChild(option);
-    }
+    popupOptions.forEach(x => input.appendChild(createOption(x)));
+
     input.addEventListener('change', () => {
         browser.runtime.sendMessage({
             action: 'executeMode',

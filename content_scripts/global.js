@@ -74,13 +74,17 @@
         'tag_id': '',
         'page': '1',
         'pseud_id': '',
-        'user_id': ''
+        'user_id': '',
+        'exclude_work_search[fandom_ids][]': '',
+        'exclude_work_search[warning_ids][]': '',
+        'exclude_work_search[freeform_ids][]': ''
       };
       const params = baseUrl.searchParams; 
       const searchParams = {};
 
       for (const [key, defaultVal] of Object.entries(defaultValues))  {
-        searchParams[key] = params.get(key) ?? defaultVal;
+        const tempVal = params.get(key);
+        searchParams[key] = tempVal == null || tempVal.trim().length == 0 ? defaultVal : params.get(key, '');
       }
       return searchParams
     },
@@ -113,8 +117,7 @@
     buildQuery(paramsObj) {
       const isBookmarks = paramsObj.user_id != '';
       return Object.entries(paramsObj)
-        .filter(([key, _]) => key != 'page')
-        .filter(([key, val]) => !(key == 'pseud_id' && val == ''))
+        .filter(([key, val]) => key != 'page' && val.length != 0)
         .filter(([key, _]) => isBookmarks ? key != 'tag_id' : key != 'user_id')
         .map(([key, value]) => `${key}=${value == null 
           ? '' : value.includes('&') 

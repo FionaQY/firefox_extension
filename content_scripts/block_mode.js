@@ -17,6 +17,26 @@
     window.AO3Popup.createNotifPopup(`Blocking tag ${blockedTag}...`);
     searchParams = AO3UrlParser.addValue(searchParams, 'work_search[excluded_tag_names]', blockedTag);
     searchParams = AO3UrlParser.addMissingId(searchParams, baseUrl);
+    return {
+      url: `https://archiveofourown.org/works?${AO3UrlParser.buildQuery(searchParams)}`,
+      page: searchParams['page'],
+      filterType: searchParams['work_search[sort_column]']
+    };
+  }
+
+  function blockAuthorUrl(e) {
+    const baseUrl = e.target.baseURI;
+
+    let searchParams = AO3UrlParser.getParams(new URL(baseUrl));
+    const rawAuthor = e.target.innerText;
+
+    const authorName = rawAuthor.match(/\((.*?)\)/)?.[1] || rawAuthor;
+    window.AO3Popup.createNotifPopup(`Blocking author ${authorName}...`);
+    
+    let currentQuery = AO3UrlParser.getValue(searchParams, 'work_search[query]');
+    currentQuery = `${currentQuery.trim()} -creators:${authorName}`;
+    searchParams = AO3UrlParser.setValue(searchParams, 'work_search[query]', currentQuery.trim());
+    searchParams = AO3UrlParser.addMissingId(searchParams, baseUrl);
     
     return {
       url: `https://archiveofourown.org/works?${AO3UrlParser.buildQuery(searchParams)}`,
@@ -80,9 +100,10 @@
   }
 
   async function handleTagClick(e) {
-    if (!e.target.matches('a[href*="/tags/"][href*="/works"]')) {
-      console.warn('Did not click a tag.');
-      window.AO3Popup.createNotifPopup(`You did not click a tag...`);
+    const blockUser = e.target.matches('a[href*="/users/"]');
+    if (!e.target.matches('a[href*="/tags/"][href*="/works"]') && !blockUser) {
+      console.warn('Did not click a tag/user.');
+      window.AO3Popup.createNotifPopup(`You did not click a tag/user...`);
       return;
     };
     if (clickedOnce) {
@@ -90,13 +111,13 @@
       return;
     }
     
-    const {url, page, filterType} = getBlockedUrl(e);
+    const {url, page, filterType} = blockUser ? blockAuthorUrl(e) : getBlockedUrl(e);
     e.preventDefault();
     e.stopImmediatePropagation();
     clickedOnce = true;
 
     if (filterType == 'created_at') {
-      window.location.href = `${url}&page=1`;
+      window.location.href = url;
       return;
     }
 
@@ -111,7 +132,7 @@
         }
 
         if (!isValidPage) {
-          correctPage = await binarySearchWorks(url, relevantData, filterType, 2, page-2);
+          correctPage = await binarySearchWorks(url, relevantData, filterType, 2, correctPage-1);
         }
       }
       const target = `${url}&page=${correctPage}`;

@@ -1,4 +1,10 @@
 (() => {
+  const currentUrl = window.location.href;
+  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
+  if (workUrl != '') {
+    window.AO3Popup.createNotifPopup('Cannot apply filters on this page');
+    return;
+  }
   const AO3UrlParser = window.AO3UrlParser;
 
   const languageCodeMap = {'english': 'en','español': 'es', 'spanish': 'es','français': 'fr','french': 'fr','deutsch': 'de','german': 'de',
@@ -171,11 +177,14 @@
     return queries.join(' ');
   }
 
-  function justSearchParams(filters, searchParams) {
+  function setSearchParams(filters, searchParams) {
     const justSet = ['sort_column', 'crossover', 'complete', 'date_from', 'date_to', 'words_from', 'words_to'];
     for (const opt of justSet) {
       const value = getStorageValue(filters, opt);
-      searchParams = AO3UrlParser.setValue(searchParams, `work_search[${opt}]`, value);
+      if (value.length != 0) {
+        const trueValue = value == 'all' ? '' : value;
+        searchParams = AO3UrlParser.setValue(searchParams, `work_search[${opt}]`, trueValue);
+      }
     }
     return searchParams;
   }
@@ -184,7 +193,7 @@
     const { filters = {} } = await browser.storage.local.get('filters');
     const baseUrl = window.location.href;
     let searchParams = AO3UrlParser.getParams(new URL(baseUrl));
-    searchParams = justSearchParams(filters, searchParams);
+    searchParams = setSearchParams(filters, searchParams);
 
     // append tags
     const excluTagName = 'excluded_tag_names';
