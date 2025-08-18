@@ -1,6 +1,71 @@
 (() => {
-  if (window.AO3Extractor && window.AO3UrlParser) {
-    return;
+  const WORK_DEFAULTS = {
+    'work_search[sort_column]': 'revised_at',
+    'work_search[other_tag_names]': '',
+    'work_search[excluded_tag_names]': '',
+    'work_search[crossover]': '',
+    'work_search[complete]': '',
+    'work_search[words_from]': '',
+    'work_search[words_to]': '',
+    'work_search[date_from]': '',
+    'work_search[date_to]': '',
+    'work_search[query]': '',
+    'work_search[language_id]': '',
+    'commit': 'Sort and Filter',
+    'tag_id': '',
+    'page': '1',
+    'pseud_id': '',
+    'user_id': '',
+    'exclude_work_search[archive_warning_ids][]': '',
+    'exclude_work_search[freeform_ids][]': '',
+    'exclude_work_search[rating_ids][]': '',
+    'exclude_work_search[category_ids][]': '',
+    'exclude_work_search[fandom_ids][]': '',
+    'exclude_work_search[character_ids][]': '',
+    'exclude_work_search[relationship_ids][]': '',
+    'include_work_search[archive_warning_ids][]': '',
+    'include_work_search[freeform_ids][]': '',
+    'include_work_search[rating_ids][]': '',
+    'include_work_search[category_ids][]': '',
+    'include_work_search[fandom_ids][]': '',
+    'include_work_search[character_ids][]': '',
+    'include_work_search[relationship_ids][]': '',
+  };
+
+  const BOOKMARK_DEFAULTS = {
+    'bookmark_search[sort_column]': 'created_at',
+    'bookmark_search[other_tag_names]': '',
+    'bookmark_search[other_bookmark_tag_names]': '',
+    'bookmark_search[excluded_tag_names]': '',
+    'bookmark_search[excluded_bookmark_tag_names]': '',
+    'bookmark_search[bookmarkable_query]': '',
+    'bookmark_search[bookmark_query]': '',
+    'bookmark_search[language_id]': '',
+    'bookmark_search[rec]': '',
+    'bookmark_search[with_notes]': '',
+    'commit': 'Sort and Filter',
+    'page': '1',
+    'pseud_id': '',
+    'user_id': '',
+    'exclude_bookmark_search[rating_ids][]': '',
+    'exclude_bookmark_search[archive_warning_ids][]': '',
+    'exclude_bookmark_search[category_ids][]': '',
+    'exclude_bookmark_search[fandom_ids][]': '',
+    'exclude_bookmark_search[character_ids][]': '',
+    'include_bookmark_search[rating_ids][]': '',
+    'include_bookmark_search[archive_warning_ids][]': '',
+    'include_bookmark_search[category_ids][]': '',
+    'include_bookmark_search[fandom_ids][]': '',
+    'include_bookmark_search[character_ids][]': '',
+  };
+
+  function mergeParams(defaults, params) {
+    const out = {};
+    for (const [key, def] of Object.entries(defaults)) {
+      const val = params.get(key)?.trim();
+      out[key] = (!val || val.length === 0) ? def : val;
+    }
+    return out;
   }
 
   window.AO3Extractor = window.AO3Extractor || {
@@ -43,59 +108,7 @@
 
   window.AO3UrlParser = window.AO3UrlParser || {
     getParams(baseUrl, isBookmarks = false) {
-      const defaultValues = {
-        'work_search[sort_column]': 'revised_at',
-        'work_search[other_tag_names]': '',
-        'work_search[excluded_tag_names]': '',
-        'work_search[crossover]': '',
-        'work_search[complete]': '',
-        'work_search[words_from]': '',
-        'work_search[words_to]': '',
-        'work_search[date_from]': '',
-        'work_search[date_to]': '',
-        'work_search[query]': '',
-        'work_search[language_id]': '',
-        'commit': 'Sort and Filter',
-        'tag_id': '',
-        'page': '1',
-        'pseud_id': '',
-        'user_id': '',
-        'exclude_work_search[archive_warning_ids][]': '',
-        'exclude_work_search[freeform_ids][]': '',
-        'exclude_work_search[rating_ids][]': '',
-        'exclude_work_search[category_ids][]': '',
-        'exclude_work_search[fandom_ids][]': '',
-        'exclude_work_search[character_ids][]': '',
-      };
-      const defaultBookmarkValues = {
-        'bookmark_search[sort_column]': 'created_at',
-        'bookmark_search[other_tag_names]': '',
-        'bookmark_search[other_bookmark_tag_names]': '',
-        'bookmark_search[excluded_tag_names]': '',
-        'bookmark_search[excluded_bookmark_tag_names]': '',
-        'bookmark_search[bookmarkable_query]': '',
-        'bookmark_search[bookmark_query]': '',
-        'bookmark_search[language_id]': '',
-        'bookmark_search[rec]': '',
-        'bookmark_search[with_notes]': '',
-        'commit': 'Sort and Filter',
-        'page': '1',
-        'pseud_id': '',
-        'user_id': '',
-        'exclude_bookmark_search[rating_ids][]': '',
-        'exclude_bookmark_search[archive_warning_ids][]': '',
-        'exclude_bookmark_search[category_ids][]': '',
-        'exclude_bookmark_search[fandom_ids][]': '',
-        'exclude_bookmark_search[character_ids][]': '',
-      };
-      const params = baseUrl.searchParams; 
-      const searchParams = {};
-
-      for (const [key, defaultVal] of Object.entries(isBookmarks? defaultBookmarkValues : defaultValues))  {
-        const tempVal = params.get(key)?.trim();
-        searchParams[key] = tempVal == null || tempVal.trim().length == 0 ? defaultVal : tempVal;
-      }
-      return searchParams
+      return mergeParams(isBookmarks ? BOOKMARK_DEFAULTS : WORK_DEFAULTS, baseUrl.searchParams);
     },
 
     getBookmarkParams(baseUrl) {
