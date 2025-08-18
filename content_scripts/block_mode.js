@@ -1,4 +1,9 @@
 (() => {
+  const workUrl = window.AO3UrlParser.getWorkUrl(window.location.href);
+  if (workUrl != '') { // if a work page
+    window.AO3Popup.createNotifPopup('Cannot block tag on this page');
+    return;
+  }
   if (typeof window.AO3BlockerHandler === 'function') {
     return;
   }

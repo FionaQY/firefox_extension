@@ -57,7 +57,7 @@
   };
 
   window.AO3UrlParser = window.AO3UrlParser || {
-    getParams(baseUrl) {
+    getParams(baseUrl, isBookmarks = false) {
       const defaultValues = {
         'work_search[sort_column]': 'revised_at',
         'work_search[other_tag_names]': '',
@@ -75,18 +75,46 @@
         'page': '1',
         'pseud_id': '',
         'user_id': '',
+        'exclude_work_search[archive_warning_ids][]': '',
+        'exclude_work_search[freeform_ids][]': '',
+        'exclude_work_search[rating_ids][]': '',
+        'exclude_work_search[category_ids][]': '',
         'exclude_work_search[fandom_ids][]': '',
-        'exclude_work_search[warning_ids][]': '',
-        'exclude_work_search[freeform_ids][]': ''
+        'exclude_work_search[character_ids][]': '',
+      };
+      const defaultBookmarkValues = {
+        'bookmark_search[sort_column]': 'created_at',
+        'bookmark_search[other_tag_names]': '',
+        'bookmark_search[other_bookmark_tag_names]': '',
+        'bookmark_search[excluded_tag_names]': '',
+        'bookmark_search[excluded_bookmark_tag_names]': '',
+        'bookmark_search[bookmarkable_query]': '',
+        'bookmark_search[bookmark_query]': '',
+        'bookmark_search[language_id]': '',
+        'bookmark_search[rec]': '',
+        'bookmark_search[with_notes]': '',
+        'commit': 'Sort and Filter',
+        'page': '1',
+        'pseud_id': '',
+        'user_id': '',
+        'exclude_bookmark_search[rating_ids][]': '',
+        'exclude_bookmark_search[archive_warning_ids][]': '',
+        'exclude_bookmark_search[category_ids][]': '',
+        'exclude_bookmark_search[fandom_ids][]': '',
+        'exclude_bookmark_search[character_ids][]': '',
       };
       const params = baseUrl.searchParams; 
       const searchParams = {};
 
-      for (const [key, defaultVal] of Object.entries(defaultValues))  {
+      for (const [key, defaultVal] of Object.entries(isBookmarks? defaultBookmarkValues : defaultValues))  {
         const tempVal = params.get(key);
-        searchParams[key] = tempVal == null || tempVal.trim().length == 0 ? defaultVal : params.get(key, '');
+        searchParams[key] = tempVal == null || tempVal.trim().length == 0 ? defaultVal : tempVal;
       }
       return searchParams
+    },
+
+    getBookmarkParams(baseUrl) {
+      return this.getParams(baseUrl, true);
     },
 
     setValue(searchParams, key, val) {

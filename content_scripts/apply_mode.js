@@ -1,7 +1,7 @@
 (() => {
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
-  if (workUrl != '') {
+  if (workUrl != '') { // if a work page
     window.AO3Popup.createNotifPopup('Cannot apply filters on this page');
     return;
   }
@@ -189,40 +189,47 @@
     return searchParams;
   }
 
-  async function formParams() {
+  async function formParams(baseUrl, isBookmark) {
     const { filters = {} } = await browser.storage.local.get('filters');
-    const baseUrl = window.location.href;
-    let searchParams = AO3UrlParser.getParams(new URL(baseUrl));
-    searchParams = setSearchParams(filters, searchParams);
+    let searchParams = isBookmark
+      ? AO3UrlParser.getBookmarkParams(new URL(baseUrl)) 
+      : AO3UrlParser.getParams(new URL(baseUrl));
+    if (!isBookmark) searchParams = setSearchParams(filters, searchParams);
+
+    const searchPrefix = isBookmark ? 'bookmark_search' : 'work_search';
 
     // append tags
     const excluTagName = 'excluded_tag_names';
     const excludedTags = getStorageList(filters, excluTagName);
     for (const tag of excludedTags) {
-      searchParams = AO3UrlParser.addValue(searchParams, `work_search[${excluTagName}]`, tag);
+      searchParams = AO3UrlParser.addValue(searchParams, `${searchPrefix}[${excluTagName}]`, tag);
     }
 
     const incluTagName = 'other_tag_names';
     const includedTags = getStorageList(filters, incluTagName);
     for (const tag of includedTags) {
-      searchParams = AO3UrlParser.addValue(searchParams, `work_search[${incluTagName}]`, tag);
+      searchParams = AO3UrlParser.addValue(searchParams, `${searchPrefix}[${excluTagName}]`, tag);
     }
     
     // set tag id
     searchParams = AO3UrlParser.addMissingId(searchParams, baseUrl);
-    
-    const initialQuery = AO3UrlParser.getValue(searchParams, 'work_search[query]');
+    const queryKey = isBookmark ? 'bookmark_search[bookmarkable_query]' : 'work_search[query]';
+    const initialQuery = AO3UrlParser.getValue(searchParams, queryKey);
     searchParams = AO3UrlParser.setValue(
       searchParams,
-      'work_search[query]' , 
+      queryKey,
       getQueryString(filters, initialQuery));
     return searchParams;
   }
 
   async function applyFilters() {
     window.AO3Popup.createNotifPopup("Applying filters now...");
-    const params = await formParams();
-    const newUrl = `https://archiveofourown.org/works?${AO3UrlParser.buildQuery(params)}`
+    const baseUrl = window.location.href;
+    const isBookmark = baseUrl.includes("/bookmarks");
+
+    const params = await formParams(baseUrl, isBookmark);
+    const tempWord = isBookmark ? 'bookmarks' : 'works';
+    const newUrl = `https://archiveofourown.org/${tempWord}?${AO3UrlParser.buildQuery(params)}`
     window.location.href = newUrl;
     return;
   }

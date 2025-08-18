@@ -54,9 +54,5 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         injectScript(tab.id, 'scroll');
     } else if (tab.url.includes("/works/")) {
         injectScript(tab.id, 'populate_bookmark');
-        // const { settings = {} } = await browser.storage.local.get('settings');
-        // if (settings[populateBookmark]) {
-        //     injectScript(tab.id, 'populate_bookmark');
-        // }   
     }
 })
