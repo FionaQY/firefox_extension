@@ -9,7 +9,27 @@
     populateBookmark: {
       label: 'Automatically Populate Bookmark',
       type: 'checkbox',
-    }
+    },
+    shrinkWorks: {
+      label: 'Shrink Works',
+      type: 'checkbox',
+    },
+    hideTags: {
+      label: '🚫 Hide with Tag(s)',
+      type: 'text',
+    },
+    hideAuthor: {
+      label: '🚫 Hide with Author(s)',
+      type: 'text',
+    },
+    hideWordUnder: {
+      label: '🚫 Hide Under x Words',
+      type: 'number',
+    },
+    hideWordOver: {
+      label: '🚫 Hide Over x Words',
+      type: 'number',
+    },
   };
 
   const modeTextMap = {
@@ -44,7 +64,6 @@
   function createItem(text, value) {
     const item = document.createElement('div');
     item.textContent = text;
-    // item.id = 'item-' + Math.random().toString(36).slice(2);
     item.id = value;
     item.draggable = true;
     item.style.cssText = `
@@ -183,7 +202,15 @@
     const inputsMap = {};
     for (const [key, config] of Object.entries(fields)) {
       const container = document.createElement('div');
-      container.style.cssText = `
+      container.style.cssText = config.type == 'checkbox'
+      ?
+      `
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        padding-bottom: 0.5em;
+      `
+      : `
         display: flex;
         flex-direction: column;
         padding-bottom: 0.5em;
@@ -240,16 +267,20 @@
           cursor: pointer;
           `;
           
-      if (config.type == 'checkbox') {
+      if (config.type === 'checkbox') {
         input.checked = settings[key] || false;
+
+        container.appendChild(input); // checkbox first
+        container.appendChild(label); // then label
       } else {
         input.value = settings[key] || input.value || '';
+
+        container.appendChild(label);
+        container.appendChild(input);
       }
 
       inputsMap[key] = { input, type: config.type };
 
-      container.appendChild(label);
-      container.appendChild(input);
       contentContainer.appendChild(container);
     }
 

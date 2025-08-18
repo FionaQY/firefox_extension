@@ -45,9 +45,11 @@
                 const freeformTags = cleanTagList(doc.querySelectorAll('dd.freeform.tags'));
 
                 const tempTitle = doc.querySelector('h2.title.heading')?.innerHTML.trim() || '';
-                const title = `<a href="${url}">${tempTitle}</a>`
+                const title = `<a href="${url}">${tempTitle}</a>`;
+                
                 const authorHref = Array.from(doc.querySelectorAll('h3.byline.heading a')).map(x => x.href.trim() || '').join(', ') || '';
-                const authorRegex = /^\/users\/([^\/]+)/;
+                
+                const authorRegex = /archiveofourown\.org\/users\/([^\/]+)/;
                 const match = authorHref.match(authorRegex);
                 const authorName = match ? ` by ${match[1]}` : '';
                 const heading = `${title}${authorName}`

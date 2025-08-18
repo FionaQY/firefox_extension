@@ -86,7 +86,7 @@
           const works = iframe.contentDocument.querySelectorAll('.work');
           for (let i = 1; i < works.length; i++) {
             const work = works[i];
-            const extractedData = AO3Extractor.extractRelevantData(work.textContent, filterType);
+            const extractedData = AO3Extractor.extractRelevantData(work, filterType);
             if (AO3Extractor.isValid(relevantData, extractedData)) {
               resolve(true);
               return;
@@ -126,7 +126,7 @@
       return;
     }
 
-    const relevantData = AO3Extractor.extractRelevantData(e.target.offsetParent.innerText, filterType);
+    const relevantData = AO3Extractor.extractRelevantData(e.target.offsetParent, filterType);
     try {
       let correctPage = page
       if (page != 1) {

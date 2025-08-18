@@ -20,7 +20,7 @@
       const work = works[i];
 
       const AO3Extractor = window.AO3Extractor;
-      const extractedData = AO3Extractor.extractRelevantData(work.textContent, filterType);
+      const extractedData = AO3Extractor.extractRelevantData(work, filterType);
       if (AO3Extractor.isValid(relevantData, extractedData)) {
         work.scrollIntoView({behavior: 'smooth', block: 'center'});
         break;

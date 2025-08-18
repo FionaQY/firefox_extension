@@ -42,6 +42,8 @@ browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
             });
             }
         pendingInjection = null;
+    } else if (msg.action == 'shrinkContentScriptReady') {
+        browser.tabs.sendMessage(sender.tab.id, { action: 'initialize'});
     }
 });
 
@@ -54,5 +56,7 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         injectScript(tab.id, 'scroll');
     } else if (tab.url.includes("/works/")) {
         injectScript(tab.id, 'populate_bookmark');
-    }
+    } else {
+        injectScript(tab.id, 'shrink_works');
+    } 
 })
