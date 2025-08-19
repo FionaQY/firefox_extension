@@ -26,6 +26,23 @@
       reasons.push(`words > ${hideWordOver}`);
     }
 
+    const hideLanguages = settings['hideLanguage']?.split(',').filter(x => x.trim().length > 0);
+    for (const lang of hideLanguages) {
+      if (stats['language'] == AO3Extractor.getLangAbb(lang)) {
+        reasons.push(`Language: ${lang}`);
+      }
+    }
+    
+    const showLanguages = settings['showLanguage']?.split(',').filter(x => x.trim().length > 0);
+    if (showLanguages.length > 0) {
+      const hasLang = showLanguages.some(x => AO3Extractor.getLangAbb(x) == stats['language']);
+      if (!hasLang) {
+        reasons.push(`Language: not ${showLanguages.join(', ')}`);
+      }
+      console.log(hasLang);
+    }
+    
+
     const tags = Array.from(work.querySelectorAll('ul.tags.commas li a')).map(x => x.innerText);
     const excludeTags = settings['hideTags']?.split(',').map(x => x.trim()).filter(x => x.length > 0);
     for (const ex of excludeTags) {

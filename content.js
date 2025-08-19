@@ -33,9 +33,9 @@
     
     let popupOptions = settings.popupOptions || [];
     const allModes = Object.keys(modeTextMap);
-    if (popupOptions.length === 0) {
+    if (!('popupOptions' in settings)) {
       popupOptions = allModes;
-    } else if (popupOptions.length !== allModes.length) {
+    } else {
       popupOptions = ["", ...popupOptions, "settings"];
     }
 

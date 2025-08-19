@@ -16,7 +16,7 @@
     },
     hideTags: {
       label: '🚫 Hide with Tag(s)',
-      type: 'text',
+      type: 'textarea',
     },
     hideAuthor: {
       label: '🚫 Hide with Author(s)',
@@ -29,6 +29,14 @@
     hideWordOver: {
       label: '🚫 Hide Over x Words',
       type: 'number',
+    },
+    hideLanguage: {
+      label: '🚫 Hide Works with Language',
+      type: 'text',
+    },
+    showLanguage: {
+      label: '✅ Show Only Works with Language',
+      type: 'text',
     },
   };
 
@@ -51,17 +59,27 @@
       display: flex;
       flex-direction: column;
       gap: 0.4em;
+      border: 2px solid ${title === 'Show' ? '#4caf50' : '#f44336'};
     `;
 
     const header = document.createElement('div');
-    header.textContent = title;
-    header.style.cssText = `font-weight: bold; margin-bottom: 0.5em;`;
+    header.textContent = title === 'Show' ? '✅ Show (click to hide)' : '🚫 Hide (click to show)';
+    header.style.cssText = `
+      font-weight: bold;
+      margin-bottom: 0.5em;
+      font-size: 1rem;
+      text-align: center;
+      color: ${title === 'Show' ? '#4caf50' : '#f44336'};
+      border-bottom: 1px solid #444;
+      padding-bottom: 0.25em;
+    `;
 
     col.appendChild(header);
     return col;
   }
 
-  function createItem(text, value) {
+
+  function createItem(text, value, showCol, hideCol) {
     const item = document.createElement('div');
     item.textContent = text;
     item.id = value;
@@ -73,39 +91,13 @@
       cursor: grab;
     `;
 
-    item.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/id', item.id);
-      e.dataTransfer.effectAllowed = 'move';
-      setTimeout(() => item.style.display = 'none', 0);
-    });
-
-    item.addEventListener('dragend', () => {
-      item.style.display = '';
+    item.addEventListener('click', () => {
+      const parent = item.parentElement;
+      const targetCol = parent === showCol ? hideCol : showCol;
+      targetCol.appendChild(item);
     });
 
     return item;
-  }
-
-  function makeDroppable(col) {
-    col.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      col.style.background = '#38384d';
-    });
-    
-    col.addEventListener('dragleave', () => {
-      col.style.background = '#2a2a3d';
-    });
-    
-    col.addEventListener('drop', (e) => {
-      e.preventDefault();
-      col.style.background = '#2a2a3d';
-      
-      const id = e.dataTransfer.getData('text/id');
-      const draggedItem = document.getElementById(id);
-      if (draggedItem) {
-        col.appendChild(draggedItem);
-      }
-    });
   }
 
   function populateCols(settings, showCol, hideCol) {
@@ -115,9 +107,9 @@
     
     for (const [val, opt] of Object.entries(modeTextMap)) {
       if (popupOptions.includes(val)) {
-        showCol.appendChild(createItem(opt, val));
+        showCol.appendChild(createItem(opt, val, showCol, hideCol));
       } else {
-        hideCol.appendChild(createItem(opt, val));
+        hideCol.appendChild(createItem(opt, val, showCol, hideCol));
       }
     }
   }
@@ -245,6 +237,17 @@
           input.type = 'text';
           input.placeholder = 'e.g. >1, 1, ([5 TO 20] !(7 || 13))';
           break;
+        case 'textarea':
+          input = document.createElement('textarea');
+          input.style.minHeight = '50px';
+          input.style.resize = 'none';
+          input.style.overflow = 'hidden';
+          input.style.boxSizing = 'border-box'; 
+          input.addEventListener('input', () => {
+            input.style.height = 'auto';
+            input.style.height = input.scrollHeight + 'px';
+          });
+          break;
         default:
           input = document.createElement('input');
           input.type = config.type;
@@ -294,7 +297,6 @@
     const showCol = createColumn('Show');
     const hideCol = createColumn('Hide');
 
-    [showCol, hideCol].forEach(makeDroppable);
     populateCols(settings, showCol, hideCol);
 
     dragDropContainer.appendChild(showCol);
