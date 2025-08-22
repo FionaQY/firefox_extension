@@ -122,6 +122,7 @@
     clickedOnce = true;
 
     if (filterType == 'created_at') {
+      window.AO3Popup.createNotifPopup('Scrolling doesn`t work on `Date Created`');
       window.location.href = url;
       return;
     }

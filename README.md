@@ -24,12 +24,14 @@ Note: The extension will be removed when you restart Firefox.
 
 ## Installation (Permanent)
 
-1. Compress files in repo into a zip file
-2. Upload zip to Firefox Add-On Developer Hub
+1. Compress files in repo into a `zip` file
+2. Upload `zip` to Firefox Add-On Developer Hub
 3. Wait until it is approved
 4. Download `.xpi` file. This automatically installs on Desktop.
 5. Mobile installation requires firefox nightly
 
+OR
+1. Get Addon from [product page](https://addons.mozilla.org/en-US/firefox/addon/ao3-qof/)
 ## Folder Structure
 ```
 firefox-extension/

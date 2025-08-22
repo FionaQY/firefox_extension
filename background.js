@@ -40,7 +40,7 @@ browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
                 action: 'initialize',
                 data: pendingInjection.data
             });
-            }
+        }
         pendingInjection = null;
     } else if (msg.action == 'shrinkContentScriptReady') {
         browser.tabs.sendMessage(sender.tab.id, { action: 'initialize'});
@@ -53,7 +53,11 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     }
 
     if (pendingInjection && pendingInjection.tabId == tabId) {
-        injectScript(tab.id, 'scroll');
+        injectScript(tab.id, 'scroll').then(() => {
+            browser.tabs.executeScript(tabId, {
+                file: `/content_scripts/shrink_works.js`
+            });
+        });
     } else if (tab.url.includes("/works/")) {
         injectScript(tab.id, 'populate_bookmark');
     } else {
