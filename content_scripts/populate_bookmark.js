@@ -73,15 +73,11 @@
     const { heading, summary, fandomTags, characterTags, freeformTags } = data;
     return `
     <div class="bookmark-popup" style="font-family: sans-serif;">      
-      ${summary.length > 0 ? `
-        <details>
-          <summary style="cursor: pointer; font-weight: bold;"><strong>Summary</strong></summary>
-          <div style="white-space: pre-wrap; margin-top: 0.5em;">${heading}</div>
-          <div style="white-space: pre-wrap; margin-top: 0.5em;">${summary}</div>
-        </details>
-          ` : ''
-        }
-
+    <details>
+      <summary style="cursor: pointer; font-weight: bold;"><strong>Summary</strong></summary>
+      <div style="white-space: pre-wrap; margin-top: 0.5em;">${heading}</div>
+      <div style="white-space: pre-wrap; margin-top: 0.5em;">${summary}</div>
+    
       ${fandomTags.length == 0 && characterTags.length == 0 && freeformTags.length == 0 ? 
         ''
         :
@@ -103,6 +99,7 @@
           </details>`
       }
       
+    </details>
     </div>
     `;
   }

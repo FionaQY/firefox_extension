@@ -239,7 +239,7 @@
           break;
         case 'textarea':
           input = document.createElement('textarea');
-          input.style.minHeight = '50px';
+          input.style.minHeight = '30px';
           input.style.resize = 'none';
           input.style.overflow = 'hidden';
           input.style.boxSizing = 'border-box'; 

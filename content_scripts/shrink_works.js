@@ -1,7 +1,11 @@
 (() => {
   browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     if (msg.action === 'initialize') {
+      if (typeof window.A03WorkShrinker === 'function') {
+        return;
+      }
       await handleShrinkWorks();
+      window.A03WorkShrinker = handleShrinkWorks;
     }
   });
 
@@ -46,7 +50,10 @@
     const tags = Array.from(work.querySelectorAll('ul.tags.commas li a')).map(x => x.innerText);
     const excludeTags = settings['hideTags']?.split(',').map(x => x.trim()).filter(x => x.length > 0);
     for (const ex of excludeTags) {
-      const pattern = new RegExp('^' + ex.replace(/\*/g, '.*') + '$', 'i');
+      const pattern = new RegExp(
+        '^' + ex.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$',
+        'i'
+      );
       for (const tag of tags) {
         if (pattern.test(tag.trim())) {
           reasons.push(`Tag: ${tag}`);
