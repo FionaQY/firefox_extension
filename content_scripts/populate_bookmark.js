@@ -27,81 +27,52 @@
 
     return cleanedTags;
   }
-  
-  async function getSummaryFromWork(url) {
-    return new Promise((resolve) => {
-        const iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;';
-        iframe.src = url;
 
-        iframe.onload = () => {
-            try {
-                const doc = iframe.contentDocument;
-                
-                const summary = Array.from(doc.querySelector('div.summary.module blockquote').querySelectorAll('p')).map(x => x.innerHTML.trim()).join('\n') || '';
-
-                const fandomTags = cleanTagList(doc.querySelectorAll('dd.fandom.tags'));
-                const characterTags = cleanTagList(doc.querySelectorAll('dd.character.tags'));
-                const freeformTags = cleanTagList(doc.querySelectorAll('dd.freeform.tags'));
-
-                const tempTitle = doc.querySelector('h2.title.heading')?.innerHTML.trim() || '';
-                const title = `<a href="${url}">${tempTitle}</a>`;
-                
-                const authorHref = Array.from(doc.querySelectorAll('h3.byline.heading a')).map(x => x.href.trim() || '').join(', ') || '';
-                
-                const authorRegex = /archiveofourown\.org\/users\/([^\/]+)/;
-                const match = authorHref.match(authorRegex);
-                const authorName = match ? ` by ${match[1]}` : '';
-                const heading = `${title}${authorName}`
-
-                resolve({ heading, summary, fandomTags, characterTags, freeformTags});
-            } catch (err) {
-                console.error('Error parsing work in iframe:', err);
-                resolve(null);
-            } finally {
-                iframe.remove();
-            }
-        };
-        document.body.appendChild(iframe);
-    });
-    }
 
   async function getBookmarkHtml() {
-    const data = await getSummaryFromWork(workUrl);
+    const data = await window.AO3Extractor.getSummaryFromWork(workUrl, false);
     if (!data) return '';
 
-    const { heading, summary, fandomTags, characterTags, freeformTags } = data;
-    return `
-    <div class="bookmark-popup" style="font-family: sans-serif;">      
-    <details>
-      <summary style="cursor: pointer; font-weight: bold;"><strong>Summary</strong></summary>
-      <div style="white-space: pre-wrap; margin-top: 0.5em;">${heading}</div>
-      <div style="white-space: pre-wrap; margin-top: 0.5em;">${summary}</div>
+    const { heading, summary, tags } = data;
     
-      ${fandomTags.length == 0 && characterTags.length == 0 && freeformTags.length == 0 ? 
-        ''
-        :
-        `
-        <details>
-          <summary style="cursor: pointer; font-weight: bold;"><strong>Tags</strong></summary>
-          ${fandomTags.length == 0 
-            ? ''
-            : `<div style="font-size: 0.9em; line-height: 1.4; margin-top: 0.5em;"><strong>Fandom(s):</strong> ${fandomTags.join(', ')}\n</div>`
-          }
-          ${characterTags.length == 0 
-            ? ''
-            : `<div style="font-size: 0.9em; line-height: 1.4; margin-top: 0.5em;"><strong>Character(s):</strong> ${characterTags.join(', ')}\n</div>`
-          }
-          ${freeformTags.length == 0 
-            ? ''
-            : `<div style="font-size: 0.9em; line-height: 1.4; margin-top: 0.5em;"><strong>Other Tag(s):</strong> ${freeformTags.join(', ')}\n</div>`
-          }
-          </details>`
+    const container = document.createElement('div');
+    container.className = 'bookmark-popup';
+    container.style.cssText = 'font-family: sans-serif;';
+    
+    const outerDetails = document.createElement('details');
+    const outerSummary = document.createElement('summary');
+    outerSummary.style.cssText = 'cursor: pointer; font-weight: bold;';
+    outerSummary.innerHTML = 'Summary';
+    outerDetails.appendChild(outerSummary);
+    
+    const headingDiv = document.createElement('div');
+    headingDiv.style.cssText = 'white-space: pre-wrap; margin-top: 0.5em;';
+    headingDiv.innerHTML = heading;
+    outerDetails.appendChild(headingDiv);
+    
+    const summaryDiv = document.createElement('div');
+    summaryDiv.style.cssText = 'white-space: pre-wrap; margin-top: 0.5em;';
+    summaryDiv.innerHTML = summary;
+    outerDetails.appendChild(summaryDiv);
+
+    if (tags && Object.keys(tags).length > 0) {
+      const tagsDetails = document.createElement('details');
+      const tagsSummary = document.createElement('summary');
+      tagsSummary.style.cssText = 'cursor: pointer; font-weight: bold;';
+      tagsSummary.innerHTML = 'Tags';
+      tagsDetails.appendChild(tagsSummary);
+
+      for (const [key, value] of Object.entries(tags)) {
+        const div = document.createElement('div');
+        div.style.cssText = 'font-size: 0.9em; line-height: 1.4; margin-top: 0.5em;';
+        div.innerHTML = `${key}(s): ${value.slice(0,3).join(', ')}`;
+        tagsDetails.appendChild(div);
       }
-      
-    </details>
-    </div>
-    `;
+      outerDetails.appendChild(tagsDetails);
+    }
+    container.append(outerDetails);
+
+    return container.outerHTML;
   }
 
   function isVisible() {

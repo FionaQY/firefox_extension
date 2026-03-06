@@ -42,7 +42,7 @@
 
   async function openHideWorksPopup() {
     const { settings = {} } = await browser.storage.local.get('settings');
-    let workSettings = settings.workSettings || [];
+    let workSettings = settings.workSettings || {};
 
     const popup = document.createElement('div');
     popup.id = popupId;
@@ -111,19 +111,7 @@
       padding: 1em;
     `;
 
-    const buttonSave = document.createElement('button');
-    buttonSave.textContent = 'Save';
-    buttonSave.style.cssText = `
-      flex: 1;
-      padding: '8px 12px';
-      background: #4a90e2;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: ${isMobile ? '16px' : '0.95rem'};
-      cursor: pointer;
-      touch-action: manipulation;
-    `;
+    const buttonSave = window.AO3Popup.getButton("#4a90e2", isMobile, 'Save');
     buttonSave.addEventListener('click', async () => {
       for (const [key, {input, type}] of Object.entries(inputsMap)) {
         workSettings[key] = (type == 'checkbox') ? input.checked : input.value;
@@ -132,19 +120,7 @@
       await browser.storage.local.set({ settings }).then(() => popup.remove());
     });
     
-    const buttonReset = document.createElement('button');
-    buttonReset.textContent = 'Reset';
-    buttonReset.style.cssText = `
-      flex: 1;
-      padding: '8px 12px';
-      background: #ee5555;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: ${isMobile ? '18px' : '1rem'};
-      cursor: pointer;
-    `;
-    
+    const buttonReset = window.AO3Popup.getButton("#ee5555", isMobile, 'Reset');
     buttonReset.addEventListener('click', async () => {
       if (confirm('Are you sure you want to reset?')) {
         delete settings["workSettings"];

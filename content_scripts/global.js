@@ -132,6 +132,51 @@
       }
       console.warn(`Unrecognized language: "${lang}"`);
       return '';
+    },
+
+    getTags(doc, url, needHref) {
+      const TAGCATEGORIES = ['rating', 'warning', 'category', 'fandom', 'relationship', 'character', 'freeform'];
+
+      const summary = doc.querySelector('div.summary.module').innerText;
+      let tags = {}; 
+      for (const cat of TAGCATEGORIES) {
+        const links = [...doc.querySelectorAll(`dd.${cat} a`)].map(x => !needHref ? x.innerText.trim() : `<a href="${x.href}">${x.innerText.trim()}</a>`);
+        tags[cat] = links;
+      }
+
+      const title = `<a href="${url}">${doc.querySelector('h2.title.heading').innerText.trim()}</a>`;
+      const author = doc.querySelector('h3.byline.heading').innerHTML.trim();
+      const heading = `${title} by ${author}`
+      return { heading, summary, tags };
+    },
+
+    async getSummaryFromWork(url, needHref) {
+      const { settings = {} } = await browser.storage.local.get('settings');
+      if (!settings['general']['summaryNoWifi']) {
+        resolve(window.AO3Extractor.getTags(document, url, needHref));
+      }
+
+      return new Promise((resolve) => {
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;';
+        iframe.src = url;
+
+        iframe.onload = () => {
+          try {
+            const doc = iframe.contentDocument;
+
+            resolve(window.AO3Extractor.getTags(doc, url));
+
+          } catch (err) {
+            console.error('Error parsing work in iframe:', err);
+            resolve(null);
+          } finally {
+            iframe.remove();
+          }
+        };
+
+        document.body.appendChild(iframe);
+      });
     }
   };
 
@@ -399,8 +444,21 @@
       return [inputsMap, contentContainer]
     },
 
-    getButtons() {
-      
+    getButton(color, isMobile, text) {
+      const butt = document.createElement('button');
+      butt.textContent = text;
+      butt.style.cssText = `
+        flex: 1 1 auto;
+        padding: 8px 12px;
+        background: ${color};
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: ${isMobile ? '16px' : '0.95rem'};
+        cursor: pointer;
+        touch-action: manipulation;
+      `;
+      return butt;
     }
       
   }

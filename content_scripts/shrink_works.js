@@ -43,7 +43,6 @@
       if (!hasLang) {
         reasons.push(`Language: not ${showLanguages.join(', ')}`);
       }
-      console.log(hasLang);
     }
     
 

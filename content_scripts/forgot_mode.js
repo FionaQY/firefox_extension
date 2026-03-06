@@ -12,6 +12,11 @@
   }
 
   async function getSummaryFromWork(url) {
+    const { settings = {} } = await browser.storage.local.get('settings');
+    if (!settings['general']['summaryNoWifi']) {
+      resolve(window.AO3Extractor.getTags(document, url));
+    }
+
     return new Promise((resolve) => {
       const iframe = document.createElement('iframe');
       iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;';
@@ -20,13 +25,8 @@
       iframe.onload = () => {
         try {
           const doc = iframe.contentDocument;
-          const summary = doc.querySelector('div.summary.module').innerText;
-          const tags = [...doc.querySelectorAll('a.tag')].map(x => `<a href="${x.href}">${x.innerText}</a>`);
 
-          const title = `<a href="${url}">${doc.querySelector('h2.title.heading').innerText.trim()}</a>`;
-          const author = doc.querySelector('h3.byline.heading').innerHTML.trim();
-          const heading = `${title} by ${author}`
-          resolve({ heading, summary, tags });
+          resolve(window.AO3Extractor.getTags(doc, url));
 
         } catch (err) {
           console.error('Error parsing work in iframe:', err);
@@ -42,7 +42,10 @@
 
   async function getSummary() {
     window.AO3Popup.createNotifPopup(`Getting summary from ${workUrl}...`);
-    const { heading, summary, tags } = await getSummaryFromWork(workUrl);
+    const data = await window.AO3Extractor.getSummaryFromWork(workUrl, true);
+    if (!data) return '';
+
+    const { heading, summary, tags } = data;
 
     if (!summary) {
       window.AO3Popup.createNotifPopup('No summary found.');
@@ -109,13 +112,15 @@
     popup.appendChild(summaryEl);
 
     if (tags && Object.keys(tags).length > 0) {
-      const tagList = document.createElement('div');
-      tagList.style.marginTop = '1em';
-      tagList.innerHTML = `
-        <div style="margin-bottom: 0.25em; font-weight: bold;">Tags:</div>
-        <div style="font-size: 0.9em; line-height: 1.4;">${tags.join(', ')}</div>
-      `;
-      popup.appendChild(tagList);
+      for (const [key, value] of Object.entries(tags)) {
+        const tagList = document.createElement('div');
+        tagList.style.marginTop = '1em';
+        tagList.innerHTML = `
+          <div style="margin-bottom: 0.25em; font-weight: bold;">${key}:</div>
+          <div style="font-size: 0.9em; line-height: 1.4;">${value.join(', ')}</div>
+        `;
+        popup.appendChild(tagList);
+      }
     }
 
     document.body.appendChild(popup);

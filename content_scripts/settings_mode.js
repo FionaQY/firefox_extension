@@ -97,7 +97,6 @@
 
   async function openSettingsPopup() {
     const { settings = {} } = await browser.storage.local.get('settings');
-    console.log(settings);
     let generalSettings = settings['general'] || {};
 
     const popup = document.createElement('div');
@@ -144,6 +143,7 @@
       transition: all 0.2s ease;
       z-index: 10000;
     `;
+
     buttonClose.addEventListener('mouseenter', () => {
       buttonClose.style.background = 'rgba(255, 255, 255, 0.2)';
       buttonClose.style.color = '#fff';
@@ -181,21 +181,37 @@
       justify-content: space-between;
       gap: 1em;
       padding: 1em;
+      flex-wrap: wrap;
     `;
 
-    const buttonSave = document.createElement('button');
-    buttonSave.textContent = 'Save Settings';
-    buttonSave.style.cssText = `
-      flex: 1;
-      padding: '8px 12px';
-      background: #4a90e2;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: ${isMobile ? '16px' : '0.95rem'};
-      cursor: pointer;
-      touch-action: manipulation;
-    `;
+    const buttonCopy = window.AO3Popup.getButton("#6c757d", isMobile, '📋 Copy Settings');
+    buttonCopy.addEventListener('click', async () => {
+      const { settings } = await browser.storage.local.get('settings');
+      const json = JSON.stringify(settings, null, 5);
+      await navigator.clipboard.writeText(json);
+      buttonCopy.textContent = '✓ Copied!';
+      setTimeout(() => { buttonCopy.textContent = '📋 Copy'; }, 1500);
+    })
+
+    const buttonPaste = window.AO3Popup.getButton("#28a745", isMobile, '📋 Paste/Override');
+    buttonPaste.addEventListener('click', async () => {
+      const text = await navigator.clipboard.readText();
+      if (!text || text.length == 0) {
+        return;
+      }
+      if (confirm('This will override all settings and filters.')) {
+        const imported = JSON.parse(text);
+        if (typeof imported !== 'object' || imported === null) {
+          throw new Error('Invalid settings format');
+        }
+        await browser.storage.local.set({ settings: imported }).then(() => popup.remove());
+      }
+    });
+
+    buttonContainer.appendChild(buttonCopy);
+    buttonContainer.appendChild(buttonPaste);
+
+    const buttonSave = window.AO3Popup.getButton("#4a90e2", isMobile, 'Save');
     buttonSave.addEventListener('click', async () => {
       for (const [key, {input, type}] of Object.entries(inputsMap)) {
         generalSettings[key] = (type == 'checkbox') ? input.checked : input.value;
@@ -206,18 +222,7 @@
       await browser.storage.local.set({ settings }).then(() => popup.remove());
     });
     
-    const buttonReset = document.createElement('button');
-    buttonReset.textContent = 'Reset Settings';
-    buttonReset.style.cssText = `
-      flex: 1;
-      padding: '8px 12px';
-      background: #ee5555;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: ${isMobile ? '18px' : '1rem'};
-      cursor: pointer;
-    `;
+    const buttonReset = window.AO3Popup.getButton("#ee5555", isMobile, 'Reset');
     buttonReset.addEventListener('click', async () => {
       if (confirm('Are you sure you want to reset Settings?')) {
         delete settings['general'];
@@ -231,7 +236,7 @@
         populateCols({}, showCol, hideCol);
       }
     });
-
+    
     buttonContainer.appendChild(buttonSave);
     buttonContainer.appendChild(buttonReset);
     popup.appendChild(contentContainer);
