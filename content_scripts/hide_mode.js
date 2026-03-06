@@ -1,104 +1,48 @@
 (() => {
-  const popupId = 'ao3-generalSettings-popup';
+  const popupId = 'ao3-hideworks-popup';
   const tempPopup = document.getElementById(popupId);
   if (tempPopup) {
     tempPopup.remove();
   }
 
   const fields = {
-    populateBookmark: {
-      label: 'Automatically Populate Bookmark',
+    hideEntirely: {
+      label: 'Hide unwanted works entirely',
       type: 'checkbox',
     },
-    shrinkWorks: {
-      label: 'Shrink Works',
-      type: 'checkbox',
+    hideTags: {
+      label: '🚫 Hide with Tag(s)',
+      type: 'textarea',
     },
-    summaryNoWifi: {
-      label: 'Get Summary Without Wifi',
-      type: 'checkbox',
+    hideAuthor: {
+      label: '🚫 Hide with Author(s)',
+      type: 'text',
     },
-  };
-
-  const modeTextMap = {
-    'block': '🚫 Block tag/author',
-    'forgot': '🤔 I forgor',
-    'apply': '✅ Apply default filters',
-    'save': '💾 Set default filters',
-    'hide': '🫣 Hide Works',
-  };
-
-  function createColumn(title) {
-    const col = document.createElement('div');
-    col.classList.add('drop-column');
-    col.style.cssText = `
-      flex: 1;
-      background: #2a2a3d;
-      padding: 0.5em;
-      border-radius: 6px;
-      min-height: 150px;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4em;
-      border: 2px solid ${title === 'Show' ? '#4caf50' : '#f44336'};
-    `;
-
-    const header = document.createElement('div');
-    header.textContent = title === 'Show' ? '✅ Show (click to hide)' : '🚫 Hide (click to show)';
-    header.style.cssText = `
-      font-weight: bold;
-      margin-bottom: 0.5em;
-      font-size: 1rem;
-      text-align: center;
-      color: ${title === 'Show' ? '#4caf50' : '#f44336'};
-      border-bottom: 1px solid #444;
-      padding-bottom: 0.25em;
-    `;
-
-    col.appendChild(header);
-    return col;
-  }
-
-
-  function createItem(text, value, showCol, hideCol) {
-    const item = document.createElement('div');
-    item.textContent = text;
-    item.id = value;
-    item.draggable = true;
-    item.style.cssText = `
-      background: #3a3a4d;
-      padding: 0.4em 0.6em;
-      border-radius: 4px;
-      cursor: grab;
-    `;
-
-    item.addEventListener('click', () => {
-      const parent = item.parentElement;
-      const targetCol = parent === showCol ? hideCol : showCol;
-      targetCol.appendChild(item);
-    });
-
-    return item;
-  }
-
-  function populateCols(settings, showCol, hideCol) {
-    const popupOptions = settings["popupOptions"] || Object.keys(modeTextMap);
-    showCol.innerHTML = '';
-    hideCol.innerHTML = '';
-    
-    for (const [val, opt] of Object.entries(modeTextMap)) {
-      if (popupOptions.includes(val)) {
-        showCol.appendChild(createItem(opt, val, showCol, hideCol));
-      } else {
-        hideCol.appendChild(createItem(opt, val, showCol, hideCol));
-      }
+    hideWordUnder: {
+      label: '🚫 Hide Under x Words',
+      type: 'number',
+    },
+    hideWordOver: {
+      label: '🚫 Hide Over x Words',
+      type: 'number',
+    },
+    hideLanguage: {
+      label: '🚫 Hide Works with Language',
+      type: 'text',
+    },
+    showLanguage: {
+      label: '✅ Show Only Works with Language',
+      type: 'text',
+    },
+    hideCrossovers: {
+      label: '🚫 Hide Works with these many Crossovers',
+      type: 'numberSpecial',
     }
-  }
+  };
 
-  async function openSettingsPopup() {
+  async function openHideWorksPopup() {
     const { settings = {} } = await browser.storage.local.get('settings');
-    console.log(settings);
-    let generalSettings = settings['general'] || {};
+    let workSettings = settings.workSettings || [];
 
     const popup = document.createElement('div');
     popup.id = popupId;
@@ -157,23 +101,7 @@
     buttonClose.onclick = () => popup.remove();
     popup.appendChild(buttonClose);
 
-    const [inputsMap, contentContainer] = window.AO3Popup.optionsPopupHelper(fields, isMobile, generalSettings);
-
-    const dragDropContainer = document.createElement('div');
-    dragDropContainer.style.cssText = `
-      display: flex;
-      gap: 1em;
-      margin-top: 1em;
-    `;
-
-    const showCol = createColumn('Show');
-    const hideCol = createColumn('Hide');
-
-    populateCols(settings, showCol, hideCol);
-
-    dragDropContainer.appendChild(showCol);
-    dragDropContainer.appendChild(hideCol);
-    contentContainer.appendChild(dragDropContainer);
+    const [inputsMap, contentContainer] = window.AO3Popup.optionsPopupHelper(fields, isMobile, workSettings);
     
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = `
@@ -184,7 +112,7 @@
     `;
 
     const buttonSave = document.createElement('button');
-    buttonSave.textContent = 'Save Settings';
+    buttonSave.textContent = 'Save';
     buttonSave.style.cssText = `
       flex: 1;
       padding: '8px 12px';
@@ -198,16 +126,14 @@
     `;
     buttonSave.addEventListener('click', async () => {
       for (const [key, {input, type}] of Object.entries(inputsMap)) {
-        generalSettings[key] = (type == 'checkbox') ? input.checked : input.value;
+        workSettings[key] = (type == 'checkbox') ? input.checked : input.value;
       }
-      const popupOptions = Array.from(showCol.childNodes).filter(x => x.id.length != 0).map(x => x.id);
-      settings.popupOptions = popupOptions;
-      settings["general"] = generalSettings;
+      settings.workSettings = workSettings
       await browser.storage.local.set({ settings }).then(() => popup.remove());
     });
     
     const buttonReset = document.createElement('button');
-    buttonReset.textContent = 'Reset Settings';
+    buttonReset.textContent = 'Reset';
     buttonReset.style.cssText = `
       flex: 1;
       padding: '8px 12px';
@@ -218,17 +144,16 @@
       font-size: ${isMobile ? '18px' : '1rem'};
       cursor: pointer;
     `;
+    
     buttonReset.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to reset Settings?')) {
-        delete settings['general'];
-        delete settings['popupOptions'];
-        await browser.storage.local.set({ settings }).then(() => popup.remove());
-
+      if (confirm('Are you sure you want to reset?')) {
+        delete settings["workSettings"];
+        await browser.storage.local.set({ settings });
+        
         const inputs = contentContainer.querySelectorAll('input');
         Array.from(inputs).forEach(x => x.type === 'checkbox' ? x.checked = false : x.value = '');
         const selects = contentContainer.querySelectorAll('select');
         Array.from(selects).forEach(x => x.selectedIndex = 0);
-        populateCols({}, showCol, hideCol);
       }
     });
 
@@ -240,5 +165,5 @@
     document.body.appendChild(popup);
   }
 
-  openSettingsPopup();
+  openHideWorksPopup();
 })();

@@ -281,6 +281,126 @@
       document.body.addEventListener('click', (e) => {
         popup.remove();
       })       
+    },
+
+    optionsPopupHelper(fields, isMobile, currSettings) {
+      const contentContainer = document.createElement('div');
+      contentContainer.style.cssText = isMobile ? `
+          flex: 1;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          min-height: 0;
+          padding-top: 1em;
+        ` : `
+          padding-top: 1em;
+          padding-left: 0.75em;
+          padding-right: 0.75em;
+        `;
+
+      const headery = document.createElement('div');
+      headery.innerHTML = `<div style="margin-bottom: 0.5em; font-weight: bold; margin-right: 2em;">If multiple values, please put a comma after each value.</div>`;
+      contentContainer.appendChild(headery);
+
+      const inputsMap = {};
+      
+      for (const [key, config] of Object.entries(fields)) {
+        const container = document.createElement('div');
+        container.style.cssText = config.type == 'checkbox'
+        ?
+        `
+          display: flex;
+          align-items: center;
+          gap: 0.5em;
+          padding-bottom: 0.5em;
+        `
+        : `
+          display: flex;
+          flex-direction: column;
+          padding-bottom: 0.5em;
+          gap: 0.4em;
+        `;
+        
+        const label = document.createElement('label');
+        label.textContent = `${config.label}:`;
+        label.style.cssText = `
+          ${isMobile ? '' : 'min-width: 160px;'}
+          color: #ccc;
+          font-size: '0.9rem;
+          display: block;
+        `;
+        
+        let input;
+        
+
+        switch (config.type) {
+          case 'select': 
+            input = document.createElement('select');
+            for (const [val, opt] of Object.entries(config.options)) {
+              const option = document.createElement('option');
+              option.value = val;
+              option.textContent = opt;
+              input.appendChild(option);
+            }
+            input.selectedIndex = 0;
+            break;
+          case 'numberSpecial':
+            input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'e.g. >1, 1, ([5 TO 20] !(7 || 13))';
+            break;
+          case 'textarea':
+            input = document.createElement('textarea');
+            input.style.minHeight = '30px';
+            input.style.resize = 'none';
+            input.style.overflow = 'hidden';
+            input.style.boxSizing = 'border-box'; 
+            input.addEventListener('input', () => {
+              input.style.height = 'auto';
+              input.style.height = input.scrollHeight + 'px';
+            });
+            break;
+          default:
+            input = document.createElement('input');
+            input.type = config.type;
+        }
+
+        input.style.cssText = config.type !== 'checkbox' 
+            ? `
+            width: 100%;
+            padding: 8px;
+            font-size: ${isMobile ? '16px' : '0.95rem'};
+            border: 1px solid #555;
+            border-radius: 4px;
+            background-color: #2a2a3d;
+            color: white;
+            box-sizing: border-box;
+            ` : `
+            width: 18px;
+            height: 18px;
+            accent-color: #ee5555;
+            cursor: pointer;
+            `;
+            
+        if (config.type === 'checkbox') {
+          input.checked = currSettings[key] || false;
+
+          container.appendChild(input); // checkbox first
+          container.appendChild(label); // then label
+        } else {
+          input.value = currSettings[key] || input.value || '';
+
+          container.appendChild(label);
+          container.appendChild(input);
+        }
+
+        inputsMap[key] = { input, type: config.type };
+        contentContainer.appendChild(container);
+      } 
+      return [inputsMap, contentContainer]
+    },
+
+    getButtons() {
+      
     }
       
   }

@@ -91,13 +91,15 @@
     tempPopup.remove();
   }
   
-  async function saveFilterValue(filters, key, value) {
+  async function saveFilterValue(settings, filters, key, value) {
     filters[key] = value;
-    await browser.storage.local.set({ filters });
+    settings.filters = filters;
+    await browser.storage.local.set({ settings });
   }
 
   async function openFilterPopup() {
-    const { filters = {} } = await browser.storage.local.get('filters');
+    const { settings = {} } = await browser.storage.local.get('settings');
+    let filters = settings.filters || {};
 
     const popup = document.createElement('div');
     popup.id = popupId;
@@ -228,7 +230,7 @@
       input.value = filters[key] || input.value || '';
       
       input.addEventListener('change', () => {
-        saveFilterValue(filters, key, input.value);
+        saveFilterValue(settings, filters, key, input.value);
       });
 
       container.appendChild(label);
@@ -269,7 +271,7 @@
       });
     };
     const buttonReset = document.createElement('button');
-    buttonReset.textContent = 'Reset All Filters';
+    buttonReset.textContent = 'Reset Filters';
     buttonReset.style.cssText = `
       flex: 1;
       padding: '8px 12px';
@@ -282,7 +284,9 @@
     `;
     buttonReset.addEventListener('click', async () => {
       if (confirm('Are you sure you want to clear all saved filter values?')) {
-        await browser.storage.local.remove('filters');
+        delete settings.filters;
+        await browser.storage.local.set({ settings });
+
         const inputs = contentContainer.querySelectorAll('input');
         Array.from(inputs).forEach(x => x.value = '');
         const selects = contentContainer.querySelectorAll('select');

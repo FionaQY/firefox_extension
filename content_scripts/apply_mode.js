@@ -174,7 +174,8 @@
   }
 
   async function formParams(baseUrl, isBookmark) {
-    const { filters = {} } = await browser.storage.local.get('filters');
+    const { settings = {} } = await browser.storage.local.get('settings');
+    let filters = settings.filters || [];
     let searchParams = isBookmark
       ? AO3UrlParser.getBookmarkParams(new URL(baseUrl)) 
       : AO3UrlParser.getParams(new URL(baseUrl));

@@ -114,7 +114,7 @@
 
   async function populateBookmark() {
     const { settings = {} } = await browser.storage.local.get('settings');
-    if (!settings['populateBookmark']) {
+    if (!settings['general']['populateBookmark']) {
       return;
     }
 

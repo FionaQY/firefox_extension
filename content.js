@@ -17,6 +17,7 @@
     'forgot': '🤔 I forgor',
     'apply': '✅ Apply default filters',
     'save': '💾 Set default filters',
+    'hide': '🫣 Hide Works',
     'settings': '⚙️ Settings'
   };
 

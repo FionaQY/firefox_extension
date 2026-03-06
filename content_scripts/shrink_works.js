@@ -16,12 +16,12 @@
     return;
   }
 
-  function isUndesired(work, settings) {
+  function isUndesired(work, workSettings) {
     const stats = window.AO3Extractor.extractAllValues(work);
     
     const words = stats['word_count'];
-    const hideWordUnder = settings['hideWordUnder'];
-    const hideWordOver = settings['hideWordOver'];
+    const hideWordUnder = workSettings['hideWordUnder'];
+    const hideWordOver = workSettings['hideWordOver'];
     const reasons = [];
     if (hideWordUnder.length != 0 && words < hideWordUnder) {
       reasons.push(`words < ${hideWordUnder}`);
@@ -30,14 +30,14 @@
       reasons.push(`words > ${hideWordOver}`);
     }
 
-    const hideLanguages = settings['hideLanguage']?.split(',').filter(x => x.trim().length > 0);
+    const hideLanguages = workSettings['hideLanguage']?.split(',').filter(x => x.trim().length > 0);
     for (const lang of hideLanguages) {
       if (stats['language'] == AO3Extractor.getLangAbb(lang)) {
         reasons.push(`Language: ${lang}`);
       }
     }
     
-    const showLanguages = settings['showLanguage']?.split(',').filter(x => x.trim().length > 0);
+    const showLanguages = workSettings['showLanguage']?.split(',').filter(x => x.trim().length > 0);
     if (showLanguages.length > 0) {
       const hasLang = showLanguages.some(x => AO3Extractor.getLangAbb(x) == stats['language']);
       if (!hasLang) {
@@ -48,7 +48,7 @@
     
 
     const tags = Array.from(work.querySelectorAll('ul.tags.commas li a')).map(x => x.innerText);
-    const excludeTags = settings['hideTags']?.split(',').map(x => x.trim()).filter(x => x.length > 0);
+    const excludeTags = workSettings['hideTags']?.split(',').map(x => x.trim()).filter(x => x.length > 0);
     for (const ex of excludeTags) {
       const pattern = new RegExp(
         '^' + ex.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$',
@@ -60,7 +60,7 @@
         }
       }
     }
-    const excludeAuthors = settings['hideAuthor']?.split(',').map(x => x.trim()).filter(x => x.length > 0);
+    const excludeAuthors = workSettings['hideAuthor']?.split(',').map(x => x.trim()).filter(x => x.length > 0);
     for (const author of excludeAuthors) {
       if (stats['authors_to_sort_on'].includes(author)) {
         reasons.push(`Author: ${author}`);
@@ -70,7 +70,11 @@
     return reasons.map(x => x.trim()).join(", ");
   }
 
-  function shrink(work, reason) {
+  function shrink(work, reason, hideEntirely) {
+    if (hideEntirely) {
+      work.style.display = 'none';
+      return;
+    }
     const header = document.createElement('div');
     header.style.display = "flex";
     header.style.alignItems = "center";
@@ -104,14 +108,15 @@
   
   async function handleShrinkWorks() {
     const { settings = {} } = await browser.storage.local.get('settings');
-    if (!settings['shrinkWorks']) {
+    if (!settings['general']['shrinkWorks']) {
       return;
     }
+    let workSettings = settings.workSettings || {};
     const works = document.querySelectorAll('.work.blurb.group');
     for (const work of works) {
-      const reason = isUndesired(work, settings);
-      if (reason.length != 0) {
-        shrink(work, reason);
+      const reason = isUndesired(work, workSettings);
+      if (reason.length > 0) {
+        shrink(work, reason, workSettings['hideEntirely']);
       }
     }
   }
