@@ -284,10 +284,13 @@
   };
 
   window.AO3Popup = window.AO3Popup || {
+    /**
+     * Displays a small notification popup that disappears after 3 seconds or on click.
+     * @param {string} msg - The message to display.
+     */
     createNotifPopup(msg) {
       const popupId = 'ao3-notif-popup';
-      const tempPopup = document.getElementById(popupId);
-      if (tempPopup) tempPopup.remove();
+      document.getElementById(popupId)?.remove();
 
       const popup = document.createElement('div');
       popup.id = popupId;
@@ -299,7 +302,8 @@
         color: #eee;
         border: 1px solid #444;
         border-radius: 8px;
-        padding: 0.5em 1em;
+        padding: 0.5em 1em 0.5em 1em; /* top/bottom 0.5, left/right 1 */
+        padding-right: 2em; /* extra space for aesthetics */
         max-width: 280px;
         font-family: sans-serif;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -320,130 +324,73 @@
 
       popup.style.left = `${randomLeft}px`;
       popup.style.top = `${randomTop}px`;
-      popup.style.position = 'fixed';
-      popup.style.paddingRight = '2em';
-      setTimeout(() => popup.remove(), 3000)
-      document.body.addEventListener('click', (e) => {
+
+      // Auto-remove after 3 seconds
+      const timer = setTimeout(() => popup.remove(), 3000);
+
+      const clickHandler = () => {
+        clearTimeout(timer);
         popup.remove();
-      })       
+        document.body.removeEventListener('click', clickHandler, { once: true });
+      };
+      document.body.addEventListener('click', clickHandler, { once: true });
     },
 
-    optionsPopupHelper(fields, isMobile, currSettings) {
-      const contentContainer = document.createElement('div');
-      contentContainer.style.cssText = isMobile ? `
-          flex: 1;
-          overflow-y: auto;
-          -webkit-overflow-scrolling: touch;
-          min-height: 0;
-          padding-top: 1em;
-        ` : `
-          padding-top: 1em;
-          padding-left: 0.75em;
-          padding-right: 0.75em;
-        `;
+    /**
+     * Creates a structured popup content with input fields.
+     * @param {Object} fields - Configuration object for fields (key -> {label, type, options?}).
+     * @param {boolean} isMobile - Whether the viewport is mobile-sized.
+     * @param {Object} currSettings - Current values to populate the inputs.
+     * @param {boolean} [showHint=false] - Whether to display the "multiple values" hint.
+     * @returns {[Object, HTMLDivElement]} A tuple: [inputsMap, contentContainer].
+     */
+    optionsPopupHelper(fields, isMobile, currSettings, showHint = false) {
+      const container = document.createElement('div');
+      container.style.cssText = this._getContentContainerStyle(isMobile);
 
-      const headery = document.createElement('div');
-      headery.innerHTML = `<div style="margin-bottom: 0.5em; font-weight: bold; margin-right: 2em;">If multiple values, please put a comma after each value.</div>`;
-      contentContainer.appendChild(headery);
+      if (showHint) {
+        const hint = document.createElement('div');
+        hint.textContent = 'If multiple values, please put a comma after each value.';
+        hint.style.cssText = 'margin-bottom: 0.5em; font-weight: bold; margin-right: 2em;';
+        container.appendChild(hint);
+      }
 
       const inputsMap = {};
-      
       for (const [key, config] of Object.entries(fields)) {
-        const container = document.createElement('div');
-        container.style.cssText = config.type == 'checkbox'
-        ?
-        `
-          display: flex;
-          align-items: center;
-          gap: 0.5em;
-          padding-bottom: 0.5em;
-        `
-        : `
-          display: flex;
-          flex-direction: column;
-          padding-bottom: 0.5em;
-          gap: 0.4em;
-        `;
-        
+        const fieldContainer = document.createElement('div');
+        fieldContainer.style.cssText = this._getFieldContainerStyle(config.type);
+
         const label = document.createElement('label');
         label.textContent = `${config.label}:`;
-        label.style.cssText = `
-          ${isMobile ? '' : 'min-width: 160px;'}
-          color: #ccc;
-          font-size: '0.9rem;
-          display: block;
-        `;
-        
-        let input;
-        
+        label.style.cssText = this._getLabelStyle(isMobile, config.type);
 
-        switch (config.type) {
-          case 'select': 
-            input = document.createElement('select');
-            for (const [val, opt] of Object.entries(config.options)) {
-              const option = document.createElement('option');
-              option.value = val;
-              option.textContent = opt;
-              input.appendChild(option);
-            }
-            input.selectedIndex = 0;
-            break;
-          case 'numberSpecial':
-            input = document.createElement('input');
-            input.type = 'text';
-            input.placeholder = 'e.g. >1, 1, ([5 TO 20] !(7 || 13))';
-            break;
-          case 'textarea':
-            input = document.createElement('textarea');
-            input.style.minHeight = '30px';
-            input.style.resize = 'none';
-            input.style.overflow = 'hidden';
-            input.style.boxSizing = 'border-box'; 
-            input.addEventListener('input', () => {
-              input.style.height = 'auto';
-              input.style.height = input.scrollHeight + 'px';
-            });
-            break;
-          default:
-            input = document.createElement('input');
-            input.type = config.type;
-        }
+        const input = this._createInput(config, isMobile, currSettings[key]);
+        this._applyInputStyles(input, config, isMobile);
 
-        input.style.cssText = config.type !== 'checkbox' 
-            ? `
-            width: 100%;
-            padding: 8px;
-            font-size: ${isMobile ? '16px' : '0.95rem'};
-            border: 1px solid #555;
-            border-radius: 4px;
-            background-color: #2a2a3d;
-            color: white;
-            box-sizing: border-box;
-            ` : `
-            width: 18px;
-            height: 18px;
-            accent-color: #ee5555;
-            cursor: pointer;
-            `;
-            
         if (config.type === 'checkbox') {
+          fieldContainer.appendChild(input);
+          fieldContainer.appendChild(label);
           input.checked = currSettings[key] || false;
-
-          container.appendChild(input); // checkbox first
-          container.appendChild(label); // then label
         } else {
-          input.value = currSettings[key] || input.value || '';
-
-          container.appendChild(label);
-          container.appendChild(input);
+          fieldContainer.appendChild(label);
+          fieldContainer.appendChild(input);
+          input.value = currSettings[key] || '';
         }
 
         inputsMap[key] = { input, type: config.type };
-        contentContainer.appendChild(container);
-      } 
-      return [inputsMap, contentContainer]
+        container.appendChild(fieldContainer);
+      }
+
+      return [inputsMap, container];
     },
 
+    /**
+     * Creates a styled button.
+     * @param {string} color - Background color.
+     * @param {boolean} isMobile - Mobile sizing.
+     * @param {string} text - Button label.
+     * @returns {HTMLButtonElement}
+     */
     getButton(color, isMobile, text) {
       const butt = document.createElement('button');
       butt.textContent = text;
@@ -459,8 +406,240 @@
         touch-action: manipulation;
       `;
       return butt;
-    }
-      
-  }
+    },
 
+    /**
+     * Creates a consistent close button for popups.
+     * @param {boolean} isMobile - Whether the device is mobile.
+     * @param {Function} [onClose] - Optional callback to run when closed. If not provided, removes the closest popup.
+     * @returns {HTMLButtonElement} The configured close button.
+     */
+    createCloseButton(isMobile, onClose) {
+      const btn = document.createElement('button');
+      btn.textContent = '×';
+      btn.style.cssText = `
+        position: absolute;
+        top: ${isMobile ? '12px' : '8px'};
+        right: ${isMobile ? '12px' : '8px'};
+        width: ${isMobile ? '32px' : '24px'};
+        height: ${isMobile ? '32px' : '24px'};
+        background: none;
+        border: none;
+        font-size: ${isMobile ? '24px' : '18px'};
+        font-weight: bold;
+        color: #ccc;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        z-index: 10000;
+      `;
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = 'rgba(255, 255, 255, 0.2)';
+        btn.style.color = '#fff';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.background = 'rgba(255, 255, 255, 0.1)';
+        btn.style.color = '#ccc';
+      });
+      btn.onclick = () => {
+        if (onClose) onClose();
+        else {
+          const popup = btn.closest(`[id$="-popup"]`); // closes those whose ids end with "-popup"
+          if (popup) popup.remove();
+        }
+      };
+      return btn;
+    },
+
+    /**
+     * Creates a base popup container.
+     * @param {string} id - Unique ID for the popup.
+     * @param {boolean} isMobile - Whether the device is mobile.
+     * @param {Object} options - Configuration.
+     * @param {string} [options.extraStyles] - Additional CSS to merge.
+     * @param {Function} [options.onClose] - Callback when closed.
+     * @param {HTMLElement} [options.content] - Element to append inside the popup (before buttons).
+     * @param {Array} [options.buttons] - Array of button objects for createButtonBar: { text, color, onClick }.
+     * @returns {HTMLDivElement} The created popup element.
+     */
+    createPopupContainer(id, isMobile, options = {}) {
+      const popup = document.createElement('div');
+      popup.id = id;
+      popup.style.cssText = `
+        position: fixed;
+        ${isMobile 
+          ? 'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 70%; border-radius: 0; padding: 1em 1em 0; margin: 0 auto;' 
+          : 'top: 20px; right: 20px; width: 380px; border-radius: 8px; padding: 1em;'
+        }
+        background: #1e1e2f;
+        color: #eee;
+        border: 1px solid #444;
+        max-height: ${isMobile ? '100vh' : '50vh'};
+        overflow: ${isMobile ? 'hidden' : 'auto'};
+        z-index: 9999;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        font-family: sans-serif;
+        scrollbar-width: thin;
+        scrollbar-color: #555 #2e2e3e;
+        -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
+        ${isMobile ? 'display: flex; flex-direction: column;' : ''}
+        ${options.extraStyles || ''}
+      `;
+
+      const closeBtn = this.createCloseButton(isMobile, options.onClose);
+      popup.appendChild(closeBtn);
+
+      if (options.content) {
+        popup.appendChild(options.content);
+      }
+
+      if (options.buttons && options.buttons.length) {
+        const buttonBar = this.createButtonBar(options.buttons, isMobile);
+        popup.appendChild(buttonBar);
+      }
+      return popup;
+    },
+
+    /**
+     * Creates a horizontal button bar from an array of button definitions.
+     * @param {Array} buttons - Array of { text, color, onClick }.
+     * @param {boolean} isMobile - Whether the device is mobile.
+     * @returns {HTMLDivElement} The button bar container.
+     */
+    createButtonBar(buttons, isMobile) {
+      const container = document.createElement('div');
+      container.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        gap: 1em;
+        padding: 1em;
+        flex-wrap: wrap;
+      `;
+      buttons.forEach(btnDef => {
+        const btn = this.getButton(btnDef.color, isMobile, btnDef.text);
+        btn.addEventListener('click', btnDef.onClick);
+        container.appendChild(btn);
+      });
+      return container;
+    },
+
+    /**
+     * Retrieves the full settings object from storage.
+     * @returns {Promise<Object>} The settings object (defaults to empty if none).
+     */
+    async getSettings() {
+      const { settings = {} } = await browser.storage.local.get('settings');
+      return settings;
+    },
+
+    /**
+     * Saves the entire settings object to storage.
+     * @param {Object} settings - The settings object to store.
+     * @returns {Promise<void>}
+     */
+    async saveSettings(settings) {
+      await browser.storage.local.set({ settings });
+    },
+
+    /**
+     * Resets all input elements inside a container to default values.
+     * @param {HTMLElement} container - The container holding the inputs.
+     * @param {Object} inputsMap - The map returned by optionsPopupHelper (optional, if not provided will search DOM).
+     */
+    resetInputs(container, inputsMap) {
+      if (inputsMap) {
+        for (const { input, type } of Object.values(inputsMap)) {
+          if (type === 'checkbox') input.checked = false;
+          else input.value = '';
+        }
+      } else {
+        const inputs = container.querySelectorAll('input, select, textarea');
+        inputs.forEach(el => {
+          if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
+          else if (el.tagName === 'SELECT') el.selectedIndex = 0;
+          else el.value = '';
+        });
+      }
+    },
+
+    // -------- private helpers for optionsPopupHelper --------
+    _getContentContainerStyle(isMobile) {
+      return isMobile
+        ? 'flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; min-height: 0; padding-top: 1em;'
+        : 'padding-top: 1em; padding-left: 0.75em; padding-right: 0.75em;';
+    },
+
+    _getFieldContainerStyle(type) {
+      return type === 'checkbox'
+        ? 'display: flex; align-items: center; gap: 0.5em; padding-bottom: 0.5em;'
+        : 'display: flex; flex-direction: column; padding-bottom: 0.5em; gap: 0.4em;';
+    },
+
+    _getLabelStyle(isMobile, type) {
+      return type === 'checkbox'
+        ? 'color: #ccc; font-size: 0.9rem; display: block;'
+        : `${isMobile ? '' : 'min-width: 160px;'} color: #ccc; font-size: 0.9rem; display: block;`;
+    },
+
+    _createInput(config, isMobile, currentValue) {
+      let input;
+      switch (config.type) {
+        case 'select':
+          input = document.createElement('select');
+          for (const [val, opt] of Object.entries(config.options)) {
+            const option = document.createElement('option');
+            option.value = val;
+            option.textContent = opt;
+            input.appendChild(option);
+          }
+          input.selectedIndex = 0;
+          break;
+        case 'numberSpecial':
+          input = document.createElement('input');
+          input.type = 'text';
+          input.placeholder = 'e.g. >1, 1, ([5 TO 20] !(7 || 13))';
+          break;
+        case 'textarea':
+          input = document.createElement('textarea');
+          input.style.minHeight = '30px';
+          input.style.resize = 'none';
+          input.style.overflow = 'hidden';
+          input.style.boxSizing = 'border-box';
+          input.addEventListener('input', () => {
+            input.style.height = 'auto';
+            input.style.height = input.scrollHeight + 'px';
+          });
+          break;
+        default:
+          input = document.createElement('input');
+          input.type = config.type;
+      }
+      return input;
+    },
+
+    _applyInputStyles(input, config, isMobile) {
+      if (config.type !== 'checkbox') {
+        input.style.cssText = `
+          width: 100%;
+          padding: 8px;
+          font-size: ${isMobile ? '16px' : '0.95rem'};
+          border: 1px solid #555;
+          border-radius: 4px;
+          background-color: #2a2a3d;
+          color: white;
+          box-sizing: border-box;
+        `;
+      } else {
+        input.style.cssText = `
+          width: 18px;
+          height: 18px;
+          accent-color: #ee5555;
+          cursor: pointer;
+        `;
+      }
+    }
+  };
 })();

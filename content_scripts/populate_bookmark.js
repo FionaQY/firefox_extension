@@ -10,25 +10,6 @@
     return;
   }
 
-
-  function cleanTagList(tags) {
-    const cleanedTags = [];
-
-    tags.forEach(tag => {
-      const newTags = tag.querySelectorAll('a.tag');
-      for (const x of newTags) {
-        if (cleanedTags.length < 5) {
-          cleanedTags.push(x.innerText)
-        } else {
-          break;
-        }
-      }
-    });
-
-    return cleanedTags;
-  }
-
-
   async function getBookmarkHtml() {
     const data = await window.AO3Extractor.getSummaryFromWork(workUrl, false);
     if (!data) return '';

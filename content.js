@@ -13,11 +13,12 @@
 
   const modeTextMap = {
     '': '',
-    'block': '🚫 Block tag/author',
+    'block': '🚫 Block Tag/Author',
     'forgot': '🤔 I forgor',
-    'apply': '✅ Apply default filters',
-    'save': '💾 Set default filters',
+    'apply': '✅ Apply Default Filters',
+    'save': '💾 Set Default Filters',
     'hide': '🫣 Hide Works',
+    'search' : '🔍︎ Search Bar',
     'settings': '⚙️ Settings'
   };
 

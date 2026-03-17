@@ -1,9 +1,6 @@
 (() => {
   const popupId = 'ao3-hideworks-popup';
-  const tempPopup = document.getElementById(popupId);
-  if (tempPopup) {
-    tempPopup.remove();
-  }
+  document.getElementById(popupId)?.remove();
 
   const fields = {
     hideEntirely: {
@@ -41,103 +38,50 @@
   };
 
   async function openHideWorksPopup() {
-    const { settings = {} } = await browser.storage.local.get('settings');
+    const settings = await window.AO3Popup.getSettings();
     let workSettings = settings.workSettings || {};
-
-    const popup = document.createElement('div');
-    popup.id = popupId;
     const isMobile = window.innerWidth <= 768;
-    popup.style.cssText = `
-      position: fixed;
-      ${isMobile ? 
-        'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 70%; border-radius: 0; padding: 1em 1em 0; margin: 0 auto;' : 
-        'top: 20px; right: 20px; width: 380px; border-radius: 8px;' 
+
+    // Create content with fields (no hint)
+    const [inputsMap, contentContainer] = window.AO3Popup.optionsPopupHelper(
+      fields, isMobile, workSettings, false
+    );
+
+    // Buttons
+    const buttons = [
+      {
+        text: 'Save',
+        color: '#4a90e2',
+        onClick: async () => {
+          // Update workSettings
+          for (const [key, { input, type }] of Object.entries(inputsMap)) {
+            workSettings[key] = (type === 'checkbox') ? input.checked : input.value;
+          }
+          settings.workSettings = workSettings;
+          await window.AO3Popup.saveSettings(settings);
+          document.getElementById(popupId)?.remove();
+        }
+      },
+      {
+        text: 'Reset',
+        color: '#ee5555',
+        onClick: async () => {
+          if (!confirm('Are you sure you want to reset?')) return;
+          delete settings.workSettings;
+          await window.AO3Popup.saveSettings(settings);
+          // Reset all inputs
+          window.AO3Popup.resetInputs(contentContainer, inputsMap);
+        }
       }
-      background: #1e1e2f;
-      color: #eee;
-      border: 1px solid #444;
-      max-height: ${isMobile ? '100vh' : '50vh'};
-      overflow: ${isMobile ? 'hidden' : 'auto'};
-      z-index: 9999;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-      font-family: sans-serif;
-      scrollbar-width: thin;
-      scrollbar-color: #555 #2e2e3e;
-      -webkit-overflow-scrolling: touch;
-      box-sizing: border-box;
-      ${isMobile ? 'display: flex; flex-direction: column;' : ''}
-    `;
+    ];
 
-    const buttonClose = document.createElement('button');
-    buttonClose.textContent = '×';
-    buttonClose.style.cssText = `
-      position: absolute;
-      top: ${isMobile ? '12px' : '8px'};
-      right: ${isMobile ? '12px' : '8px'};
-      width: ${isMobile ? '32px' : '24px'};
-      height: ${isMobile ? '32px' : '24px'};
-      background: none;
-      border:none;
-      font-size: ${isMobile ? '24px' : '18px'};
-      font-weight: bold;
-      color: #ccc;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-      z-index: 10000;
-    `;
-    buttonClose.addEventListener('mouseenter', () => {
-      buttonClose.style.background = 'rgba(255, 255, 255, 0.2)';
-      buttonClose.style.color = '#fff';
+    // Create popup
+    const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
+      content: contentContainer,
+      buttons: buttons,
+      extraStyles: isMobile ? '' : 'padding-bottom: 0;'
     });
 
-    buttonClose.addEventListener('mouseleave', () => {
-      buttonClose.style.background = 'rgba(255, 255, 255, 0.1)';
-      buttonClose.style.color = '#ccc';
-    });
-    
-    buttonClose.onclick = () => popup.remove();
-    popup.appendChild(buttonClose);
-
-    const [inputsMap, contentContainer] = window.AO3Popup.optionsPopupHelper(fields, isMobile, workSettings);
-    
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = `
-      display: flex;
-      justify-content: space-between;
-      gap: 1em;
-      padding: 1em;
-    `;
-
-    const buttonSave = window.AO3Popup.getButton("#4a90e2", isMobile, 'Save');
-    buttonSave.addEventListener('click', async () => {
-      for (const [key, {input, type}] of Object.entries(inputsMap)) {
-        workSettings[key] = (type == 'checkbox') ? input.checked : input.value;
-      }
-      settings.workSettings = workSettings
-      await browser.storage.local.set({ settings }).then(() => popup.remove());
-    });
-    
-    const buttonReset = window.AO3Popup.getButton("#ee5555", isMobile, 'Reset');
-    buttonReset.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to reset?')) {
-        delete settings["workSettings"];
-        await browser.storage.local.set({ settings });
-        
-        const inputs = contentContainer.querySelectorAll('input');
-        Array.from(inputs).forEach(x => x.type === 'checkbox' ? x.checked = false : x.value = '');
-        const selects = contentContainer.querySelectorAll('select');
-        Array.from(selects).forEach(x => x.selectedIndex = 0);
-      }
-    });
-
-    buttonContainer.appendChild(buttonSave);
-    buttonContainer.appendChild(buttonReset);
-    popup.appendChild(contentContainer);
-    popup.appendChild(buttonContainer);
-    
     document.body.appendChild(popup);
   }
 
