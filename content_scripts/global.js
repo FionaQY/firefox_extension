@@ -303,7 +303,7 @@
         border: 1px solid #444;
         border-radius: 8px;
         padding: 0.5em 1em 0.5em 1em; /* top/bottom 0.5, left/right 1 */
-        padding-right: 2em; /* extra space for aesthetics */
+        padding-right: 2em;
         max-width: 280px;
         font-family: sans-serif;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -471,7 +471,7 @@
         position: fixed;
         ${isMobile 
           ? 'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 70%; border-radius: 0; padding: 1em 1em 0; margin: 0 auto;' 
-          : 'top: 20px; right: 20px; width: 380px; border-radius: 8px; padding: 1em;'
+          : 'top: 20px; right: 20px; width: 380px; border-radius: 8px; padding: 0.5em;'
         }
         background: #1e1e2f;
         color: #eee;
@@ -563,6 +563,83 @@
           else el.value = '';
         });
       }
+    },
+
+    /**
+     * Creates a search bar component with an input field and buttons on the right.
+     * @param {Object} options - Configuration.
+     * @param {string} options.inputPlaceholder - Placeholder text for the input.
+     * @param {string} options.inputValue - Initial value for the input.
+     * @param {Array} options.buttons - Array of { text, color, onClick, active? }.
+     * @param {Function} [options.onInputChange] - Callback when input value changes (receives new value).
+     * @param {boolean} [options.isMobile] - Override mobile detection.
+     * @returns {HTMLDivElement} The search bar container.
+     */
+    createSearchBar(options = {}) {
+      const {
+        inputPlaceholder = '',
+        inputValue = '',
+        buttons = [],
+        onInputChange = null,
+        isMobile = window.innerWidth <= 768
+      } = options;
+
+      const container = document.createElement('div');
+      container.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        padding: 0.5em;
+        background: #2a2a3d;
+        border-radius: 4px;
+        border: 1px solid #444;
+      `;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = inputPlaceholder;
+      input.value = inputValue;
+      input.style.cssText = `
+        flex: 1;
+        padding: 8px 10px;
+        font-size: ${isMobile ? '16px' : '0.95rem'};
+        border: 1px solid #555;
+        border-radius: 4px;
+        background: #1e1e2f;
+        color: white;
+        outline: none;
+        min-width: 0;
+      `;
+      if (onInputChange) {
+        input.addEventListener('input', (e) => onInputChange(e.target.value));
+      }
+      container.appendChild(input);
+
+      // Buttons
+      buttons.forEach(btnDef => {
+        const btn = document.createElement('button');
+        btn.textContent = btnDef.text;
+        const bgColor = btnDef.color || 'transparent';
+        btn.style.cssText = `
+          padding: 8px 12px;
+          background: ${bgColor};
+          color: white;
+          border: none;
+          border-radius: 4px;
+          font-size: ${isMobile ? '16px' : '0.95rem'};
+          cursor: pointer;
+          white-space: nowrap;
+          touch-action: manipulation;
+          transition: filter 0.2s, background 0.2s;
+        `;
+        btn.addEventListener('mouseenter', () => { btn.style.filter = 'brightness(1.1)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.filter = 'none'; });
+        btn.addEventListener('click', (e) => { if (btnDef.onClick) {btnDef.onClick(e);}
+        });
+        container.appendChild(btn);
+      });
+
+      return container;
     },
 
     // -------- private helpers for optionsPopupHelper --------
