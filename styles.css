@@ -64,11 +64,6 @@
   overflow-y: auto;
 }
 
-#ao3-qof-modal *::before,
-#ao3-qof-modal *::after {
-  content: none !important;
-}
-
 .ao3-popup-content {
   box-sizing: border-box;
   padding: 0.75em 0.65em 0.9em;
