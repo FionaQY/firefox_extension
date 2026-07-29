@@ -1,6 +1,19 @@
 /* globals browser */
 
 (() => {
+  // Inject external stylesheet
+  function injectStyles() {
+    const styleId = 'ao3-qof-styles';
+    if (document.getElementById(styleId)) return;
+
+    const link = document.createElement('link');
+    link.id = styleId;
+    link.rel = 'stylesheet';
+    link.href = browser.runtime.getURL('styles.css');
+    document.head.appendChild(link);
+  }
+
+  injectStyles();
   // Listen for messages from background to show popup
   browser.runtime.onMessage.addListener(async (msg) => {
     if (msg.action === 'showPopup') {
@@ -8,66 +21,57 @@
     }
   });
 
-  const popupId = 'ao3-qof-popup';
-  document.getElementById(popupId)?.remove();
-
   const modeTextMap = {
     block: { icon: '🚫', label: 'Block Tag/Author' },
     forgot: { icon: '🤔', label: 'I forgor' },
     apply: { icon: '✅', label: 'Apply Default Filters' },
     save: { icon: '💾', label: 'Set Default Filters' },
     hide: { icon: '🫣', label: 'Hide Works' },
-    search: { icon: '🔍︎', label: 'Search Bar' },
+    search: { icon: '🔍', label: 'Search Bar' },
     settings: { icon: '⚙️', label: 'Settings' }
   };
 
   async function showPopup() {
+    const popupId = 'ao3-qof-popup';
+    if (document.getElementById(popupId)) {
+      document.getElementById(popupId).remove();
+      return;
+    }
+
     const settings = await window.AO3Popup.getSettings();
     const isMobile = window.innerWidth <= 768;
 
-    function createButton(val) {
+    function createButton(val, isExpanded = false) {
       const { icon = '', label = '' } = modeTextMap[val] || {};
 
       const button = document.createElement('button');
       button.type = 'button';
       button.dataset.mode = val;
-      button.style.cssText = `
-        box-sizing: border-box;
-        cursor: pointer;
-        width: 100%;
-        min-height: ${isMobile ? '55px' : '70px'};
-        border: 1px solid #444;
-        border-radius: 12px;
-        background-color: #252535;
-        color: white;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.1rem;
-        padding: 0.45rem 0.3rem;
-        text-align: center;
-        transition: transform 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
-        overflow: hidden;
-      `;
+
+      button.classList.add('ao3-mode-button');
+      if (isExpanded) {
+        button.classList.add('expanded');
+      } else {
+        button.classList.add(isMobile ? 'mobile' : 'desktop');
+      }
 
       const iconEl = document.createElement('div');
       iconEl.textContent = icon;
-      iconEl.style.cssText = `
-        font-size: ${isMobile ? '1.2rem' : '1.4rem'};
-        line-height: 1;
-      `;
+      iconEl.classList.add('ao3-mode-button-icon');
+      if (isExpanded) {
+        iconEl.classList.add('expanded');
+      } else {
+        iconEl.classList.add(isMobile ? 'mobile' : 'desktop');
+      }
 
       const textEl = document.createElement('div');
       textEl.textContent = label;
-      textEl.style.cssText = `
-        width: 100%;
-        font-size: ${isMobile ? '0.85rem' : '0.8rem'};
-        line-height: 1.1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      `;
+      textEl.classList.add('ao3-mode-button-text');
+      if (isExpanded) {
+        textEl.classList.add('expanded');
+      } else {
+        textEl.classList.add(isMobile ? 'mobile' : 'desktop');
+      }
 
       button.appendChild(iconEl);
       button.appendChild(textEl);
@@ -81,17 +85,6 @@
         });
       });
 
-      button.addEventListener('pointerenter', () => {
-        button.style.backgroundColor = '#2f2f45';
-        button.style.borderColor = '#7a7aff';
-        button.style.transform = 'translateY(-1px)';
-      });
-      button.addEventListener('pointerleave', () => {
-        button.style.backgroundColor = '#252535';
-        button.style.borderColor = '#555';
-        button.style.transform = 'none';
-      });
-
       return button;
     }
 
@@ -103,38 +96,85 @@
       popupOptions = [...popupOptions, 'settings'];
     }
 
+    // Create expanded fullscreen modal (desktop only)
+    function createExpandedModal() {
+      const modalId = 'ao3-qof-modal';
+      document.getElementById(modalId)?.remove();
+
+      const modal = document.createElement('div');
+      modal.id = modalId;
+      modal.classList.add('ao3-modal-overlay');
+
+      const container = document.createElement('div');
+      container.classList.add('ao3-modal-container');
+
+      const header = document.createElement('div');
+      header.classList.add('ao3-modal-header');
+
+      const title = document.createElement('h2');
+      title.textContent = 'Select Mode';
+      title.classList.add('ao3-modal-title');
+      header.appendChild(title);
+
+      const contractBtn = document.createElement('button');
+      contractBtn.textContent = '⇦ Contract';
+      contractBtn.classList.add('ao3-control-button');
+      contractBtn.addEventListener('click', () => {
+        modal.remove();
+        showPopup();
+      });
+      header.appendChild(contractBtn);
+
+      container.appendChild(header);
+
+      const expandedGrid = document.createElement('div');
+      expandedGrid.classList.add('ao3-expanded-grid');
+
+      popupOptions.forEach(val => {
+        if (val === '') return;
+        const expandedButton = createButton(val, true);
+        expandedGrid.appendChild(expandedButton);
+      });
+
+      container.appendChild(expandedGrid);
+
+      const footer = document.createElement('div');
+      footer.classList.add('ao3-modal-footer');
+
+      container.appendChild(footer);
+      modal.appendChild(container);
+      document.body.appendChild(modal);
+    }
+
     const content = document.createElement('div');
-    content.style.cssText = isMobile
-      ? 'flex: 1; padding: 0.75em 0.65em 0.9em; box-sizing: border-box;'
-      : 'padding: 0.75em 0.65em 0.9em; box-sizing: border-box;';
+    content.classList.add('ao3-popup-content', isMobile ? 'mobile' : 'desktop');
 
     const label = document.createElement('label');
     label.textContent = 'Select mode:';
-    label.style.cssText = `
-      color: #ccc;
-      display: block;
-      margin-bottom: 0.75em;
-      font-size: ${isMobile ? '1rem' : '0.95rem'};
-    `;
+    label.classList.add('ao3-popup-label', isMobile ? 'mobile' : 'desktop');
     content.appendChild(label);
 
     const grid = document.createElement('div');
-    grid.style.cssText = `
-      display: grid;
-      grid-template-columns: repeat(${isMobile ? 1 : 2}, minmax(0, 1fr));
-      grid-auto-rows: minmax(0, auto);
-      justify-items: stretch;
-      gap: 0.4rem;
-      width: 100%;
-      max-width: 100%;
-    `;
+    grid.classList.add('ao3-button-grid', isMobile ? 'mobile' : 'desktop');
 
     popupOptions.forEach(val => {
       if (val === '') return;
-      grid.appendChild(createButton(val));
+      grid.appendChild(createButton(val, false));
     });
 
     content.appendChild(grid);
+
+    // Add expand button on desktop
+    if (!isMobile) {
+      const expandBtn = document.createElement('button');
+      expandBtn.textContent = '⛶ Expand';
+      expandBtn.classList.add('ao3-control-button', 'ao3-expand-button');
+      expandBtn.addEventListener('click', () => {
+        createExpandedModal();
+        document.getElementById(popupId)?.remove();
+      });
+      content.appendChild(expandBtn);
+    }
 
     const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
       content: content,
@@ -144,5 +184,6 @@
     });
 
     document.body.appendChild(popup);
+
   }
 })();
