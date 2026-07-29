@@ -297,6 +297,7 @@
 
       const popup = document.createElement('div');
       popup.id = popupId;
+      popup.classList.add('ao3-notif-popup');
       popup.textContent = msg;
 
       document.body.appendChild(popup);

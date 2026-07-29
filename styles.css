@@ -74,7 +74,7 @@
 }
 
 /* Notification Popup */
-#ao3-notif-popup {
+.ao3-notif-popup {
   position: fixed;
   background: #1e1e2f;
   color: #eee;
