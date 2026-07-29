@@ -408,6 +408,25 @@
   background: #4a90e2;
 }
 
+.ao3-search-status {
+  color: #ccc;
+  font-size: 0.85rem;
+  min-height: 1.2em;
+  padding: 0.4em 0.2em 0;
+}
+
+/* Search Matches */
+mark.ao3-search-highlight {
+  background: #ffe066;
+  color: #000;
+  padding: 0;
+}
+
+mark.ao3-search-highlight.current {
+  background: #ff9f1c;
+  outline: 2px solid #ff9f1c;
+}
+
 /* Options Form */
 .ao3-options-content {
   padding-top: 1em;
