@@ -30,26 +30,25 @@
     const isMobile = window.innerWidth <= 768;
 
     const content = document.createElement('div');
-    content.style.padding = '0.5em 0';
+    content.classList.add('ao3-summary-content');
 
     const headingEl = document.createElement('div');
-    headingEl.style.marginBottom = '0.5em';
-    headingEl.style.fontWeight = 'bold';
+    headingEl.classList.add('ao3-summary-heading');
     headingEl.innerHTML = heading;
     content.appendChild(headingEl);
 
     const summaryEl = document.createElement('div');
     summaryEl.innerHTML = summary;
-    summaryEl.style.marginBottom = '1em';
+    summaryEl.classList.add('ao3-summary-text');
     content.appendChild(summaryEl);
 
     if (tags && Object.keys(tags).length > 0) {
       for (const [key, values] of Object.entries(tags)) {
         if (values.length === 0) continue;
         const tagContainer = document.createElement('div');
-        tagContainer.style.marginTop = '0.5em';
+        tagContainer.classList.add('ao3-summary-tags');
         const label = document.createElement('span');
-        label.style.fontWeight = 'bold';
+        label.classList.add('ao3-summary-tags-label');
         label.textContent = `${key}: `;
         tagContainer.appendChild(label);
         const valueSpan = document.createElement('span');
@@ -61,7 +60,7 @@
 
     const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
       content: content,
-      extraStyles: 'max-width: 450px; max-height: 80vh; overflow-y: auto;',
+      extraClasses: ['summary'],
     });
 
     document.body.appendChild(popup);

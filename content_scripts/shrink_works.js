@@ -75,18 +75,15 @@
 
   function shrink(work, reason, hideEntirely) {
     if (hideEntirely) {
-      work.style.display = 'none';
+      work.classList.add('ao3-hidden');
       return;
     }
     const header = document.createElement('div');
-    header.style.display = "flex";
-    header.style.alignItems = "center";
-    header.style.gap = "8px";
-    header.style.justifyContent = "space-between";
+    header.classList.add('ao3-shrink-header');
 
     const toggle = document.createElement('button');
     toggle.textContent = "Show/Hide Work";
-    toggle.style.cursor = "pointer";
+    toggle.classList.add('ao3-shrink-toggle');
 
     const label = document.createElement('span');
     label.textContent = reason
@@ -98,13 +95,13 @@
     while (work.firstChild) {
       content.appendChild(work.firstChild);
     }
-    content.style.display = "none";
+    content.classList.add('ao3-hidden');
 
     work.appendChild(header);
     work.appendChild(content);
 
     toggle.addEventListener('click', () => {
-      content.style.display = content.style.display === "none" ? "block" : "none";
+      content.classList.toggle('ao3-hidden');
     });
   }
 

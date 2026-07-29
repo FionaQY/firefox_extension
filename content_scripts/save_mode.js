@@ -116,14 +116,14 @@
     const buttons = [
       {
         text: 'Apply Filters Now',
-        color: '#4a90e2',
+        variant: 'primary',
         onClick: () => {
           browser.runtime.sendMessage({ action: 'applyFilters' });
         }
       },
       {
         text: 'Reset Filters',
-        color: '#ee5555',
+        variant: 'danger',
         onClick: async () => {
           if (!confirm('Are you sure you want to clear all saved filter values?')) return;
           const currentSettings = await window.AO3Popup.getSettings();
@@ -137,7 +137,7 @@
     const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
       content: contentContainer,
       buttons: buttons,
-      extraStyles: isMobile ? '' : 'padding-bottom: 0;'
+      extraClasses: isMobile ? [] : ['flush-bottom']
     });
 
     document.body.appendChild(popup);

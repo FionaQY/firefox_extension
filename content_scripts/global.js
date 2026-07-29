@@ -163,7 +163,7 @@
 
       return new Promise((resolve) => {
         const iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;';
+        iframe.classList.add('ao3-offscreen-iframe');
         iframe.src = url;
 
         iframe.onload = () => {
@@ -297,25 +297,8 @@
 
       const popup = document.createElement('div');
       popup.id = popupId;
+      popup.classList.add('ao3-notif-popup');
       popup.textContent = msg;
-
-      popup.style.cssText = `
-        position: fixed;
-        background: #1e1e2f;
-        color: #eee;
-        border: 1px solid #444;
-        border-radius: 8px;
-        padding: 0.5em 1em 0.5em 1em; /* top/bottom 0.5, left/right 1 */
-        padding-right: 2em;
-        max-width: 280px;
-        font-family: sans-serif;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        z-index: 9999;
-        cursor: default;
-        user-select: text;
-        white-space: pre-wrap;
-        word-break: break-word;
-      `;
 
       document.body.appendChild(popup);
       const popupRect = popup.getBoundingClientRect();
@@ -349,23 +332,29 @@
      */
     optionsPopupHelper(fields, isMobile, currSettings, showHint = false) {
       const container = document.createElement('div');
-      container.style.cssText = this._getContentContainerStyle(isMobile);
+      container.classList.add('ao3-options-content', isMobile ? 'mobile' : 'desktop');
 
       if (showHint) {
         const hint = document.createElement('div');
         hint.textContent = 'If multiple values, please put a comma after each value.';
-        hint.style.cssText = 'margin-bottom: 0.5em; font-weight: bold; margin-right: 2em;';
+        hint.classList.add('ao3-options-hint');
         container.appendChild(hint);
       }
 
       const inputsMap = {};
       for (const [key, config] of Object.entries(fields)) {
         const fieldContainer = document.createElement('div');
-        fieldContainer.style.cssText = this._getFieldContainerStyle(config.type);
+        fieldContainer.classList.add('ao3-field-container');
+        if (config.type === 'checkbox') {
+          fieldContainer.classList.add('checkbox');
+        }
 
         const label = document.createElement('label');
         label.textContent = `${config.label}:`;
-        label.style.cssText = this._getLabelStyle(isMobile, config.type);
+        label.classList.add('ao3-field-label');
+        if (config.type !== 'checkbox' && !isMobile) {
+          label.classList.add('desktop');
+        }
 
         const input = this._createInput(config, isMobile, currSettings[key]);
         this._applyInputStyles(input, config, isMobile);
@@ -389,25 +378,18 @@
 
     /**
      * Creates a styled button.
-     * @param {string} color - Background color.
+     * @param {string} variant - Colour variant ('primary', 'danger', 'neutral' or 'success').
      * @param {boolean} isMobile - Mobile sizing.
      * @param {string} text - Button label.
      * @returns {HTMLButtonElement}
      */
-    getButton(color, isMobile, text) {
+    getButton(variant, isMobile, text) {
       const butt = document.createElement('button');
       butt.textContent = text;
-      butt.style.cssText = `
-        flex: 1 1 auto;
-        padding: 8px 12px;
-        background: ${color};
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: ${isMobile ? '16px' : '0.95rem'};
-        cursor: pointer;
-        touch-action: manipulation;
-      `;
+      butt.classList.add('ao3-bar-button', `ao3-${variant || 'neutral'}`);
+      if (isMobile) {
+        butt.classList.add('mobile');
+      }
       return butt;
     },
 
@@ -420,32 +402,7 @@
     createCloseButton(isMobile, onClose) {
       const btn = document.createElement('button');
       btn.textContent = '×';
-      btn.style.cssText = `
-        position: absolute;
-        top: ${isMobile ? '12px' : '8px'};
-        right: ${isMobile ? '12px' : '8px'};
-        width: ${isMobile ? '32px' : '24px'};
-        height: ${isMobile ? '32px' : '24px'};
-        background: none;
-        border: none;
-        font-size: ${isMobile ? '24px' : '18px'};
-        font-weight: bold;
-        color: #ccc;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-        z-index: 10000;
-      `;
-      btn.addEventListener('mouseenter', () => {
-        btn.style.background = 'rgba(255, 255, 255, 0.2)';
-        btn.style.color = '#fff';
-      });
-      btn.addEventListener('mouseleave', () => {
-        btn.style.background = 'rgba(255, 255, 255, 0.1)';
-        btn.style.color = '#ccc';
-      });
+      btn.classList.add('ao3-close-button', isMobile ? 'mobile' : 'desktop');
       btn.onclick = () => {
         if (onClose) onClose();
         else {
@@ -461,37 +418,19 @@
      * @param {string} id - Unique ID for the popup.
      * @param {boolean} isMobile - Whether the device is mobile.
      * @param {Object} options - Configuration.
-     * @param {string} [options.extraStyles] - Additional CSS to merge.
+     * @param {string[]} [options.extraClasses] - Additional classes to add to the popup.
      * @param {Function} [options.onClose] - Callback when closed.
      * @param {HTMLElement} [options.content] - Element to append inside the popup (before buttons).
-     * @param {Array} [options.buttons] - Array of button objects for createButtonBar: { text, color, onClick }.
+     * @param {Array} [options.buttons] - Array of button objects for createButtonBar: { text, variant, onClick }.
      * @returns {HTMLDivElement} The created popup element.
      */
     createPopupContainer(id, isMobile, options = {}) {
       const popup = document.createElement('div');
       popup.id = id;
-      popup.style.cssText = `
-        position: fixed;
-        ${isMobile 
-          ? 'top: 0; left: 0; width: 100%; height: 70%; border-radius: 0; padding: 1em 1em 0;' 
-          : 'top: 20px; right: 20px; width: auto; min-width: 280px; max-width: 340px; border-radius: 8px; padding: 0.75em;'
-        }
-        background: #1e1e2f;
-        color: #eee;
-        border: 1px solid #444;
-        max-height: ${isMobile ? '80vh' : '50vh'};
-        height: auto;
-        overflow: ${isMobile ? 'hidden' : 'auto'};
-        z-index: 9999;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        font-family: sans-serif;
-        scrollbar-width: thin;
-        scrollbar-color: #555 #2e2e3e;
-        -webkit-overflow-scrolling: touch;
-        box-sizing: border-box;
-        ${isMobile ? 'display: flex; flex-direction: column;' : ''}
-        ${options.extraStyles || ''}
-      `;
+      popup.classList.add('ao3-popup-container', isMobile ? 'mobile' : 'desktop');
+      if (options.extraClasses) {
+        popup.classList.add(...options.extraClasses);
+      }
 
       const closeBtn = this.createCloseButton(isMobile, options.onClose);
       popup.appendChild(closeBtn);
@@ -509,21 +448,15 @@
 
     /**
      * Creates a horizontal button bar from an array of button definitions.
-     * @param {Array} buttons - Array of { text, color, onClick }.
+     * @param {Array} buttons - Array of { text, variant, onClick }.
      * @param {boolean} isMobile - Whether the device is mobile.
      * @returns {HTMLDivElement} The button bar container.
      */
     createButtonBar(buttons, isMobile) {
       const container = document.createElement('div');
-      container.style.cssText = `
-        display: flex;
-        justify-content: space-between;
-        gap: 1em;
-        padding: 1em;
-        flex-wrap: wrap;
-      `;
+      container.classList.add('ao3-button-bar');
       buttons.forEach(btnDef => {
-        const btn = this.getButton(btnDef.color, isMobile, btnDef.text);
+        const btn = this.getButton(btnDef.variant, isMobile, btnDef.text);
         btn.addEventListener('click', btnDef.onClick);
         container.appendChild(btn);
       });
@@ -574,7 +507,7 @@
      * @param {Object} options - Configuration.
      * @param {string} options.inputPlaceholder - Placeholder text for the input.
      * @param {string} options.inputValue - Initial value for the input.
-     * @param {Array} options.buttons - Array of { text, color, onClick, active? }.
+     * @param {Array} options.buttons - Array of { text, variant, onClick, active? }.
      * @param {Function} [options.onInputChange] - Callback when input value changes (receives new value).
      * @param {boolean} [options.isMobile] - Override mobile detection.
      * @returns {HTMLDivElement} The search bar container.
@@ -589,31 +522,16 @@
       } = options;
 
       const container = document.createElement('div');
-      container.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 0.5em;
-        padding: 0.5em;
-        background: #2a2a3d;
-        border-radius: 4px;
-        border: 1px solid #444;
-      `;
+      container.classList.add('ao3-search-bar');
 
       const input = document.createElement('input');
       input.type = 'text';
       input.placeholder = inputPlaceholder;
       input.value = inputValue;
-      input.style.cssText = `
-        flex: 1;
-        padding: 8px 10px;
-        font-size: ${isMobile ? '16px' : '0.95rem'};
-        border: 1px solid #555;
-        border-radius: 4px;
-        background: #1e1e2f;
-        color: white;
-        outline: none;
-        min-width: 0;
-      `;
+      input.classList.add('ao3-search-input');
+      if (isMobile) {
+        input.classList.add('mobile');
+      }
       if (onInputChange) {
         input.addEventListener('input', (e) => onInputChange(e.target.value));
       }
@@ -623,21 +541,16 @@
       buttons.forEach(btnDef => {
         const btn = document.createElement('button');
         btn.textContent = btnDef.text;
-        const bgColor = btnDef.color || 'transparent';
-        btn.style.cssText = `
-          padding: 8px 12px;
-          background: ${bgColor};
-          color: white;
-          border: none;
-          border-radius: 4px;
-          font-size: ${isMobile ? '16px' : '0.95rem'};
-          cursor: pointer;
-          white-space: nowrap;
-          touch-action: manipulation;
-          transition: filter 0.2s, background 0.2s;
-        `;
-        btn.addEventListener('mouseenter', () => { btn.style.filter = 'brightness(1.1)'; });
-        btn.addEventListener('mouseleave', () => { btn.style.filter = 'none'; });
+        btn.classList.add('ao3-search-button');
+        if (isMobile) {
+          btn.classList.add('mobile');
+        }
+        if (btnDef.variant) {
+          btn.classList.add(`ao3-${btnDef.variant}`);
+        }
+        if (btnDef.active) {
+          btn.classList.add('active');
+        }
         btn.addEventListener('click', (e) => { if (btnDef.onClick) {btnDef.onClick(e);}
         });
         container.appendChild(btn);
@@ -647,24 +560,6 @@
     },
 
     // -------- private helpers for optionsPopupHelper --------
-    _getContentContainerStyle(isMobile) {
-      return isMobile
-        ? 'flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; min-height: 0; padding-top: 1em;'
-        : 'padding-top: 1em; padding-left: 0.75em; padding-right: 0.75em;';
-    },
-
-    _getFieldContainerStyle(type) {
-      return type === 'checkbox'
-        ? 'display: flex; align-items: center; gap: 0.5em; padding-bottom: 0.5em;'
-        : 'display: flex; flex-direction: column; padding-bottom: 0.5em; gap: 0.4em;';
-    },
-
-    _getLabelStyle(isMobile, type) {
-      return type === 'checkbox'
-        ? 'color: #ccc; font-size: 0.9rem; display: block;'
-        : `${isMobile ? '' : 'min-width: 160px;'} color: #ccc; font-size: 0.9rem; display: block;`;
-    },
-
     _createInput(config) {
       let input;
       switch (config.type) {
@@ -685,10 +580,6 @@
           break;
         case 'textarea':
           input = document.createElement('textarea');
-          input.style.minHeight = '30px';
-          input.style.resize = 'none';
-          input.style.overflow = 'hidden';
-          input.style.boxSizing = 'border-box';
           input.addEventListener('input', () => {
             input.style.height = 'auto';
             input.style.height = input.scrollHeight + 'px';
@@ -703,23 +594,12 @@
 
     _applyInputStyles(input, config, isMobile) {
       if (config.type !== 'checkbox') {
-        input.style.cssText = `
-          width: 100%;
-          padding: 8px;
-          font-size: ${isMobile ? '16px' : '0.95rem'};
-          border: 1px solid #555;
-          border-radius: 4px;
-          background-color: #2a2a3d;
-          color: white;
-          box-sizing: border-box;
-        `;
+        input.classList.add('ao3-field-input');
+        if (isMobile) {
+          input.classList.add('mobile');
+        }
       } else {
-        input.style.cssText = `
-          width: 18px;
-          height: 18px;
-          accent-color: #ee5555;
-          cursor: pointer;
-        `;
+        input.classList.add('ao3-field-checkbox');
       }
     }
   };

@@ -14,16 +14,13 @@
     let isMatchWholeWord = false;
     let isUseRegex = false;
 
-    const neutralColor = '#6c757d';
-    const activeColor = '#4a90e2';
-
     const searchBar = window.AO3Popup.createSearchBar({
       inputPlaceholder: 'Search',
       inputValue: '',
       buttons: [
-        {text: 'Aa', onClick: (e) => {isMatchCase = !isMatchCase; e.target.style.background = isMatchCase ? activeColor : neutralColor;}},
-        {text: '[ab]', onClick: (e) => {isMatchWholeWord = !isMatchWholeWord; e.target.style.background = isMatchWholeWord ? activeColor : neutralColor;}},
-        {text: '.*', onClick: (e) => {isUseRegex = !isUseRegex; e.target.style.background = isUseRegex ? activeColor : neutralColor;}},
+        {text: 'Aa', variant: 'neutral', onClick: (e) => {isMatchCase = !isMatchCase; e.target.classList.toggle('active', isMatchCase);}},
+        {text: '[ab]', variant: 'neutral', onClick: (e) => {isMatchWholeWord = !isMatchWholeWord; e.target.classList.toggle('active', isMatchWholeWord);}},
+        {text: '.*', variant: 'neutral', onClick: (e) => {isUseRegex = !isUseRegex; e.target.classList.toggle('active', isUseRegex);}},
       ],
       onInputChange: (value) => console.log('Input changed:', value),
     });
@@ -33,7 +30,7 @@
     const buttons = [
       {
         text: 'Clear',
-        color: '#ee5555',
+        variant: 'danger',
         onClick: () => {
           const input = searchBar.querySelector('input');
           if (input) {
@@ -43,7 +40,7 @@
       },
       {
         text: '🔍︎',
-        color: '#4a90e2',
+        variant: 'primary',
         onClick: () => {
           console.log(`isMatchCase :${isMatchCase}`)
           console.log(`isMatchWholeWord :${isMatchWholeWord}`)
@@ -72,7 +69,7 @@
     const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
       content: content,
       buttons: buttons,
-      extraStyles: isMobile ? '' : 'padding-bottom: 0;'
+      extraClasses: isMobile ? [] : ['flush-bottom']
     });
 
     document.body.appendChild(popup);

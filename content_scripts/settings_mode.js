@@ -31,31 +31,13 @@
   };
 
   function createColumn(title) {
+    const isShow = title === 'Show';
     const col = document.createElement('div');
-    col.classList.add('drop-column');
-    col.style.cssText = `
-      flex: 1;
-      background: #2a2a3d;
-      padding: 0.5em;
-      border-radius: 6px;
-      min-height: 150px;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4em;
-      border: 2px solid ${title === 'Show' ? '#4caf50' : '#f44336'};
-    `;
+    col.classList.add('ao3-drop-column', isShow ? 'show' : 'hide');
 
     const header = document.createElement('div');
-    header.textContent = title === 'Show' ? '✅ Show (click to hide)' : '🚫 Hide (click to show)';
-    header.style.cssText = `
-      font-weight: bold;
-      margin-bottom: 0.5em;
-      font-size: 1rem;
-      text-align: center;
-      color: ${title === 'Show' ? '#4caf50' : '#f44336'};
-      border-bottom: 1px solid #444;
-      padding-bottom: 0.25em;
-    `;
+    header.textContent = isShow ? '✅ Show (click to hide)' : '🚫 Hide (click to show)';
+    header.classList.add('ao3-drop-column-header');
 
     col.appendChild(header);
     return col;
@@ -66,12 +48,7 @@
     item.textContent = text;
     item.id = value;
     item.draggable = true;
-    item.style.cssText = `
-      background: #3a3a4d;
-      padding: 0.4em 0.6em;
-      border-radius: 4px;
-      cursor: grab;
-    `;
+    item.classList.add('ao3-drop-item');
 
     item.addEventListener('click', () => {
       const parent = item.parentElement;
@@ -108,7 +85,7 @@
 
     // Drag-drop columns
     const dragDropContainer = document.createElement('div');
-    dragDropContainer.style.cssText = 'display: flex; gap: 1em; margin-top: 1em;';
+    dragDropContainer.classList.add('ao3-drop-container');
     const showCol = createColumn('Show');
     const hideCol = createColumn('Hide');
     populateCols(settings, showCol, hideCol);
@@ -120,7 +97,7 @@
     const buttons = [
       {
         text: '📋 Copy Settings',
-        color: '#6c757d',
+        variant: 'neutral',
         onClick: async (e) => {
           const btn = e.target;
           const currentSettings = await window.AO3Popup.getSettings();
@@ -135,7 +112,7 @@
       },
       {
         text: '📋 Paste/Override',
-        color: '#28a745',
+        variant: 'success',
         onClick: async () => {
           const text = await navigator.clipboard.readText();
           if (!text || text.length === 0) return;
@@ -155,7 +132,7 @@
       },
       {
         text: 'Save',
-        color: '#4a90e2',
+        variant: 'primary',
         onClick: async () => {
           for (const [key, { input, type }] of Object.entries(inputsMap)) {
             generalSettings[key] = (type === 'checkbox') ? input.checked : input.value;
@@ -172,7 +149,7 @@
       },
       {
         text: 'Reset',
-        color: '#ee5555',
+        variant: 'danger',
         onClick: async () => {
           if (!confirm('Are you sure you want to reset Settings?')) return;
           delete settings.general;
@@ -188,7 +165,7 @@
     const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
       content: contentContainer,
       buttons: buttons,
-      extraStyles: isMobile ? '' : 'padding-bottom: 0;'  // no extra padding needed
+      extraClasses: isMobile ? [] : ['flush-bottom']
     });
 
     document.body.appendChild(popup);

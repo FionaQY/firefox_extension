@@ -79,7 +79,7 @@
     const currUrl = `${url}&page=${page}`;
     return new Promise((resolve) => {
       const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;';
+      iframe.classList.add('ao3-offscreen-iframe');
       iframe.src = currUrl;
       iframe.onload = async () => {
         try {

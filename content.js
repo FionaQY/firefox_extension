@@ -178,9 +178,7 @@
 
     const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
       content: content,
-      extraStyles: isMobile
-        ? 'max-height: 40vh; overflow-y: auto; display: flex; flex-direction: column;'
-        : 'max-height: 45vh; overflow-y: auto;',
+      extraClasses: ['modes'],
     });
 
     document.body.appendChild(popup);
