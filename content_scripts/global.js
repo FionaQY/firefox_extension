@@ -153,8 +153,12 @@
 
     async getSummaryFromWork(url, needHref) {
       const { settings = {} } = await browser.storage.local.get('settings');
-      if (!settings['general']['summaryNoWifi']) {
-        return window.AO3Extractor.getTags(document, url, needHref);
+      
+      if (settings['general'] && settings['general']['summaryNoWifi']) {
+        if (document.querySelector('h2.title.heading')) {
+          return window.AO3Extractor.getTags(document, url, needHref);
+        }
+        return null;
       }
 
       return new Promise((resolve) => {
@@ -165,9 +169,7 @@
         iframe.onload = () => {
           try {
             const doc = iframe.contentDocument;
-
-            resolve(window.AO3Extractor.getTags(doc, url));
-
+            resolve(window.AO3Extractor.getTags(doc, url, needHref));
           } catch (err) {
             console.error('Error parsing work in iframe:', err);
             resolve(null);
