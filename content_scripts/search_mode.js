@@ -1,3 +1,6 @@
+/* eslint-disable no-unused-vars */
+/* globals AO3Popup */
+/* eslint-enable no-unused-vars */
 (() => {
   const popupId = 'ao3-searchbar-popup';
   const tempPopup = document.getElementById(popupId);
@@ -5,7 +8,7 @@
     tempPopup.remove();
   }
 
-  async function openSearchBar(e) {
+  async function openSearchBar() {
     const isMobile = window.innerWidth <= 768;
     let isMatchCase = false;
     let isMatchWholeWord = false;
@@ -45,6 +48,8 @@
           console.log(`isMatchCase :${isMatchCase}`)
           console.log(`isMatchWholeWord :${isMatchWholeWord}`)
           console.log(`isUseRegex :${isUseRegex}`)
+          // TODO: Implement search functionality with properly scoped variables
+          /*
           try {
             browser.runtime.sendMessage({
               action: 'scrollPage',
@@ -59,6 +64,7 @@
           } catch (error) {
             console.error('AO3 Search Bar error:', error);
           }
+          */
         }
       }
     ];

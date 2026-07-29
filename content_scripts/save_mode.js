@@ -1,3 +1,4 @@
+/* globals browser */
 (() => {
   const popupId = 'ao3-filter-popup';
   document.getElementById(popupId)?.remove();

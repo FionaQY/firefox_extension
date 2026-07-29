@@ -1,3 +1,7 @@
+/* eslint-disable no-unused-vars */
+/* globals AO3Popup */
+/* eslint-enable no-unused-vars */
+
 (() => {
   const popupId = 'ao3-generalSettings-popup';
   document.getElementById(popupId)?.remove();
@@ -143,7 +147,7 @@
               }
               await window.AO3Popup.saveSettings(imported);
               document.getElementById(popupId)?.remove();
-            } catch (e) {
+            } catch {
               window.AO3Popup.createNotifPopup('Invalid settings format');
             }
           }

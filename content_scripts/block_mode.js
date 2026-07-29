@@ -1,3 +1,4 @@
+/* globals browser */
 (() => {
   const workUrl = window.AO3UrlParser.getWorkUrl(window.location.href);
   if (workUrl != '') { // if a work page

@@ -1,3 +1,4 @@
+/* globals browser */
 (() => {
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
@@ -18,19 +19,6 @@
       return [];
     }
     return obtainedList.split(',').map(x => x.trim()).filter(x => x.length > 0);
-  }
-
-
-  function getLangAbb(lang) {
-    const normalized = lang.toLowerCase().trim().replace(/[^\w\s]/g, '');
-    if (/^[a-z]{2,3}(-[a-z]{2,3})?$/i.test(normalized)) {
-      return normalized;
-    }
-    if (languageCodeMap[normalized]) {
-      return languageCodeMap[normalized];
-    }
-    console.warn(`Unrecognized language: "${lang}"`);
-    return '';
   }
 
   function parseQuery(query) {

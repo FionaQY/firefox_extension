@@ -1,3 +1,4 @@
+/* globals browser */
 (() => {
   if (typeof window.AO3BookmarkHandler === 'function') {
     return;

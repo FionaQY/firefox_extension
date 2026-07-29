@@ -1,3 +1,4 @@
+/* globals browser */
 (() => {
   const WORK_DEFAULTS = {
     'work_search[sort_column]': 'revised_at',
@@ -153,7 +154,7 @@
     async getSummaryFromWork(url, needHref) {
       const { settings = {} } = await browser.storage.local.get('settings');
       if (!settings['general']['summaryNoWifi']) {
-        resolve(window.AO3Extractor.getTags(document, url, needHref));
+        return window.AO3Extractor.getTags(document, url, needHref);
       }
 
       return new Promise((resolve) => {
@@ -218,7 +219,7 @@
       const isBookmarks = paramsObj.user_id != '';
       return Object.entries(paramsObj)
         .filter(([key, val]) => key != 'page' && val.length != 0)
-        .filter(([key, _]) => isBookmarks ? key != 'tag_id' : key != 'user_id')
+        .filter(([key]) => isBookmarks ? key != 'tag_id' : key != 'user_id')
         .map(([key, value]) => `${key}=${value == null 
           ? '' : value.includes('&') 
           ? this.superEncodeURI(value) 
@@ -470,13 +471,14 @@
       popup.style.cssText = `
         position: fixed;
         ${isMobile 
-          ? 'top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 70%; border-radius: 0; padding: 1em 1em 0; margin: 0 auto;' 
-          : 'top: 20px; right: 20px; width: 380px; border-radius: 8px; padding: 0.5em;'
+          ? 'top: 0; left: 0; width: 100%; height: 70%; border-radius: 0; padding: 1em 1em 0;' 
+          : 'top: 20px; right: 20px; width: auto; min-width: 280px; max-width: 340px; border-radius: 8px; padding: 0.75em;'
         }
         background: #1e1e2f;
         color: #eee;
         border: 1px solid #444;
-        max-height: ${isMobile ? '100vh' : '50vh'};
+        max-height: ${isMobile ? '80vh' : '50vh'};
+        height: auto;
         overflow: ${isMobile ? 'hidden' : 'auto'};
         z-index: 9999;
         box-shadow: 0 4px 20px rgba(0,0,0,0.4);
@@ -661,7 +663,7 @@
         : `${isMobile ? '' : 'min-width: 160px;'} color: #ccc; font-size: 0.9rem; display: block;`;
     },
 
-    _createInput(config, isMobile, currentValue) {
+    _createInput(config) {
       let input;
       switch (config.type) {
         case 'select':

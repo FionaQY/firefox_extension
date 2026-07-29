@@ -1,3 +1,4 @@
+/* globals browser */
 let pendingInjection = null;
 
 browser.browserAction.onClicked.addListener((tab) => {
@@ -18,7 +19,7 @@ function injectScript(tabId, scriptName) {
     }
 }
 
-browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+browser.runtime.onMessage.addListener(async (msg, sender) => {
     const [tab] = await browser.tabs.query({ 
         active: true, 
         currentWindow: true 

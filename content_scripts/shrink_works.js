@@ -1,5 +1,9 @@
+/* eslint-disable no-unused-vars */
+/* globals browser, AO3Popup, AO3Extractor */
+/* eslint-enable no-unused-vars */
+
 (() => {
-  browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+  browser.runtime.onMessage.addListener(async (msg) => {
     if (msg.action === 'initialize') {
       if (typeof window.A03WorkShrinker === 'function') {
         return;

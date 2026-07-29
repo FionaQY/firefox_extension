@@ -1,3 +1,6 @@
+/* eslint-disable no-unused-vars */
+/* globals AO3Popup, AO3UrlParser */
+/* eslint-enable no-unused-vars */
 (() => {
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);

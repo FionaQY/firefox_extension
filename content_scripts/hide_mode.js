@@ -1,3 +1,6 @@
+/* eslint-disable no-unused-vars */
+/* globals browser, AO3Popup */
+/* eslint-enable no-unused-vars */
 (() => {
   const popupId = 'ao3-hideworks-popup';
   document.getElementById(popupId)?.remove();

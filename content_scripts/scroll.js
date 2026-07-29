@@ -1,5 +1,7 @@
+/* globals browser */
+
 (() => {
-  browser.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+  browser.runtime.onMessage.addListener(async (msg) => {
     if (msg.action === 'initialize') {
       goToWork(msg.data.filterType, msg.data.targetValue)
     }
