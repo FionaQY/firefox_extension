@@ -1,6 +1,6 @@
 /* globals browser */
 (() => {
-  const popupId = 'ao3-filter-popup';
+  const popupId = 'ao3-qof-popup';
   document.getElementById(popupId)?.remove();
 
   const fields = {

@@ -3,7 +3,7 @@
 /* eslint-enable no-unused-vars */
 
 (() => {
-  const popupId = 'ao3-generalSettings-popup';
+  const popupId = 'ao3-qof-popup';
   document.getElementById(popupId)?.remove();
 
   const fields = {

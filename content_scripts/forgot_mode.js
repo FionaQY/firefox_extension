@@ -9,7 +9,7 @@
     return;
   }
 
-  const popupId = 'ao3-summary-popup';
+  const popupId = 'ao3-qof-popup';
   document.getElementById(popupId)?.remove();
 
   async function showSummaryPopup() {

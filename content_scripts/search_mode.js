@@ -2,7 +2,7 @@
 /* globals AO3Popup */
 /* eslint-enable no-unused-vars */
 (() => {
-  const popupId = 'ao3-searchbar-popup';
+  const popupId = 'ao3-qof-popup';
   const tempPopup = document.getElementById(popupId);
   if (tempPopup) {
     tempPopup.remove();
