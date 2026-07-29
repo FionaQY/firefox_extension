@@ -1,7 +1,67 @@
 /* Popup Container Styles */
-#ao3-qof-popup {
+.ao3-popup-container {
   all: initial;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: sans-serif;
+  position: fixed;
+  box-sizing: border-box;
+  background: #1e1e2f;
+  color: #eee;
+  border: 1px solid #444;
+  height: auto;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  scrollbar-width: thin;
+  scrollbar-color: #555 #2e2e3e;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ao3-popup-container.mobile {
+  display: flex;
+  flex-direction: column;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 70%;
+  max-height: 80vh;
+  border-radius: 0;
+  padding: 1em 1em 0;
+  overflow: hidden;
+}
+
+.ao3-popup-container.desktop {
+  display: block;
+  top: 20px;
+  right: 20px;
+  width: auto;
+  min-width: 280px;
+  max-width: 340px;
+  max-height: 50vh;
+  border-radius: 8px;
+  padding: 0.75em;
+  overflow: auto;
+}
+
+/* Popup Container Variants */
+.ao3-popup-container.flush-bottom {
+  padding-bottom: 0;
+}
+
+.ao3-popup-container.modes {
+  overflow-y: auto;
+}
+
+.ao3-popup-container.modes.mobile {
+  max-height: 40vh;
+}
+
+.ao3-popup-container.modes.desktop {
+  max-height: 45vh;
+}
+
+.ao3-popup-container.summary {
+  max-width: 450px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 #ao3-qof-modal *::before,
@@ -11,15 +71,29 @@
 
 .ao3-popup-content {
   box-sizing: border-box;
+  padding: 0.75em 0.65em 0.9em;
 }
 
 .ao3-popup-content.mobile {
   flex: 1;
-  padding: 0.75em 0.65em 0.9em;
 }
 
-.ao3-popup-content.desktop {
-  padding: 0.75em 0.65em 0.9em;
+/* Notification Popup */
+#ao3-notif-popup {
+  position: fixed;
+  background: #1e1e2f;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 0.5em 2em 0.5em 1em;
+  max-width: 280px;
+  font-family: sans-serif;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+  cursor: default;
+  user-select: text;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* Label Styles */
@@ -208,4 +282,301 @@
 .ao3-expand-button {
   width: 100%;
   margin-top: 0.75em;
+}
+
+/* Close Button */
+.ao3-close-button {
+  position: absolute;
+  background: none;
+  border: none;
+  font-weight: bold;
+  color: #ccc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10000;
+  font-family: inherit;
+}
+
+.ao3-close-button.mobile {
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  font-size: 24px;
+}
+
+.ao3-close-button.desktop {
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  font-size: 18px;
+}
+
+.ao3-close-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* Button Bar */
+.ao3-button-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  padding: 1em;
+  flex-wrap: wrap;
+}
+
+.ao3-bar-button {
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+}
+
+/* Button Colour Variants */
+.ao3-primary {
+  background: #4a90e2;
+}
+
+.ao3-danger {
+  background: #ee5555;
+}
+
+.ao3-neutral {
+  background: #6c757d;
+}
+
+.ao3-success {
+  background: #28a745;
+}
+
+/* Search Bar */
+.ao3-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.5em;
+  background: #2a2a3d;
+  border-radius: 4px;
+  border: 1px solid #444;
+}
+
+.ao3-search-input {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #1e1e2f;
+  color: white;
+  outline: none;
+  min-width: 0;
+  font-family: inherit;
+}
+
+.ao3-search-button {
+  padding: 8px 12px;
+  background: transparent;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  white-space: nowrap;
+  touch-action: manipulation;
+  transition: filter 0.2s, background 0.2s;
+  font-family: inherit;
+}
+
+.ao3-search-button:hover {
+  filter: brightness(1.1);
+}
+
+.ao3-search-button.active {
+  background: #4a90e2;
+}
+
+/* Options Form */
+.ao3-options-content {
+  padding-top: 1em;
+}
+
+.ao3-options-content.mobile {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+}
+
+.ao3-options-content.desktop {
+  padding-left: 0.75em;
+  padding-right: 0.75em;
+}
+
+.ao3-options-hint {
+  margin-bottom: 0.5em;
+  font-weight: bold;
+  margin-right: 2em;
+}
+
+.ao3-field-container {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0.5em;
+  gap: 0.4em;
+}
+
+.ao3-field-container.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.ao3-field-label {
+  color: #ccc;
+  font-size: 0.9rem;
+  display: block;
+}
+
+.ao3-field-label.desktop {
+  min-width: 160px;
+}
+
+.ao3-field-input {
+  width: 100%;
+  padding: 8px;
+  font-size: 0.95rem;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background-color: #2a2a3d;
+  color: white;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+textarea.ao3-field-input {
+  min-height: 30px;
+  resize: none;
+  overflow: hidden;
+}
+
+.ao3-field-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #ee5555;
+  cursor: pointer;
+}
+
+/* Settings Drag-and-Drop Columns */
+.ao3-drop-container {
+  display: flex;
+  gap: 1em;
+  margin-top: 1em;
+}
+
+.ao3-drop-column {
+  flex: 1;
+  background: #2a2a3d;
+  padding: 0.5em;
+  border-radius: 6px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  border: 2px solid #444;
+}
+
+.ao3-drop-column.show {
+  border-color: #4caf50;
+}
+
+.ao3-drop-column.hide {
+  border-color: #f44336;
+}
+
+.ao3-drop-column-header {
+  font-weight: bold;
+  margin-bottom: 0.5em;
+  font-size: 1rem;
+  text-align: center;
+  border-bottom: 1px solid #444;
+  padding-bottom: 0.25em;
+}
+
+.ao3-drop-column.show .ao3-drop-column-header {
+  color: #4caf50;
+}
+
+.ao3-drop-column.hide .ao3-drop-column-header {
+  color: #f44336;
+}
+
+.ao3-drop-item {
+  background: #3a3a4d;
+  padding: 0.4em 0.6em;
+  border-radius: 4px;
+  cursor: grab;
+}
+
+/* Summary Popup */
+.ao3-summary-content {
+  padding: 0.5em 0;
+}
+
+.ao3-summary-heading {
+  margin-bottom: 0.5em;
+  font-weight: bold;
+}
+
+.ao3-summary-text {
+  margin-bottom: 1em;
+}
+
+.ao3-summary-tags {
+  margin-top: 0.5em;
+}
+
+.ao3-summary-tags-label {
+  font-weight: bold;
+}
+
+/* Shrunken Works */
+.ao3-shrink-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.ao3-shrink-toggle {
+  cursor: pointer;
+}
+
+/* Mobile Font Sizes (bigger to stop mobile browsers zooming in) */
+.ao3-bar-button.mobile,
+.ao3-search-input.mobile,
+.ao3-search-button.mobile,
+.ao3-field-input.mobile {
+  font-size: 16px;
+}
+
+/* Utilities */
+.ao3-hidden {
+  display: none !important;
+}
+
+.ao3-offscreen-iframe {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  left: -9999px;
 }

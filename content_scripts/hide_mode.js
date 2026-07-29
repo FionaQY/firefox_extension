@@ -54,7 +54,7 @@
     const buttons = [
       {
         text: 'Save',
-        color: '#4a90e2',
+        variant: 'primary',
         onClick: async () => {
           // Update workSettings
           for (const [key, { input, type }] of Object.entries(inputsMap)) {
@@ -67,7 +67,7 @@
       },
       {
         text: 'Reset',
-        color: '#ee5555',
+        variant: 'danger',
         onClick: async () => {
           if (!confirm('Are you sure you want to reset?')) return;
           delete settings.workSettings;
@@ -82,7 +82,7 @@
     const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
       content: contentContainer,
       buttons: buttons,
-      extraStyles: isMobile ? '' : 'padding-bottom: 0;'
+      extraClasses: isMobile ? [] : ['flush-bottom']
     });
 
     document.body.appendChild(popup);
