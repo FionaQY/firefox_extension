@@ -222,6 +222,14 @@
   justify-content: center;
 }
 
+/* Stop AO3's own rules adding arrows etc. inside our popups */
+.ao3-modal-overlay *::before,
+.ao3-modal-overlay *::after,
+.ao3-popup-container *::before,
+.ao3-popup-container *::after {
+  content: none !important;
+}
+
 .ao3-modal-container {
   background: #1e1e2f;
   border: 1px solid #444;
