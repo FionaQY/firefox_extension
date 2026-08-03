@@ -82,10 +82,12 @@
 
   function openSearchBar() {
     const isMobile = window.innerWidth <= 768;
-    clearHighlights(); // in case a previous search bar was closed without clearing
+    // clearHighlights();
 
     const status = document.createElement('div');
     status.classList.add('ao3-search-status');
+    status.style.cursor = 'pointer';
+    status.title = 'Click to jump to a specific match index';
 
     function setStatus(msg) {
       status.textContent = msg;
@@ -98,6 +100,24 @@
       }
       setStatus(`${currentIndex + 1} of ${matches.length} match${matches.length === 1 ? '' : 'es'}`);
     }
+
+    status.addEventListener('click', () => {
+      if (matches.length === 0) return;
+
+      const inputVal = prompt(
+        `Enter match number (1 to ${matches.length}):`,
+        (currentIndex + 1).toString()
+      );
+
+      if (inputVal === null) return;
+
+      const targetNum = parseInt(inputVal.trim(), 10);
+      if (!isNaN(targetNum) && targetNum >= 1 && targetNum <= matches.length) {
+        goToMatch(targetNum - 1);
+      } else {
+        window.AO3Popup.createNotifPopup('Invalid match index entered.');
+      }
+    });
 
     function goToMatch(index) {
       if (matches.length === 0) return;
