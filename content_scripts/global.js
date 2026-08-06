@@ -292,7 +292,7 @@
      * @param {string} msg - The message to display.
      */
     createNotifPopup(msg) {
-      const popupId = 'ao3-qof-popup';
+      const popupId = 'ao3-qof-notif-popup';
       document.getElementById(popupId)?.remove();
 
       const popup = document.createElement('div');
