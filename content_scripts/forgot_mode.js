@@ -34,11 +34,11 @@
 
     const headingEl = document.createElement('div');
     headingEl.classList.add('ao3-summary-heading');
-    headingEl.innerHTML = heading;
+    headingEl.appendChild(window.AO3Popup.parseHtmlFragment(heading));
     content.appendChild(headingEl);
 
     const summaryEl = document.createElement('div');
-    summaryEl.innerHTML = summary;
+    summaryEl.textContent = summary;
     summaryEl.classList.add('ao3-summary-text');
     content.appendChild(summaryEl);
 
@@ -52,7 +52,7 @@
         label.textContent = `${key}: `;
         tagContainer.appendChild(label);
         const valueSpan = document.createElement('span');
-        valueSpan.innerHTML = values.join(', ');
+        valueSpan.appendChild(window.AO3Popup.parseHtmlFragment(values.join(', ')));
         tagContainer.appendChild(valueSpan);
         content.appendChild(tagContainer);
       }

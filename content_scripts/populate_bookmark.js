@@ -19,35 +19,33 @@
     
     const container = document.createElement('div');
     container.className = 'bookmark-popup';
-    container.style.cssText = 'font-family: sans-serif;';
     
     const outerDetails = document.createElement('details');
     const outerSummary = document.createElement('summary');
-    outerSummary.style.cssText = 'cursor: pointer; font-weight: bold;';
-    outerSummary.innerHTML = 'Summary';
+    outerSummary.className = 'bookmark-summary-toggle';
     outerDetails.appendChild(outerSummary);
     
     const headingDiv = document.createElement('div');
-    headingDiv.style.cssText = 'white-space: pre-wrap; margin-top: 0.5em;';
-    headingDiv.innerHTML = heading;
+    headingDiv.className = 'bookmark-heading';
+    headingDiv.appendChild(window.AO3Popup.parseHtmlFragment(heading));
     outerDetails.appendChild(headingDiv);
     
     const summaryDiv = document.createElement('div');
-    summaryDiv.style.cssText = 'white-space: pre-wrap; margin-top: 0.5em;';
-    summaryDiv.innerHTML = summary;
+    summaryDiv.className = 'bookmark-summary';
+    summaryDiv.textContent = summary;
     outerDetails.appendChild(summaryDiv);
 
     if (tags && Object.keys(tags).length > 0) {
       const tagsDetails = document.createElement('details');
       const tagsSummary = document.createElement('summary');
-      tagsSummary.style.cssText = 'cursor: pointer; font-weight: bold;';
-      tagsSummary.innerHTML = 'Tags';
+      tagsSummary.className = 'bookmark-summary-toggle';
+      tagsSummary.textContent = 'Tags';
       tagsDetails.appendChild(tagsSummary);
 
       for (const [key, value] of Object.entries(tags)) {
         const div = document.createElement('div');
-        div.style.cssText = 'font-size: 0.9em; line-height: 1.4; margin-top: 0.5em;';
-        div.innerHTML = `${key}(s): ${value.slice(0,3).join(', ')}`;
+        div.className = 'bookmark-tag-item';
+        div.textContent = `${key}(s): ${value.slice(0,3).join(', ')}`;
         tagsDetails.appendChild(div);
       }
       outerDetails.appendChild(tagsDetails);

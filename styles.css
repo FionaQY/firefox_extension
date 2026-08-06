@@ -1,4 +1,11 @@
+/* AO3 Extension UI Styles */
+/*
+  All UI classes are namespaced with an ao3- prefix to avoid collisions with
+  page content and Archive of Our Own page styles.
+*/
+
 /* Popup Container Styles */
+/* Base popup container used by all extension overlay panels. */
 .ao3-popup-container {
   all: initial;
   font-family: sans-serif;
@@ -74,6 +81,7 @@
 }
 
 /* Notification Popup */
+/* Compact toast-style notification used for quick user feedback. */
 .ao3-notif-popup {
   position: fixed;
   background: #1e1e2f;
@@ -83,7 +91,7 @@
   padding: 0.5em 2em 0.5em 1em;
   max-width: 280px;
   font-family: sans-serif;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(91, 83, 83, 0.4);
   z-index: 9999;
   cursor: default;
   user-select: text;
@@ -104,6 +112,7 @@
 }
 
 /* Grid Layouts */
+/* Reusable grid containers for buttons and compact mode controls. */
 .ao3-button-grid {
   display: grid;
   grid-auto-rows: minmax(0, auto);
@@ -121,6 +130,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* Used when extra compact grid density is needed in some popup views. */
 .ao3-expanded-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -128,7 +138,8 @@
   width: 100%;
 }
 
-/* Button Styles */
+/* Primary Button Styles */
+/* Main mode buttons shown in the launcher UI. */
 .ao3-mode-button {
   box-sizing: border-box;
   cursor: pointer;
@@ -207,6 +218,7 @@
 }
 
 /* Modal Styles */
+/* Full-screen modal overlay used for settings and important dialogs. */
 .ao3-modal-overlay {
   all: initial;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -346,6 +358,7 @@
 }
 
 /* Button Colour Variants */
+/* These button colour variants are applied dynamically from JS as ao3-{variant}. */
 .ao3-primary {
   background: #4a90e2;
 }
@@ -363,6 +376,7 @@
 }
 
 /* Search Bar */
+/* Search field and button container used by the live search overlay. */
 .ao3-search-bar {
   display: flex;
   align-items: center;
@@ -413,6 +427,10 @@
   font-size: 0.85rem;
   min-height: 1.2em;
   padding: 0.4em 0.2em 0;
+  cursor: pointer; /* allow tapping status to open the picker */
+  margin-top: 2px;
+  text-align: center;
+  font-weight: bold;
 }
 
 /* Search Matches */
@@ -425,6 +443,107 @@ mark.ao3-search-highlight {
 mark.ao3-search-highlight.current {
   background: #ff9f1c;
   outline: 2px solid #ff9f1c;
+}
+
+/* Search picker overlay and controls */
+/* Match navigation overlay shown when the user taps the match counter. */
+.ao3-search-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ao3-search-picker-box {
+  background: var(--ao3-popup-bg, #fff);
+  color: #000;
+  border-radius: 12px;
+  padding: 14px;
+  width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ao3-search-picker-title {
+  font-weight: bold;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.ao3-search-picker-wheel {
+  height: 120px;
+  width: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  border-top: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  padding: 45px 0;
+  box-sizing: border-box;
+}
+
+.ao3-search-picker-item {
+  height: 30px;
+  line-height: 30px;
+  font-size: 15px;
+  scroll-snap-align: center;
+  cursor: pointer;
+}
+
+.ao3-search-picker-close {
+  padding: 4px 14px;
+  border: none;
+  background: #900;
+  color: #fff;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+/* Search popup mobile layout overrides */
+/* Mobile-specific layout for the search overlay when in compact bottom sheet mode. */
+.ao3-popup-container.search-popup.mobile {
+  position: fixed !important;
+  bottom: 0 !important;
+  top: auto !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: auto !important;
+  max-height: max-content !important;
+  min-height: min-content !important;
+  padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px)) 10px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  border-radius: 12px 12px 0 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+  overflow: hidden !important;
+}
+
+.ao3-search-popup-content {
+  height: auto !important;
+  flex: 0 0 auto !important;
+}
+
+.ao3-search-bar.mobile {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  align-items: center;
+  height: auto;
 }
 
 /* Options Form */
@@ -550,6 +669,7 @@ textarea.ao3-field-input {
 }
 
 /* Summary Popup */
+/* Styles for the AO3 summary popup content used in summary mode. */
 .ao3-summary-content {
   padding: 0.5em 0;
 }
@@ -561,6 +681,7 @@ textarea.ao3-field-input {
 
 .ao3-summary-text {
   margin-bottom: 1em;
+  white-space: pre-wrap; /* preserve line breaks in summaries */
 }
 
 .ao3-summary-tags {

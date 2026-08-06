@@ -512,6 +512,22 @@
      * @param {boolean} [options.isMobile] - Override mobile detection.
      * @returns {HTMLDivElement} The search bar container.
      */
+    /**
+     * Parses a trusted HTML string into a document fragment.
+     * This avoids direct innerHTML usage while preserving safe markup like links.
+     * @param {string} html
+     * @returns {DocumentFragment}
+     */
+    parseHtmlFragment(html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const fragment = document.createDocumentFragment();
+      for (const node of Array.from(doc.body.childNodes)) {
+        fragment.appendChild(node);
+      }
+      return fragment;
+    },
+
     createSearchBar(options = {}) {
       const {
         inputPlaceholder = '',

@@ -14,6 +14,7 @@
   let isUseRegex = false;
   let matches = [];
   let currentIndex = -1;
+  let lastQuery = '';
 
   function buildRegex(query) {
     const pattern = isUseRegex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -81,11 +82,9 @@
 
   function openSearchBar() {
     const isMobile = window.innerWidth <= 768;
-    // clearHighlights();
 
     const status = document.createElement('div');
     status.classList.add('ao3-search-status');
-    status.style.cssText = 'cursor: pointer; font-size: 12px; margin-top: 2px; text-align: center; font-weight: bold;';
     status.title = 'Tap to scroll through match indices';
 
     function setStatus(msg) {
@@ -104,40 +103,23 @@
       if (matches.length === 0) return;
 
       const overlay = document.createElement('div');
-      overlay.style.cssText = `
-        position: fixed; inset: 0; z-index: 100000;
-        background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px);
-        display: flex; align-items: center; justify-content: center;
-      `;
+      overlay.className = 'ao3-search-picker-overlay';
 
       const pickerBox = document.createElement('div');
-      pickerBox.style.cssText = `
-        background: var(--ao3-popup-bg, #fff); color: #000;
-        border-radius: 12px; padding: 14px; width: 200px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.3); text-align: center;
-        display: flex; flex-direction: column; align-items: center; gap: 8px;
-      `;
+      pickerBox.className = 'ao3-search-picker-box';
 
       const title = document.createElement('div');
-      title.style.cssText = 'font-weight: bold; font-size: 13px; opacity: 0.8;';
+      title.className = 'ao3-search-picker-title';
       title.textContent = 'Scroll to Match Index';
 
       const scrollWheel = document.createElement('div');
-      scrollWheel.style.cssText = `
-        height: 120px; width: 100%; overflow-y: scroll;
-        scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch;
-        border-top: 1px solid #ccc; border-bottom: 1px solid #ccc;
-        padding: 45px 0; box-sizing: border-box;
-      `;
+      scrollWheel.className = 'ao3-search-picker-wheel';
 
       matches.forEach((_, idx) => {
         const item = document.createElement('div');
         item.textContent = `${idx + 1} / ${matches.length}`;
-        item.style.cssText = `
-          height: 30px; line-height: 30px; font-size: 15px;
-          font-weight: ${idx === currentIndex ? 'bold' : 'normal'};
-          scroll-snap-align: center; cursor: pointer;
-        `;
+        item.className = 'ao3-search-picker-item';
+        item.style.fontWeight = idx === currentIndex ? 'bold' : 'normal';
         item.addEventListener('click', () => {
           goToMatch(idx);
           overlay.remove();
@@ -159,10 +141,7 @@
 
       const closeBtn = document.createElement('button');
       closeBtn.textContent = 'Done';
-      closeBtn.style.cssText = `
-        padding: 4px 14px; border: none; background: #900; color: #fff;
-        border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 4px; font-size: 13px;
-      `;
+      closeBtn.className = 'ao3-search-picker-close';
       closeBtn.onclick = () => overlay.remove();
 
       pickerBox.appendChild(title);
@@ -195,7 +174,16 @@
       updateStatus();
     }
 
-    function search(query) {
+    function search() {
+      const query = getInput().value.trim();
+      const queryTracking = `${isMatchCase}${isMatchWholeWord}${isUseRegex}${query}`;
+
+      if (queryTracking === lastQuery) {
+        goToMatch(currentIndex + 1);
+        return;
+      }
+
+      lastQuery = queryTracking;
       clearHighlights();
       if (!query) {
         setStatus('');
@@ -217,6 +205,7 @@
 
       if (matches.length === 0) {
         setStatus('No matches');
+        clearHighlights();
         return;
       }
       goToMatch(0);
@@ -224,7 +213,7 @@
 
     function toggleOption(e, isActive) {
       e.target.classList.toggle('active', isActive);
-      search(getInput().value.trim());
+      search();
     }
 
     const searchBar = window.AO3Popup.createSearchBar({
@@ -243,11 +232,7 @@
     getInput().addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      if (matches.length === 0) {
-        search(getInput().value.trim());
-      } else {
-        goToMatch(e.shiftKey ? currentIndex - 1 : currentIndex + 1);
-      }
+      search();
     });
 
     const content = document.createElement('div');
@@ -277,7 +262,7 @@
       {
         text: '🔍︎',
         variant: 'primary',
-        onClick: () => search(getInput().value.trim())
+        onClick: () => search()
       }
     ];
 
@@ -292,39 +277,9 @@
     });
 
     if (isMobile) {
-      popup.style.cssText = `
-        position: fixed !important;
-        bottom: 0 !important;
-        top: auto !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100vw !important;
-        max-width: 100vw !important;
-        height: auto !important;
-        max-height: max-content !important;
-        min-height: min-content !important;
-        padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px)) 10px !important;
-        box-sizing: border-box !important;
-        margin: 0 !important;
-        border-radius: 12px 12px 0 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: flex-end !important;
-        overflow: hidden !important;
-      `;
-
-      content.style.cssText = `
-        height: auto !important;
-        flex: 0 0 auto !important;
-      `;
-
-      searchBar.style.cssText = `
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        gap: 4px !important;
-        align-items: center !important;
-        height: auto !important;
-      `;
+      popup.classList.add('search-popup', 'mobile');
+      content.classList.add('ao3-search-popup-content');
+      searchBar.classList.add('mobile');
     }
 
     document.body.appendChild(popup);
