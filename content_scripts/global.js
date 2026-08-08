@@ -385,6 +385,7 @@
      */
     getButton(variant, isMobile, text) {
       const butt = document.createElement('button');
+      butt.type = 'button';
       butt.textContent = text;
       butt.classList.add('ao3-bar-button', `ao3-${variant || 'neutral'}`);
       if (isMobile) {
@@ -556,6 +557,7 @@
       // Buttons
       buttons.forEach(btnDef => {
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.textContent = btnDef.text;
         btn.classList.add('ao3-search-button');
         if (isMobile) {

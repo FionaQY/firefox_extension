@@ -295,7 +295,8 @@
 }
 
 .ao3-expand-button {
-  width: 100%;
+  width: auto;
+  align-self: flex-start;
   margin-top: 0.75em;
 }
 
