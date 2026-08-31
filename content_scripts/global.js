@@ -140,13 +140,15 @@
     },
 
     getTags(doc, url, needHref) {
-      const TAGCATEGORIES = ['rating', 'warning', 'category', 'fandom', 'relationship', 'character', 'freeform'];
+      const TAGCATEGORIES = ['rating', 'warning', 'category', 'fandom', 'relationship', 'character', 'freeform', 'series', 'collections'];
 
       const summary = this.getTagsHelper(doc, 'div.summary.module');
       let tags = {}; 
       for (const cat of TAGCATEGORIES) {
         const links = [...doc.querySelectorAll(`dd.${cat} a`)].map(x => !needHref ? x.innerText.trim() : `<a href="${x.href}">${x.innerText.trim()}</a>`);
-        tags[cat] = links;
+        if (links.length > 0) {
+          tags[cat] = links;
+        }
       }
 
       const title = `<a href="${url}">${this.getTagsHelper(doc, 'h2.title.heading')}</a>`;
@@ -155,12 +157,10 @@
       return { heading, summary, tags };
     },
 
-    async getSummaryFromWork(currentUrl, url, needHref) {
-      const { settings = {} } = await browser.storage.local.get('settings');
-      
-      if (currentUrl == url && settings['general'] && settings['general']['summaryNoWifi']) {
-        if (document.querySelector('h2.title.heading')) {
-          return window.AO3Extractor.getTags(document, url, needHref);
+    async getSummaryFromWork(currentUrl, url, needHref) {      
+      if (currentUrl == url) {
+        if (this.getTagsHelper(document, 'h2.title.heading')) {
+          return this.getTags(document, url, needHref);
         }
         return null;
       }
@@ -184,7 +184,18 @@
 
         document.body.appendChild(iframe);
       });
-    }
+    },
+
+    async getSummary(currentUrl, url, needHref = true) {
+      window.AO3Popup.createNotifPopup(`Getting summary from ${url}...`);
+
+      const data = await window.AO3Extractor.getSummaryFromWork(currentUrl, url, needHref);
+      if (!data) {
+        window.AO3Popup.createNotifPopup('Failed to load summary.');
+        return null;
+      }
+      return data;
+    },
   };
 
   window.AO3UrlParser = window.AO3UrlParser || {

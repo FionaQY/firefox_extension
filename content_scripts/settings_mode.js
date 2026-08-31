@@ -15,10 +15,6 @@
       label: 'Shrink Works',
       type: 'checkbox',
     },
-    summaryNoWifi: {
-      label: 'Get Summary Without Wifi',
-      type: 'checkbox',
-    },
   };
 
   const modeTextMap = {

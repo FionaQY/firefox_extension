@@ -12,10 +12,17 @@
   }
 
   async function getBookmarkHtml() {
-    const data = await window.AO3Extractor.getSummaryFromWork(currentUrl, workUrl, false);
-    if (!data) return '';
+    let summaryData = await window.AO3Extractor.getSummary(currentUrl, workUrl, false);
+    if (!summaryData?.summary) {
+      const neworkUrl = window.AO3UrlParser.getWorkUrl(currentUrl, true);
+      summaryData = await window.AO3Extractor.getSummary(currentUrl, neworkUrl, false);
+      if (!summaryData?.summary) {
+        window.AO3Popup.createNotifPopup('Failed to load summary.');
+        return;
+      }
+    }
 
-    const { heading, summary, tags } = data;
+    const { heading, summary, tags } = summaryData;
     
     const container = document.createElement('div');
     container.className = 'bookmark-popup';

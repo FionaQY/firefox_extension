@@ -12,21 +12,11 @@
   const popupId = 'ao3-qof-popup';
   document.getElementById(popupId)?.remove();
 
-  async function getSummary(url, needHref = true) {
-    window.AO3Popup.createNotifPopup(`Getting summary from ${url}...`);
-
-    const data = await window.AO3Extractor.getSummaryFromWork(currentUrl, url, needHref);
-    if (!data) {
-      window.AO3Popup.createNotifPopup('Failed to load summary.');
-      return null;
-    }
-    return data;
-  }
-
   async function showSummaryPopup() {
-    let summaryData = await getSummary(workUrl);
+    let summaryData = await window.AO3Extractor.getSummary(currentUrl, workUrl);
     if (!summaryData?.summary) {
-      summaryData = await getSummary(workUrl, false);
+      const neworkUrl = window.AO3UrlParser.getWorkUrl(currentUrl, true);
+      summaryData = await window.AO3Extractor.getSummary(currentUrl, neworkUrl);
       if (!summaryData?.summary) {
         window.AO3Popup.createNotifPopup('Failed to load summary.');
         return;
