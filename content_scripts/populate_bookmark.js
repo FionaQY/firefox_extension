@@ -12,7 +12,7 @@
   }
 
   async function getBookmarkHtml() {
-    const data = await window.AO3Extractor.getSummaryFromWork(workUrl, false);
+    const data = await window.AO3Extractor.getSummaryFromWork(currentUrl, workUrl, false);
     if (!data) return '';
 
     const { heading, summary, tags } = data;

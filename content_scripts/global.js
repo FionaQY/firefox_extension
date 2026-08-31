@@ -135,26 +135,30 @@
       return '';
     },
 
+    getTagsHelper(doc, query) {
+      return doc.querySelector(query)?.innerText || '';
+    },
+
     getTags(doc, url, needHref) {
       const TAGCATEGORIES = ['rating', 'warning', 'category', 'fandom', 'relationship', 'character', 'freeform'];
 
-      const summary = doc.querySelector('div.summary.module').innerText;
+      const summary = this.getTagsHelper(doc, 'div.summary.module');
       let tags = {}; 
       for (const cat of TAGCATEGORIES) {
         const links = [...doc.querySelectorAll(`dd.${cat} a`)].map(x => !needHref ? x.innerText.trim() : `<a href="${x.href}">${x.innerText.trim()}</a>`);
         tags[cat] = links;
       }
 
-      const title = `<a href="${url}">${doc.querySelector('h2.title.heading').innerText.trim()}</a>`;
-      const author = doc.querySelector('h3.byline.heading').innerHTML.trim();
-      const heading = `${title} by ${author}`
+      const title = `<a href="${url}">${this.getTagsHelper(doc, 'h2.title.heading')}</a>`;
+      const author = this.getTagsHelper(doc, 'h3.byline.heading');
+      const heading = `${title} by ${author}`;
       return { heading, summary, tags };
     },
 
-    async getSummaryFromWork(url, needHref) {
+    async getSummaryFromWork(currentUrl, url, needHref) {
       const { settings = {} } = await browser.storage.local.get('settings');
       
-      if (settings['general'] && settings['general']['summaryNoWifi']) {
+      if (currentUrl == url && settings['general'] && settings['general']['summaryNoWifi']) {
         if (document.querySelector('h2.title.heading')) {
           return window.AO3Extractor.getTags(document, url, needHref);
         }
@@ -275,14 +279,24 @@
       } 
     },
 
-    getWorkUrl(url) {
-      const match = url.match(/\/works\/(\d+)/);
+    getWorkUrl(url, withChapter = true) {
+      const match = url.match(/\/works\/(\d+)\/chapters\/(\d+)/);
       if (match) {
-        const workId = match[1]; 
-        return `https://archiveofourown.org/works/${workId}`        
-      } else {
-        return '';
-      }
+        const workId = match[1];
+        const chapterId = match[2];
+        let link = `https://archiveofourown.org/works/${workId}`;
+        if (chapterId && withChapter) {
+          link += `/chapters/${chapterId}`;
+        }
+        return link;
+      } 
+      const match2 = url.match(/\/works\/(\d+)/);
+        if (match2) {
+          const workId = match2[1];
+          let link = `https://archiveofourown.org/works/${workId}`;
+          return link;
+        }
+      return '';
     }
   };
 

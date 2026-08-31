@@ -12,20 +12,28 @@
   const popupId = 'ao3-qof-popup';
   document.getElementById(popupId)?.remove();
 
-  async function showSummaryPopup() {
-    window.AO3Popup.createNotifPopup(`Getting summary from ${workUrl}...`);
+  async function getSummary(url, needHref = true) {
+    window.AO3Popup.createNotifPopup(`Getting summary from ${url}...`);
 
-    const data = await window.AO3Extractor.getSummaryFromWork(workUrl, true);
+    const data = await window.AO3Extractor.getSummaryFromWork(currentUrl, url, needHref);
     if (!data) {
       window.AO3Popup.createNotifPopup('Failed to load summary.');
-      return;
+      return null;
+    }
+    return data;
+  }
+
+  async function showSummaryPopup() {
+    let summaryData = await getSummary(workUrl);
+    if (!summaryData?.summary) {
+      summaryData = await getSummary(workUrl, false);
+      if (!summaryData?.summary) {
+        window.AO3Popup.createNotifPopup('Failed to load summary.');
+        return;
+      }
     }
 
-    const { heading, summary, tags } = data;
-    if (!summary) {
-      window.AO3Popup.createNotifPopup('No summary found.');
-      return;
-    }
+    const { heading, summary, tags } = summaryData;
 
     const isMobile = window.innerWidth <= 768;
 
