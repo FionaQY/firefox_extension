@@ -24,6 +24,7 @@
     'save': '💾 Set default filters',
     'hide': '🫣 Hide Works',
     'search': '🔍︎ Search Bar',
+    'download': '📥 Download Doc',
   };
 
   function createColumn(title) {

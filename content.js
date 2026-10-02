@@ -28,6 +28,7 @@
     save: { icon: '💾', label: 'Set Default Filters' },
     hide: { icon: '🫣', label: 'Hide Works' },
     search: { icon: '🔍', label: 'Search Bar' },
+    download: { icon: '📥', label: 'Download Doc' },
     settings: { icon: '⚙️', label: 'Settings' }
   };
 
@@ -35,7 +36,6 @@
     const popupId = 'ao3-qof-popup';
     if (document.getElementById(popupId)) {
       document.getElementById(popupId).remove();
-      return;
     }
 
     const settings = await window.AO3Popup.getSettings();
@@ -164,7 +164,6 @@
 
     content.appendChild(grid);
 
-    // Add expand button on desktop
     if (!isMobile) {
       const expandBtn = document.createElement('button');
       expandBtn.textContent = '⛶ Expand';
@@ -185,3 +184,4 @@
 
   }
 })();
+

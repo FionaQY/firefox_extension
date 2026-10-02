@@ -1,22 +1,28 @@
 /* globals browser */
 let pendingInjection = null;
 
+const MODE_MAP = {
+    block: "block_mode",
+    forgot: "forgot_mode",
+    apply: "apply_mode",
+    save: "save_mode",
+    hide: "hide_mode",
+    search: "search_mode",
+    download: "download_mode.bundle",
+    settings: "settings_mode"
+};
+
 browser.browserAction.onClicked.addListener((tab) => {
     browser.tabs.sendMessage(tab.id, {action: 'showPopup'})
 });
 
-function injectScript(tabId, scriptName) {
-    try {
-        browser.tabs.executeScript(tabId, {
-            file: "/content_scripts/global.js"
-        }, () => {
-            browser.tabs.executeScript(tabId, {
-                file: `/content_scripts/${scriptName}.js`
-            });
-        });
-    } catch (error) { 
-        console.error(`Error injecting ${scriptName} script:`, error);
-    }
+async function injectScript(tabId, scriptName) {
+  try {
+    await browser.tabs.executeScript(tabId, { file: "/content_scripts/global.js" });
+    await browser.tabs.executeScript(tabId, { file: `/content_scripts/${scriptName}.js` });
+  } catch (error) {
+    console.error(`Error injecting ${scriptName} script:`, error);
+  }
 }
 
 browser.runtime.onMessage.addListener(async (msg, sender) => {
@@ -26,7 +32,7 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
     });
 
     if (msg.action === 'executeMode') {
-        injectScript(tab.id, `${msg.mode}_mode`);
+        injectScript(tab.id,  MODE_MAP[msg.mode]);
     } else if (msg.action === 'scrollPage') {
         pendingInjection = {
             data: msg.data,
@@ -45,6 +51,24 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
         pendingInjection = null;
     } else if (msg.action == 'shrinkContentScriptReady') {
         browser.tabs.sendMessage(sender.tab.id, { action: 'initialize'});
+    } else if (msg.action === "downloadDoc") {
+        const blob = await (await fetch(msg.url)).blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const id = await browser.downloads.download({
+            url: blobUrl,
+            filename: msg.filename,
+            saveAs: true
+        });
+
+        const onChanged = (delta) => {
+            if (delta.id === id && delta.state &&
+                (delta.state.current === "complete" || delta.state.current === "interrupted")) {
+                URL.revokeObjectURL(blobUrl);
+                browser.downloads.onChanged.removeListener(onChanged);
+            }
+        };
+        browser.downloads.onChanged.addListener(onChanged);
     }
 });
 

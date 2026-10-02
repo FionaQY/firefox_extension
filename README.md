@@ -44,3 +44,5 @@ firefox-extension/
 
 ## Credits
 Icon by [Ning Nong](https://www.flaticon.com/authors/ning-nong) from [www.flaticon.com](https://www.flaticon.com)
+
+npx esbuild content_scripts/download_mode.js --bundle --format=iife --platform=browser --outfile=content_scripts/download_mode.bundle.js

@@ -41,6 +41,7 @@
     "activeTab",
     "webNavigation",
     "storage",
+    "downloads",
     "https://archiveofourown.org/*"
   ],
 
