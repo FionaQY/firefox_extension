@@ -1,1 +1,5 @@
 node_modules
+package-lock.json
+package.json
+content_scripts/download_mode.bundle.js
+content_scripts/download_list.bundle.js

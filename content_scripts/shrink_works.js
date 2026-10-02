@@ -15,7 +15,7 @@
 
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
-  if (workUrl != '') { // if a work page
+  if (workUrl != '') {
     window.AO3Popup.createNotifPopup('No works to shrink here');
     return;
   }
@@ -43,8 +43,7 @@
     
     const showLanguages = workSettings['showLanguage']?.split(',').filter(x => x.trim().length > 0);
     if (showLanguages.length > 0) {
-      const hasLang = showLanguages.some(x => AO3Extractor.getLangAbb(x) == stats['language']);
-      if (!hasLang) {
+      if (!showLanguages.some(x => AO3Extractor.getLangAbb(x) == stats['language'])) {
         reasons.push(`Language: not ${showLanguages.join(', ')}`);
       }
     }

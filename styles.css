@@ -15,7 +15,7 @@
   color: #eee;
   border: 1px solid #444;
   height: auto;
-  z-index: 9999;
+  z-index: 99999;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   scrollbar-width: thin;
   scrollbar-color: #555 #2e2e3e;
@@ -92,7 +92,7 @@
   max-width: 280px;
   font-family: sans-serif;
   box-shadow: 0 4px 12px rgba(91, 83, 83, 0.4);
-  z-index: 9999;
+  z-index: 99999;
   cursor: default;
   user-select: text;
   white-space: pre-wrap;
@@ -723,4 +723,93 @@ textarea.ao3-field-input {
   width: 1px;
   height: 1px;
   left: -9999px;
+}
+
+/* Ensure work card container can host elements cleanly */
+.work.blurb.group,
+li.blurb.group {
+  position: relative !important;
+}
+
+/* Wrapper around checkbox next to date */
+.ao3-dl-check-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-left: 10px !important;
+  vertical-align: middle !important;
+  cursor: pointer !important;
+}
+
+/* Checkbox styling */
+.ao3-dl-check {
+  width: 15px !important;
+  height: 15px !important;
+  cursor: pointer !important;
+  accent-color: #900 !important; /* Matches default AO3 red accent */
+  margin: 0 !important;
+  vertical-align: middle !important;
+}
+
+/* Floating download panel at bottom-right */
+#ao3-dl-panel {
+  position: fixed !important;
+  right: 16px !important;
+  bottom: 16px !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 999999 !important;
+
+  background: #1e1e2f !important;
+  color: #eee !important;
+
+  border: 1px solid #444 !important;
+  border-radius: 10px !important;
+
+  padding: 10px 14px !important;
+
+  font: 13px/1.4 sans-serif !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+
+  display: flex !important;
+  gap: 12px !important;
+  align-items: center !important;
+}
+
+/* Panel label styling */
+#ao3-dl-panel label {
+  color: #eee !important;
+  font-weight: normal !important;
+  margin: 0 !important;
+}
+
+.ao3-dl-btn {
+  color: #000000 !important;
+}
+
+/* Buttons inside download panel */
+#ao3-dl-panel button {
+  cursor: pointer !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  border: 1px solid #555 !important;
+  background: #2f2f45 !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-family: inherit !important;
+  transition: background 0.2s ease !important;
+}
+
+#ao3-dl-panel button:hover {
+  background: #3f3f55 !important;
+  border-color: #7a7aff !important;
+}
+
+#ao3-dl-panel button:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+#ao3-dl-status {
+  font-size: 12px !important;
+  color: #ccc !important;
 }
