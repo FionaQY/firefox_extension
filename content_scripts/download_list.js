@@ -21,15 +21,6 @@ async function linesToDataUrl(lines) {
 }
 
 (() => {
-  if (window.__ao3DownloadList) return;
-  window.__ao3DownloadList = true;
-
-  if (window.AO3UrlParser?.getWorkUrl(window.location.href)) return;
-
-  const DELAY_MS = 3000;
-  const safe = s => s.replace(/[\\/:*?"<>|]/g, "_").trim();
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-
   function workInfo(work) {
     const link = work.querySelector("h4.heading a[href^='/works/']");
     if (!link) return null;
@@ -70,59 +61,16 @@ async function linesToDataUrl(lines) {
       work.appendChild(cb);
     }
   }
+  
 
-  injectCheckboxes();
-  const observer = new MutationObserver(() => injectCheckboxes());
-  observer.observe(document.body, { childList: true, subtree: true });
+  if (window.__ao3DownloadList) return;
+  window.__ao3DownloadList = true;
 
-  let panel = document.getElementById("ao3-dl-panel");
-  if (!panel) {
-    panel = document.createElement("div");
-    panel.id = "ao3-dl-panel";
-    const allLabel = document.createElement("label");
-    allLabel.style.display = "flex";
-    allLabel.style.alignItems = "center";
-    allLabel.style.gap = "4px";
-    allLabel.style.cursor = "pointer";
+  if (window.AO3UrlParser?.getWorkUrl(window.location.href)) return;
 
-    const allBoxInput = document.createElement("input");
-    allBoxInput.type = "checkbox";
-    allBoxInput.id = "ao3-dl-all";
-
-    allLabel.appendChild(allBoxInput);
-    allLabel.appendChild(document.createTextNode(" All"));
-
-    const downloadBtn = document.createElement("button");
-    downloadBtn.id = "ao3-dl-btn";
-    downloadBtn.type = "button";
-    downloadBtn.textContent = "Download (0)";
-
-    const statusSpan = document.createElement("span");
-    statusSpan.id = "ao3-dl-status";
-
-    panel.append(allLabel, downloadBtn, statusSpan);
-    document.body.appendChild(panel);
-  }
-
-  const btn = panel.querySelector("#ao3-dl-btn");
-  const status = panel.querySelector("#ao3-dl-status");
-  const allBox = panel.querySelector("#ao3-dl-all");
-
-  const checks = () => [...document.querySelectorAll(".ao3-dl-check")];
-
-  const selected = () => checks().filter(c => c.checked);
-  const refresh = () => {
-    btn.textContent = `Download (${selected().length})`;
-  };
-
-  document.addEventListener("change", e => {
-    if (e.target.classList?.contains("ao3-dl-check")) refresh();
-  });
-
-  allBox.addEventListener("change", () => {
-    checks().forEach(c => c.checked = allBox.checked);
-    refresh();
-  });
+  const DELAY_MS = 3000;
+  const safe = s => s.replace(/[\\/:*?"<>|]/g, "_").trim();
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 
   function loadWorkText(id) {
@@ -151,48 +99,109 @@ async function linesToDataUrl(lines) {
     });
   }
 
-  const toLines = text =>
-    text.replace(/\r/g, "")
-      .split("\n")
-      .map(l => l.replace(/\u00a0/g, " ").trimEnd())
-      .filter(Boolean);
 
-  /* ---------------- DOWNLOAD ---------------- */
-
-  btn.addEventListener("click", async () => {
-    const items = selected();
-    if (!items.length) return;
-
-    btn.disabled = true;
-
-    for (let i = 0; i < items.length; i++) {
-      const { id, title, author } = items[i].dataset;
-
-      status.textContent = `${i + 1}/${items.length}: ${title}`;
-
-      try {
-        const lines = toLines(await loadWorkText(id));
-        const url = await linesToDataUrl(lines);
-
-        await browser.runtime.sendMessage({
-          action: "downloadDoc",
-          url,
-          filename: `${safe(title)}_${safe(author)}.docx`,
-          saveAs: items.length === 1,
-        });
-
-        items[i].checked = false;
-      } catch (err) {
-        console.error(err);
-        status.textContent = `Failed: ${title}`;
-      }
-
-      if (i < items.length - 1) await sleep(DELAY_MS);
+  async function openDownloadButton() {
+    const { settings = {} } = await browser.storage.local.get('settings');
+    if (!settings['general']['downloadWorks']) {
+      return;
     }
 
-    status.textContent = "Done";
-    btn.disabled = false;
-    refresh();
-  });
+    injectCheckboxes();
+    const observer = new MutationObserver(() => injectCheckboxes());
+    observer.observe(document.body, { childList: true, subtree: true });
 
+    let panel = document.getElementById("ao3-dl-panel");
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "ao3-dl-panel";
+      const allLabel = document.createElement("label");
+      allLabel.style.display = "flex";
+      allLabel.style.alignItems = "center";
+      allLabel.style.gap = "4px";
+      allLabel.style.cursor = "pointer";
+
+      const allBoxInput = document.createElement("input");
+      allBoxInput.type = "checkbox";
+      allBoxInput.id = "ao3-dl-all";
+
+      allLabel.appendChild(allBoxInput);
+      allLabel.appendChild(document.createTextNode(" All"));
+
+      const downloadBtn = document.createElement("button");
+      downloadBtn.id = "ao3-dl-btn";
+      downloadBtn.type = "button";
+      downloadBtn.textContent = "Download (0)";
+
+      const statusSpan = document.createElement("span");
+      statusSpan.id = "ao3-dl-status";
+
+      panel.append(allLabel, downloadBtn, statusSpan);
+      document.body.appendChild(panel);
+    }
+
+    const btn = panel.querySelector("#ao3-dl-btn");
+    const status = panel.querySelector("#ao3-dl-status");
+    const allBox = panel.querySelector("#ao3-dl-all");
+
+    const checks = () => [...document.querySelectorAll(".ao3-dl-check")];
+
+    const selected = () => checks().filter(c => c.checked);
+    const refresh = () => {
+      btn.textContent = `Download (${selected().length})`;
+    };
+
+    document.addEventListener("change", e => {
+      if (e.target.classList?.contains("ao3-dl-check")) refresh();
+    });
+
+    allBox.addEventListener("change", () => {
+      checks().forEach(c => c.checked = allBox.checked);
+      refresh();
+    });
+
+      const toLines = text =>
+      text.replace(/\r/g, "")
+        .split("\n")
+        .map(l => l.replace(/\u00a0/g, " ").trimEnd())
+        .filter(Boolean);
+
+    btn.addEventListener("click", async () => {
+      const items = selected();
+      if (!items.length) return;
+
+      btn.disabled = true;
+      checks().forEach(x => x.disabled = true)
+
+      for (let i = 0; i < items.length; i++) {
+        const { id, title, author } = items[i].dataset;
+
+        status.textContent = `${i + 1}/${items.length}: ${title}`;
+
+        try {
+          const lines = toLines(await loadWorkText(id));
+          const url = await linesToDataUrl(lines);
+
+          await browser.runtime.sendMessage({
+            action: "downloadDoc",
+            url,
+            filename: `${safe(title)}_${safe(author)}.docx`,
+            saveAs: items.length === 1,
+          });
+
+          items[i].checked = false;
+        } catch (err) {
+          console.error(err);
+          status.textContent = `Failed: ${title}`;
+        }
+
+        if (i < items.length - 1) await sleep(DELAY_MS);
+      }
+
+      status.textContent = "Done";
+      btn.disabled = false;
+      checks.forEach(x => x.disabled = false)
+      refresh();
+    });
+  }
+  openDownloadButton()
 })();

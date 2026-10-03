@@ -15,6 +15,10 @@
       label: 'Shrink Works',
       type: 'checkbox',
     },
+    downloadWorks: {
+      label: 'Download Works as docx (not formatted)',
+      type: 'checkbox',
+    }
   };
 
   const modeTextMap = {
