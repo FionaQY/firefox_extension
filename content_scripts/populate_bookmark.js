@@ -5,7 +5,7 @@
   }
 
   const currentUrl = window.location.href;
-  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
+  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl, false);
   if (workUrl == '') {
     console.warn('Current page is not an AO3 work page. Unable to obtain workUrl');
     return;
@@ -77,7 +77,7 @@
     }
 
     const bookmarkTextBox = document.getElementById("bookmark_notes");
-    if (bookmarkTextBox.value.trim().length === 0) {
+    if (settings['general']['overrideBookmark'] || bookmarkTextBox.value.trim().length === 0) {
       window.AO3Popup.createNotifPopup("Getting bookmark info...");
       bookmarkTextBox.value = await getBookmarkHtml();
       window.AO3Popup.createNotifPopup("Bookmark textbox populated.");

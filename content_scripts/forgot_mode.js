@@ -3,7 +3,7 @@
 /* eslint-enable no-unused-vars */
 (() => {
   const currentUrl = window.location.href;
-  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
+  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl, false);
   if (!workUrl) {
     window.AO3Popup.createNotifPopup('Cannot get work ID');
     return;
@@ -15,7 +15,7 @@
   async function showSummaryPopup() {
     let summaryData = await window.AO3Extractor.getSummary(currentUrl, workUrl);
     if (!summaryData?.summary) {
-      const neworkUrl = window.AO3UrlParser.getWorkUrl(currentUrl, true);
+      const neworkUrl = window.AO3UrlParser.getWorkUrl(currentUrl, false);
       summaryData = await window.AO3Extractor.getSummary(currentUrl, neworkUrl);
       if (!summaryData?.summary) {
         window.AO3Popup.createNotifPopup('Failed to load summary.');

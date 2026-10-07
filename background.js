@@ -91,15 +91,13 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
 });
 
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status != "complete") return;
-
+  if (changeInfo.status != "complete" || !tab.url) return;
+  
   if (pendingInjection && pendingInjection.tabId == tabId) {
-    injectScript(tab.id, "scroll").then(() => {
-      browser.tabs.executeScript(tabId, { file: "/content_scripts/shrink_works.js" });
-    });
+    injectScript(tabId, "scroll", "shrink_works");
   } else if (tab.url.includes("/works/")) {
-    injectScript(tab.id, "populate_bookmark");
+    injectScript(tabId, "populate_bookmark");
   } else {
-    injectScript(tab.id, "shrink_works", "download_list.bundle");
+    injectScript(tabId, "shrink_works", "download_list.bundle");
   }
 });

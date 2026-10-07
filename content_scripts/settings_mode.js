@@ -11,6 +11,10 @@
       label: 'Automatically Populate Bookmark',
       type: 'checkbox',
     },
+    overrideBookmark: {
+      label: 'Populate Bookmark even if filled',
+      type: 'checkbox',
+    },
     shrinkWorks: {
       label: 'Shrink Works',
       type: 'checkbox',

@@ -1,24 +1,5 @@
 /* globals browser */
-import { Document, Packer, Paragraph, TextRun } from "docx";
-
-async function linesToDataUrl(lines) {
-  const doc = new Document({
-    sections: [{
-      children: lines.map(l =>
-        new Paragraph({ children: [new TextRun(l)] })
-      ),
-    }],
-  });
-
-  const blob = await Packer.toBlob(doc);
-
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = reject;
-    r.readAsDataURL(blob);
-  });
-}
+import { workToLines, linesToDataUrl, safe } from "./download_file.js";
 
 (() => {
   function workInfo(work) {
@@ -61,7 +42,6 @@ async function linesToDataUrl(lines) {
       work.appendChild(cb);
     }
   }
-  
 
   if (window.__ao3DownloadList) return;
   window.__ao3DownloadList = true;
@@ -69,23 +49,21 @@ async function linesToDataUrl(lines) {
   if (window.AO3UrlParser?.getWorkUrl(window.location.href)) return;
 
   const DELAY_MS = 3000;
-  const safe = s => s.replace(/[\\/:*?"<>|]/g, "_").trim();
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-
-  function loadWorkText(id) {
+  function loadWork(id) {
     return new Promise((resolve, reject) => {
       const f = document.createElement("iframe");
       f.style.cssText = "position:fixed;left:-99999px;top:0;width:1200px;height:800px;";
 
       f.onload = () => {
         try {
-          const text = f.contentDocument.body.innerText;
-          f.remove();
-          resolve(text);
+          const href = `${location.origin}/works/${id}`;
+          resolve(workToLines(f.contentDocument, href));
         } catch (e) {
-          f.remove();
           reject(e);
+        } finally {
+          f.remove();
         }
       };
 
@@ -99,10 +77,9 @@ async function linesToDataUrl(lines) {
     });
   }
 
-
   async function openDownloadButton() {
-    const { settings = {} } = await browser.storage.local.get('settings');
-    if (!settings['general']['downloadWorks']) {
+    const { settings = {} } = await browser.storage.local.get("settings");
+    if (!settings["general"]?.["downloadWorks"]) {
       return;
     }
 
@@ -155,22 +132,16 @@ async function linesToDataUrl(lines) {
     });
 
     allBox.addEventListener("change", () => {
-      checks().forEach(c => c.checked = allBox.checked);
+      checks().forEach(c => (c.checked = allBox.checked));
       refresh();
     });
-
-      const toLines = text =>
-      text.replace(/\r/g, "")
-        .split("\n")
-        .map(l => l.replace(/\u00a0/g, " ").trimEnd())
-        .filter(Boolean);
 
     btn.addEventListener("click", async () => {
       const items = selected();
       if (!items.length) return;
 
       btn.disabled = true;
-      checks().forEach(x => x.disabled = true)
+      checks().forEach(x => (x.disabled = true));
 
       for (let i = 0; i < items.length; i++) {
         const { id, title, author } = items[i].dataset;
@@ -178,7 +149,7 @@ async function linesToDataUrl(lines) {
         status.textContent = `${i + 1}/${items.length}: ${title}`;
 
         try {
-          const lines = toLines(await loadWorkText(id));
+          const { lines } = await loadWork(id);
           const url = await linesToDataUrl(lines);
 
           await browser.runtime.sendMessage({
@@ -199,9 +170,10 @@ async function linesToDataUrl(lines) {
 
       status.textContent = "Done";
       btn.disabled = false;
-      checks.forEach(x => x.disabled = false)
+      checks().forEach(x => (x.disabled = false));
       refresh();
     });
   }
-  openDownloadButton()
+
+  openDownloadButton();
 })();
