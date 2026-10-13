@@ -10,10 +10,7 @@
   },
   "globals": {
     "browser": "readonly",
-    "chrome": "readonly",
-    "AO3Extractor": "readonly",
-    "AO3UrlParser": "readonly",
-    "AO3Popup": "readonly"
+    "chrome": "readonly"
   },
   "rules": {
     "no-unused-vars": [

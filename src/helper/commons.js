@@ -90,13 +90,13 @@ export async function getSummaryFromWork(currentUrl, url, needHref) {
   try {
     return getTags(await fetchDoc(url), url, needHref);
   } catch (err) {
-    console.error("Error loading work:", err);
+    createNotifPopup("Error loading work:", err);
     return null;
   }
 }
 
 export async function getSummary(currentUrl, url, needHref = true) {
-  createNotifPopup(`Getting summary from ${url}...`);
+  console.log(`Getting summary from ${url}...`);
 
   const data = await getSummaryFromWork(currentUrl, url, needHref);
   if (!data) {

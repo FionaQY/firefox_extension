@@ -18,20 +18,22 @@ This is a personal Firefox extension I built for myself. It may not be polished 
 To load the extension in Firefox temporarily for development:
 
 1. Git clone this repo
-2. Open Firefox and go to `about:debugging`
-3. Click "This Firefox"
-4. Click "Load Temporary Add-on"
-5. Select `manifest.json` file
+2. Run `npm run build` to obtain `bundle.js` file
+3. Open Firefox and go to `about:debugging`
+4. Click "This Firefox"
+5. Click "Load Temporary Add-on"
+6. Select `manifest.json` file
 
 Note: The extension will be removed when you restart Firefox.
 
 ## Installation (Permanent)
 
-1. Compress files in repo into a `zip` file
-2. Upload `zip` to Firefox Add-On Developer Hub
-3. Wait until it is approved
-4. Download `.xpi` file. This automatically installs on Desktop.
-5. Mobile installation requires firefox nightly
+1. Run `npm run build` to obtain `bundle.js` file
+2. Compress files in repo into a `zip` file
+3. Upload `zip` to Firefox Add-On Developer Hub
+4. Wait until it is approved
+5. Download `.xpi` file. This automatically installs on Desktop.
+6. Mobile installation requires firefox nightly
 
 OR
 
@@ -43,7 +45,7 @@ OR
 firefox-extension/
 ├── manifest.json
 ├── background.js
-├── content.js
+├── content.bundle.js
 ├── content_scripts/
 ├── icons/
 ```

@@ -8,7 +8,11 @@ import {
 
 import { getWorkUrl, fetchDoc } from "./helper/commons.js";
 import { workInfo } from "./helper/extractor.js";
-import { createLabeledCheckbox, getButton } from "./helper/popup.js";
+import {
+  createLabeledCheckbox,
+  getButton,
+  createNotifPopup,
+} from "./helper/popup.js";
 
 const DELAY_MS = 3000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -192,7 +196,7 @@ async function openDownloadButton() {
           }
           cb.checked = false;
         } catch (err) {
-          console.error(err);
+          createNotifPopup(`Cannot download series :(: ${err}`);
           status.textContent = `Failed to read series: ${title}`;
         }
       } else if (!seen.has(id)) {
@@ -230,13 +234,12 @@ async function openDownloadButton() {
           });
         }
 
-        // uncheck the matching work checkbox, if it's on this page
         const cb = items.find(
           (c) => c.dataset.type === "work" && c.dataset.id === id,
         );
         if (cb) cb.checked = false;
       } catch (err) {
-        console.error(err);
+        createNotifPopup(`sadge :(: ${err}`);
         status.textContent = `Failed: ${title}`;
       }
 
@@ -260,7 +263,7 @@ async function openDownloadButton() {
           saveAs: true,
         });
       } catch (err) {
-        console.error(err);
+        createNotifPopup(`Cannot bundle :(: ${err}`);
         status.textContent = "Failed to build bundle";
         setBusy(false);
         return;

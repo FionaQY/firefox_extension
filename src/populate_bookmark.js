@@ -10,7 +10,7 @@ import { createNotifPopup, parseHtmlFragment } from "./helper/popup";
   const currentUrl = window.location.href;
   const workUrl = getWorkUrl(currentUrl, false);
   if (workUrl == "") {
-    console.warn(
+    createNotifPopup(
       "Current page is not an AO3 work page. Unable to obtain workUrl",
     );
     return;

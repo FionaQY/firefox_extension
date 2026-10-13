@@ -105,6 +105,7 @@ import { createNotifPopup } from "./helper/popup";
 
     return result;
   }
+
   async function checkPageForWork(url, page, relevantData, filterType) {
     createNotifPopup(`Checking page ${page}..`);
     const doc = await fetchDoc(`${url}&page=${page}`);
@@ -118,12 +119,11 @@ import { createNotifPopup } from "./helper/popup";
   async function handleTagClick(e) {
     const blockUser = e.target.matches('a[href*="/users/"]');
     if (!e.target.matches('a[href*="/tags/"][href*="/works"]') && !blockUser) {
-      console.warn("Did not click a tag/user.");
       createNotifPopup(`You did not click a tag/user...`);
       return;
     }
     if (clickedOnce) {
-      console.warn("Clicked once already.");
+      createNotifPopup("Clicked once already.");
       return;
     }
 
@@ -184,7 +184,6 @@ import { createNotifPopup } from "./helper/popup";
       window.location.href = target;
       return;
     } catch (error) {
-      console.error("AO3 Blocker error:", error);
       createNotifPopup(`Failed: ${error.message}`);
     }
   }
