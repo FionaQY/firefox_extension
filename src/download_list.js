@@ -246,16 +246,18 @@ async function openDownloadButton() {
       if (i < jobs.length - 1) await sleep(DELAY_MS);
     }
 
-    // ---- 3. build the bundle ----
     if (bundle && loaded.length > 1) {
       status.textContent = "Building bundle...";
       try {
-        const name =
-          seriesTitles.length === 1 && standalone === 0
-            ? `${safe(seriesTitles[0])}_series.docx`
-            : `AO3_bundle_${loaded.length}_works.docx`;
+        const isSeriesBundle = seriesTitles.length === 1 && standalone === 0;
+        const seriesName = isSeriesBundle ? seriesTitles[0] : "";
+        const name = isSeriesBundle
+          ? `${safe(seriesTitles[0])}_series.docx`
+          : `AO3_bundle_${loaded.length}_works.docx`;
 
-        const url = await linesToDataUrl(mergeWorks(loaded));
+        const url = await linesToDataUrl(
+          mergeWorks(loaded, isSeriesBundle, seriesName),
+        );
         await browser.runtime.sendMessage({
           action: "downloadDoc",
           url,
