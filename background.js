@@ -8,7 +8,7 @@ const MODE_MAP = {
   save: "save_mode",
   hide: "hide_mode",
   search: "search_mode",
-  download: "download_mode.bundle",
+  download: "download_mode",
   settings: "settings_mode",
 };
 
@@ -17,12 +17,10 @@ browser.browserAction.onClicked.addListener((tab) => {
 });
 
 async function injectScript(tabId, ...scripts) {
-  const files = ["global", ...scripts];
-
   try {
-    for (const name of files) {
+    for (const name of scripts) {
       await browser.tabs.executeScript(tabId, {
-        file: `/content_scripts/${name}.js`,
+        file: `/content_scripts/${name}.bundle.js`,
       });
     }
   } catch (error) {
@@ -37,7 +35,7 @@ async function downloadDoc(msg) {
   const id = await browser.downloads.download({
     url: blobUrl,
     filename: msg.filename,
-    saveAs: true,
+    saveAs: msg.saveAs ?? true,
   });
 
   const onChanged = (delta) => {
@@ -57,7 +55,8 @@ async function downloadDoc(msg) {
 // action -> (msg, sender, tab)
 const handlers = {
   executeMode(msg, sender, tab) {
-    injectScript(tab.id, MODE_MAP[msg.mode]);
+    const script = MODE_MAP[msg.mode];
+    if (script) injectScript(tab.id, script);
   },
 
   scrollPage(msg, sender, tab) {
@@ -101,6 +100,6 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   } else if (tab.url.includes("/works/")) {
     injectScript(tabId, "populate_bookmark");
   } else {
-    injectScript(tabId, "shrink_works", "download_list.bundle");
+    injectScript(tabId, "shrink_works", "download_list");
   }
 });

@@ -1,6 +1,8 @@
-/* eslint-disable no-unused-vars */
-/* globals browser, AO3Popup, AO3Extractor */
-/* eslint-enable no-unused-vars */
+/* globals browser */
+
+import { getLangAbb, extractAllValues } from "./helper/extractor";
+import { createNotifPopup } from "./helper/popup";
+import { getWorkUrl } from "./helper/commons";
 
 (() => {
   browser.runtime.onMessage.addListener(async (msg) => {
@@ -14,14 +16,14 @@
   });
 
   const currentUrl = window.location.href;
-  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
+  const workUrl = getWorkUrl(currentUrl);
   if (workUrl != "") {
-    window.AO3Popup.createNotifPopup("No works to shrink here");
+    createNotifPopup("No works to shrink here");
     return;
   }
 
   function isUndesired(work, workSettings) {
-    const stats = window.AO3Extractor.extractAllValues(work);
+    const stats = extractAllValues(work);
 
     const words = stats["word_count"];
     const hideWordUnder = workSettings["hideWordUnder"];
@@ -38,7 +40,7 @@
       ?.split(",")
       .filter((x) => x.trim().length > 0);
     for (const lang of hideLanguages) {
-      if (stats["language"] == AO3Extractor.getLangAbb(lang)) {
+      if (stats["language"] == getLangAbb(lang)) {
         reasons.push(`Language: ${lang}`);
       }
     }
@@ -47,11 +49,7 @@
       ?.split(",")
       .filter((x) => x.trim().length > 0);
     if (showLanguages.length > 0) {
-      if (
-        !showLanguages.some(
-          (x) => AO3Extractor.getLangAbb(x) == stats["language"],
-        )
-      ) {
+      if (!showLanguages.some((x) => getLangAbb(x) == stats["language"])) {
         reasons.push(`Language: not ${showLanguages.join(", ")}`);
       }
     }

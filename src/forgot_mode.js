@@ -1,11 +1,16 @@
-/* eslint-disable no-unused-vars */
-/* globals AO3Popup, AO3UrlParser */
-/* eslint-enable no-unused-vars */
+/* globals */
+
+import {
+  createNotifPopup,
+  parseHtmlFragment,
+  createPopupContainer,
+} from "./helper/popup";
+import { getSummary, getWorkUrl } from "./helper/commons";
 (() => {
   const currentUrl = window.location.href;
-  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl, false);
+  const workUrl = getWorkUrl(currentUrl, false);
   if (!workUrl) {
-    window.AO3Popup.createNotifPopup("Cannot get work ID");
+    createNotifPopup("Cannot get work ID");
     return;
   }
 
@@ -13,12 +18,12 @@
   document.getElementById(popupId)?.remove();
 
   async function showSummaryPopup() {
-    let summaryData = await window.AO3Extractor.getSummary(currentUrl, workUrl);
+    let summaryData = await getSummary(currentUrl, workUrl);
     if (!summaryData?.summary) {
-      const neworkUrl = window.AO3UrlParser.getWorkUrl(currentUrl, false);
-      summaryData = await window.AO3Extractor.getSummary(currentUrl, neworkUrl);
+      const neworkUrl = getWorkUrl(currentUrl, false);
+      summaryData = await getSummary(currentUrl, neworkUrl);
       if (!summaryData?.summary) {
-        window.AO3Popup.createNotifPopup("Failed to load summary.");
+        createNotifPopup("Failed to load summary.");
         return;
       }
     }
@@ -32,7 +37,7 @@
 
     const headingEl = document.createElement("div");
     headingEl.classList.add("ao3-summary-heading");
-    headingEl.appendChild(window.AO3Popup.parseHtmlFragment(heading));
+    headingEl.appendChild(parseHtmlFragment(heading));
     content.appendChild(headingEl);
 
     const summaryEl = document.createElement("div");
@@ -50,15 +55,13 @@
         label.textContent = `${key}: `;
         tagContainer.appendChild(label);
         const valueSpan = document.createElement("span");
-        valueSpan.appendChild(
-          window.AO3Popup.parseHtmlFragment(values.join(", ")),
-        );
+        valueSpan.appendChild(parseHtmlFragment(values.join(", ")));
         tagContainer.appendChild(valueSpan);
         content.appendChild(tagContainer);
       }
     }
 
-    const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
+    const popup = createPopupContainer(popupId, isMobile, {
       content: content,
       extraClasses: ["summary"],
     });

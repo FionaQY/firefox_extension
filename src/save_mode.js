@@ -1,4 +1,12 @@
 /* globals browser */
+import {
+  optionsPopupHelper,
+  createPopupContainer,
+  resetInputs,
+  saveSettings,
+  getSettings,
+} from "./helper/popup";
+
 (() => {
   const popupId = "ao3-qof-popup";
   document.getElementById(popupId)?.remove();
@@ -91,18 +99,18 @@
   };
 
   async function saveFilterValue(key, value) {
-    const settings = await window.AO3Popup.getSettings();
+    const settings = await getSettings();
     if (!settings.filters) settings.filters = {};
     settings.filters[key] = value;
-    await window.AO3Popup.saveSettings(settings);
+    await saveSettings(settings);
   }
 
   async function openFilterPopup() {
-    const settings = await window.AO3Popup.getSettings();
+    const settings = await getSettings();
     const filters = settings.filters || {};
     const isMobile = window.innerWidth <= 768;
 
-    const [inputsMap, contentContainer] = window.AO3Popup.optionsPopupHelper(
+    const [inputsMap, contentContainer] = optionsPopupHelper(
       fields,
       isMobile,
       filters,
@@ -132,15 +140,15 @@
             !confirm("Are you sure you want to clear all saved filter values?")
           )
             return;
-          const currentSettings = await window.AO3Popup.getSettings();
+          const currentSettings = await getSettings();
           delete currentSettings.filters;
-          await window.AO3Popup.saveSettings(currentSettings);
-          window.AO3Popup.resetInputs(contentContainer, inputsMap);
+          await saveSettings(currentSettings);
+          resetInputs(contentContainer, inputsMap);
         },
       },
     ];
 
-    const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
+    const popup = createPopupContainer(popupId, isMobile, {
       content: contentContainer,
       buttons: buttons,
       extraClasses: isMobile ? [] : ["flush-bottom"],

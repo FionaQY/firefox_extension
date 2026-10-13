@@ -1,6 +1,13 @@
-/* eslint-disable no-unused-vars */
-/* globals AO3Popup */
-/* eslint-enable no-unused-vars */
+/* globals */
+
+import {
+  optionsPopupHelper,
+  createPopupContainer,
+  resetInputs,
+  saveSettings,
+  getSettings,
+  createNotifPopup,
+} from "./helper/popup";
 
 (() => {
   const popupId = "ao3-qof-popup";
@@ -82,11 +89,11 @@
   }
 
   async function openSettingsPopup() {
-    const settings = await window.AO3Popup.getSettings();
+    const settings = await getSettings();
     let generalSettings = settings.general || {};
     const isMobile = window.innerWidth <= 768;
 
-    const [inputsMap, contentContainer] = window.AO3Popup.optionsPopupHelper(
+    const [inputsMap, contentContainer] = optionsPopupHelper(
       fields,
       isMobile,
       generalSettings,
@@ -110,7 +117,7 @@
         variant: "neutral",
         onClick: async (e) => {
           const btn = e.target;
-          const currentSettings = await window.AO3Popup.getSettings();
+          const currentSettings = await getSettings();
           const json = JSON.stringify(currentSettings, null, 5);
           await navigator.clipboard.writeText(json);
           if (btn) {
@@ -134,10 +141,10 @@
               if (typeof imported !== "object" || imported === null) {
                 throw new Error("Invalid settings format");
               }
-              await window.AO3Popup.saveSettings(imported);
+              await saveSettings(imported);
               document.getElementById(popupId)?.remove();
             } catch {
-              window.AO3Popup.createNotifPopup("Invalid settings format");
+              createNotifPopup("Invalid settings format");
             }
           }
         },
@@ -156,7 +163,7 @@
             .map((x) => x.id);
           settings.popupOptions = popupOptions;
           settings.general = generalSettings;
-          await window.AO3Popup.saveSettings(settings);
+          await saveSettings(settings);
           document.getElementById(popupId)?.remove();
         },
       },
@@ -167,15 +174,15 @@
           if (!confirm("Are you sure you want to reset Settings?")) return;
           delete settings.general;
           delete settings.popupOptions;
-          await window.AO3Popup.saveSettings(settings);
+          await saveSettings(settings);
 
-          window.AO3Popup.resetInputs(contentContainer, inputsMap);
+          resetInputs(contentContainer, inputsMap);
           populateCols({}, showCol, hideCol);
         },
       },
     ];
 
-    const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
+    const popup = createPopupContainer(popupId, isMobile, {
       content: contentContainer,
       buttons: buttons,
       extraClasses: isMobile ? [] : ["flush-bottom"],

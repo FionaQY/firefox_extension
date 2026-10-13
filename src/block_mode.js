@@ -1,9 +1,21 @@
 /* globals browser */
+import {
+  buildQuery,
+  getValue,
+  setValue,
+  getParams,
+  addValue,
+  addMissingId,
+} from "./helper/params";
+import { getWorkUrl, fetchDoc } from "./helper/commons";
+import { isValid, extractRelevantData } from "./helper/extractor";
+import { createNotifPopup } from "./helper/popup";
+
 (() => {
-  const workUrl = window.AO3UrlParser.getWorkUrl(window.location.href);
+  const workUrl = getWorkUrl(window.location.href);
   if (workUrl != "") {
     // if a work page
-    window.AO3Popup.createNotifPopup("Cannot block tag on this page");
+    createNotifPopup("Cannot block tag on this page");
     return;
   }
   if (typeof window.AO3BlockerHandler === "function") {
@@ -11,25 +23,23 @@
   }
 
   const WAITTIME = 4000;
-  const AO3Extractor = window.AO3Extractor;
-  const AO3UrlParser = window.AO3UrlParser;
 
   let clickedOnce = false;
 
   function getBlockedUrl(e) {
     const baseUrl = e.target.baseURI;
 
-    let searchParams = AO3UrlParser.getParams(new URL(baseUrl));
+    let searchParams = getParams(new URL(baseUrl));
     const blockedTag = e.target.innerText;
-    window.AO3Popup.createNotifPopup(`Blocking tag ${blockedTag}...`);
-    searchParams = AO3UrlParser.addValue(
+    createNotifPopup(`Blocking tag ${blockedTag}...`);
+    searchParams = addValue(
       searchParams,
       "work_search[excluded_tag_names]",
       blockedTag,
     );
-    searchParams = AO3UrlParser.addMissingId(searchParams, baseUrl);
+    searchParams = addMissingId(searchParams, baseUrl);
     return {
-      url: `https://archiveofourown.org/works?${AO3UrlParser.buildQuery(searchParams)}`,
+      url: `https://archiveofourown.org/works?${buildQuery(searchParams)}`,
       page: searchParams["page"],
       filterType: searchParams["work_search[sort_column]"],
     };
@@ -38,26 +48,23 @@
   function blockAuthorUrl(e) {
     const baseUrl = e.target.baseURI;
 
-    let searchParams = AO3UrlParser.getParams(new URL(baseUrl));
+    let searchParams = getParams(new URL(baseUrl));
     const rawAuthor = e.target.innerText;
 
     const authorName = rawAuthor.match(/\((.*?)\)/)?.[1] || rawAuthor;
-    window.AO3Popup.createNotifPopup(`Blocking author ${authorName}...`);
+    createNotifPopup(`Blocking author ${authorName}...`);
 
-    let currentQuery = AO3UrlParser.getValue(
-      searchParams,
-      "work_search[query]",
-    );
+    let currentQuery = getValue(searchParams, "work_search[query]");
     currentQuery = `${currentQuery.trim()} -creators:${authorName}`;
-    searchParams = AO3UrlParser.setValue(
+    searchParams = setValue(
       searchParams,
       "work_search[query]",
       currentQuery.trim(),
     );
-    searchParams = AO3UrlParser.addMissingId(searchParams, baseUrl);
+    searchParams = addMissingId(searchParams, baseUrl);
 
     return {
-      url: `https://archiveofourown.org/works?${AO3UrlParser.buildQuery(searchParams)}`,
+      url: `https://archiveofourown.org/works?${buildQuery(searchParams)}`,
       page: searchParams["page"],
       filterType: searchParams["work_search[sort_column]"],
     };
@@ -98,45 +105,21 @@
 
     return result;
   }
-
   async function checkPageForWork(url, page, relevantData, filterType) {
-    const currUrl = `${url}&page=${page}`;
-    return new Promise((resolve) => {
-      const iframe = document.createElement("iframe");
-      iframe.classList.add("ao3-offscreen-iframe");
-      iframe.src = currUrl;
-      iframe.onload = async () => {
-        try {
-          window.AO3Popup.createNotifPopup(`Checking page ${page}..`);
-          const works = iframe.contentDocument.querySelectorAll(".work");
-          for (let i = 1; i < works.length; i++) {
-            const work = works[i];
-            const extractedData = AO3Extractor.extractRelevantData(
-              work,
-              filterType,
-            );
-            if (AO3Extractor.isValid(relevantData, extractedData)) {
-              resolve(true);
-              return;
-            }
-          }
-          resolve(false);
-        } catch (err) {
-          console.error("Iframe loading failed", err);
-          resolve(false);
-        } finally {
-          iframe.remove();
-        }
-      };
-      document.body.appendChild(iframe);
-    });
+    createNotifPopup(`Checking page ${page}..`);
+    const doc = await fetchDoc(`${url}&page=${page}`);
+    return [...doc.querySelectorAll(".work")]
+      .slice(1)
+      .some((work) =>
+        isValid(relevantData, extractRelevantData(work, filterType)),
+      );
   }
 
   async function handleTagClick(e) {
     const blockUser = e.target.matches('a[href*="/users/"]');
     if (!e.target.matches('a[href*="/tags/"][href*="/works"]') && !blockUser) {
       console.warn("Did not click a tag/user.");
-      window.AO3Popup.createNotifPopup(`You did not click a tag/user...`);
+      createNotifPopup(`You did not click a tag/user...`);
       return;
     }
     if (clickedOnce) {
@@ -152,17 +135,12 @@
     clickedOnce = true;
 
     if (filterType == "created_at") {
-      window.AO3Popup.createNotifPopup(
-        "Scrolling doesn`t work on `Date Created`",
-      );
+      createNotifPopup("Scrolling doesn`t work on `Date Created`");
       window.location.href = url;
       return;
     }
 
-    const relevantData = AO3Extractor.extractRelevantData(
-      e.target.offsetParent,
-      filterType,
-    );
+    const relevantData = extractRelevantData(e.target.offsetParent, filterType);
     try {
       let correctPage = page;
       if (page != 1) {
@@ -207,6 +185,7 @@
       return;
     } catch (error) {
       console.error("AO3 Blocker error:", error);
+      createNotifPopup(`Failed: ${error.message}`);
     }
   }
 

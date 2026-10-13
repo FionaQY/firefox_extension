@@ -1,4 +1,5 @@
 /* globals browser */
+import { isValid, extractRelevantData } from "./helper/extractor";
 
 (() => {
   browser.runtime.onMessage.addListener(async (msg) => {
@@ -21,9 +22,8 @@
     for (let i = works.length - 1; i > 0; i--) {
       const work = works[i];
 
-      const AO3Extractor = window.AO3Extractor;
-      const extractedData = AO3Extractor.extractRelevantData(work, filterType);
-      if (AO3Extractor.isValid(relevantData, extractedData)) {
+      const extractedData = extractRelevantData(work, filterType);
+      if (isValid(relevantData, extractedData)) {
         work.scrollIntoView({ behavior: "smooth", block: "center" });
         break;
       }

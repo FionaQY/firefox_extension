@@ -1,6 +1,7 @@
-/* eslint-disable no-unused-vars */
-/* globals AO3Popup */
-/* eslint-enable no-unused-vars */
+/* globals */
+
+import { createSearchBar, createPopupContainer } from "./helper/popup";
+
 (() => {
   const popupId = "ao3-qof-popup";
   document.getElementById(popupId)?.remove();
@@ -240,7 +241,7 @@
       search();
     }
 
-    const searchBar = window.AO3Popup.createSearchBar({
+    const searchBar = createSearchBar({
       inputPlaceholder: "Search",
       inputValue: "",
       isMobile: isMobile,
@@ -311,7 +312,7 @@
       },
     ];
 
-    const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
+    const popup = createPopupContainer(popupId, isMobile, {
       content: content,
       buttons: buttons,
       extraClasses: ["flush-bottom"],

@@ -731,6 +731,13 @@ textarea.ao3-field-input {
   left: -9999px;
 }
 
+.ao3-labeled-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
 /* Ensure work card container can host elements cleanly */
 .work.blurb.group,
 li.blurb.group {

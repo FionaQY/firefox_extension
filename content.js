@@ -1,7 +1,7 @@
 /* globals browser */
+import { createPopupContainer, getSettings } from "./src/helper/popup";
 
 (() => {
-  // Inject external stylesheet
   function injectStyles() {
     const styleId = "ao3-qof-styles";
     if (document.getElementById(styleId)) return;
@@ -14,7 +14,6 @@
   }
 
   injectStyles();
-  // Listen for messages from background to show popup
   browser.runtime.onMessage.addListener(async (msg) => {
     if (msg.action === "showPopup") {
       await showPopup();
@@ -38,7 +37,7 @@
       document.getElementById(popupId).remove();
     }
 
-    const settings = await window.AO3Popup.getSettings();
+    const settings = await getSettings();
     const isMobile = window.innerWidth <= 768;
 
     function createButton(val, isExpanded = false) {
@@ -177,7 +176,7 @@
       content.appendChild(expandBtn);
     }
 
-    const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
+    const popup = createPopupContainer(popupId, isMobile, {
       content: content,
       extraClasses: ["modes"],
     });

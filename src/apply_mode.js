@@ -1,14 +1,24 @@
 /* globals browser */
+import { getLangAbb } from "./helper/extractor";
+import {
+  getBookmarkParams,
+  buildQuery,
+  getValue,
+  setValue,
+  getParams,
+  addValue,
+  addMissingId,
+} from "./helper/params";
+import { createNotifPopup } from "./helper/popup";
+
 (() => {
   const currentUrl = window.location.href;
-  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
+  const workUrl = window.getWorkUrl(currentUrl);
   if (workUrl != "") {
     // if a work page
-    window.AO3Popup.createNotifPopup("Cannot apply filters on this page");
+    createNotifPopup("Cannot apply filters on this page");
     return;
   }
-  const AO3UrlParser = window.AO3UrlParser;
-  const AO3Extractor = window.AO3Extractor;
 
   function getStorageValue(filters, key) {
     return filters[key] || "";
@@ -126,7 +136,7 @@
 
     // languagesList
     const languagesList = languagesRaw
-      .map((x) => AO3Extractor.getLangAbb(x))
+      .map((x) => getLangAbb(x))
       .filter((code) => code.trim().length != 0)
       .map((code) => `${langPref}:${code}`)
       .filter((entry) => !queries.includes(entry));
@@ -135,7 +145,7 @@
 
     // excluLanguagesList
     const excluLanguagesList = excluLanguagesRaw
-      .map((x) => AO3Extractor.getLangAbb(x))
+      .map((x) => getLangAbb(x))
       .filter((code) => code.trim().length != 0)
       .map((x) => `${exLangPref}:${x}`)
       .filter((x) => !queries.includes(x));
@@ -183,11 +193,7 @@
       const value = getStorageValue(filters, opt);
       if (value.length != 0) {
         const trueValue = value == "all" ? "" : value;
-        searchParams = AO3UrlParser.setValue(
-          searchParams,
-          `work_search[${opt}]`,
-          trueValue,
-        );
+        searchParams = setValue(searchParams, `work_search[${opt}]`, trueValue);
       }
     }
     return searchParams;
@@ -197,8 +203,8 @@
     const { settings = {} } = await browser.storage.local.get("settings");
     let filters = settings.filters || [];
     let searchParams = isBookmark
-      ? AO3UrlParser.getBookmarkParams(new URL(baseUrl))
-      : AO3UrlParser.getParams(new URL(baseUrl));
+      ? getBookmarkParams(new URL(baseUrl))
+      : getParams(new URL(baseUrl));
     if (!isBookmark) searchParams = setSearchParams(filters, searchParams);
 
     const searchPrefix = isBookmark ? "bookmark_search" : "work_search";
@@ -207,7 +213,7 @@
     const excluTagName = "excluded_tag_names";
     const excludedTags = getStorageList(filters, excluTagName);
     for (const tag of excludedTags) {
-      searchParams = AO3UrlParser.addValue(
+      searchParams = addValue(
         searchParams,
         `${searchPrefix}[${excluTagName}]`,
         tag,
@@ -217,7 +223,7 @@
     const incluTagName = "other_tag_names";
     const includedTags = getStorageList(filters, incluTagName);
     for (const tag of includedTags) {
-      searchParams = AO3UrlParser.addValue(
+      searchParams = addValue(
         searchParams,
         `${searchPrefix}[${excluTagName}]`,
         tag,
@@ -225,12 +231,12 @@
     }
 
     // set tag id
-    searchParams = AO3UrlParser.addMissingId(searchParams, baseUrl);
+    searchParams = addMissingId(searchParams, baseUrl);
     const queryKey = isBookmark
       ? "bookmark_search[bookmarkable_query]"
       : "work_search[query]";
-    const initialQuery = AO3UrlParser.getValue(searchParams, queryKey);
-    searchParams = AO3UrlParser.setValue(
+    const initialQuery = getValue(searchParams, queryKey);
+    searchParams = setValue(
       searchParams,
       queryKey,
       getQueryString(filters, initialQuery),
@@ -239,13 +245,13 @@
   }
 
   async function applyFilters() {
-    window.AO3Popup.createNotifPopup("Applying filters now...");
+    createNotifPopup("Applying filters now...");
     const baseUrl = window.location.href;
     const isBookmark = baseUrl.includes("/bookmarks");
 
     const params = await formParams(baseUrl, isBookmark);
     const tempWord = isBookmark ? "bookmarks" : "works";
-    const newUrl = `https://archiveofourown.org/${tempWord}?${AO3UrlParser.buildQuery(params)}`;
+    const newUrl = `https://archiveofourown.org/${tempWord}?${buildQuery(params)}`;
     window.location.href = newUrl;
     return;
   }

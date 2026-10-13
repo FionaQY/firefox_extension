@@ -1,11 +1,14 @@
 /* globals browser */
+import { getSummary, getWorkUrl } from "./helper/commons";
+import { createNotifPopup, parseHtmlFragment } from "./helper/popup";
+
 (() => {
   if (typeof window.AO3BookmarkHandler === "function") {
     return;
   }
 
   const currentUrl = window.location.href;
-  const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl, false);
+  const workUrl = getWorkUrl(currentUrl, false);
   if (workUrl == "") {
     console.warn(
       "Current page is not an AO3 work page. Unable to obtain workUrl",
@@ -14,20 +17,12 @@
   }
 
   async function getBookmarkHtml() {
-    let summaryData = await window.AO3Extractor.getSummary(
-      currentUrl,
-      workUrl,
-      false,
-    );
+    let summaryData = await getSummary(currentUrl, workUrl, false);
     if (!summaryData?.summary) {
-      const neworkUrl = window.AO3UrlParser.getWorkUrl(currentUrl, true);
-      summaryData = await window.AO3Extractor.getSummary(
-        currentUrl,
-        neworkUrl,
-        false,
-      );
+      const neworkUrl = getWorkUrl(currentUrl, true);
+      summaryData = await getSummary(currentUrl, neworkUrl, false);
       if (!summaryData?.summary) {
-        window.AO3Popup.createNotifPopup("Failed to load summary.");
+        createNotifPopup("Failed to load summary.");
         return;
       }
     }
@@ -44,7 +39,7 @@
 
     const headingDiv = document.createElement("div");
     headingDiv.className = "bookmark-heading";
-    headingDiv.appendChild(window.AO3Popup.parseHtmlFragment(heading));
+    headingDiv.appendChild(parseHtmlFragment(heading));
     outerDetails.appendChild(headingDiv);
 
     const summaryDiv = document.createElement("div");
@@ -91,13 +86,11 @@
       settings["general"]["overrideBookmark"] ||
       bookmarkTextBox.value.trim().length === 0
     ) {
-      window.AO3Popup.createNotifPopup("Getting bookmark info...");
+      createNotifPopup("Getting bookmark info...");
       bookmarkTextBox.value = await getBookmarkHtml();
-      window.AO3Popup.createNotifPopup("Bookmark textbox populated.");
+      createNotifPopup("Bookmark textbox populated.");
     } else {
-      window.AO3Popup.createNotifPopup(
-        "No population as textbox is already populated",
-      );
+      createNotifPopup("No population as textbox is already populated");
     }
   }
 

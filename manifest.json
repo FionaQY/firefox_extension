@@ -30,7 +30,7 @@
     {
       "matches": ["https://archiveofourown.org/*"],
       "run_at": "document_end",
-      "js": ["content.js"]
+      "js": ["content.bundle.js"]
     }
   ],
 

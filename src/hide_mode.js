@@ -1,6 +1,14 @@
 /* eslint-disable no-unused-vars */
-/* globals browser, AO3Popup */
+/* globals browser */
 /* eslint-enable no-unused-vars */
+import {
+  optionsPopupHelper,
+  createPopupContainer,
+  resetInputs,
+  saveSettings,
+  getSettings,
+} from "./helper/popup";
+
 (() => {
   const popupId = "ao3-qof-popup";
   document.getElementById(popupId)?.remove();
@@ -41,12 +49,12 @@
   };
 
   async function openHideWorksPopup() {
-    const settings = await window.AO3Popup.getSettings();
+    const settings = await getSettings();
     let workSettings = settings.workSettings || {};
     const isMobile = window.innerWidth <= 768;
 
     // Create content with fields (no hint)
-    const [inputsMap, contentContainer] = window.AO3Popup.optionsPopupHelper(
+    const [inputsMap, contentContainer] = optionsPopupHelper(
       fields,
       isMobile,
       workSettings,
@@ -65,7 +73,7 @@
               type === "checkbox" ? input.checked : input.value;
           }
           settings.workSettings = workSettings;
-          await window.AO3Popup.saveSettings(settings);
+          await saveSettings(settings);
           document.getElementById(popupId)?.remove();
         },
       },
@@ -75,15 +83,15 @@
         onClick: async () => {
           if (!confirm("Are you sure you want to reset?")) return;
           delete settings.workSettings;
-          await window.AO3Popup.saveSettings(settings);
+          await saveSettings(settings);
           // Reset all inputs
-          window.AO3Popup.resetInputs(contentContainer, inputsMap);
+          resetInputs(contentContainer, inputsMap);
         },
       },
     ];
 
     // Create popup
-    const popup = window.AO3Popup.createPopupContainer(popupId, isMobile, {
+    const popup = createPopupContainer(popupId, isMobile, {
       content: contentContainer,
       buttons: buttons,
       extraClasses: isMobile ? [] : ["flush-bottom"],
