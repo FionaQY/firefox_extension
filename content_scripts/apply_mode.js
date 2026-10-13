@@ -2,15 +2,16 @@
 (() => {
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
-  if (workUrl != '') { // if a work page
-    window.AO3Popup.createNotifPopup('Cannot apply filters on this page');
+  if (workUrl != "") {
+    // if a work page
+    window.AO3Popup.createNotifPopup("Cannot apply filters on this page");
     return;
   }
   const AO3UrlParser = window.AO3UrlParser;
   const AO3Extractor = window.AO3Extractor;
-  
+
   function getStorageValue(filters, key) {
-    return filters[key] || '';
+    return filters[key] || "";
   }
 
   function getStorageList(filters, key) {
@@ -18,16 +19,19 @@
     if (obtainedList.length == 0) {
       return [];
     }
-    return obtainedList.split(',').map(x => x.trim()).filter(x => x.length > 0);
+    return obtainedList
+      .split(",")
+      .map((x) => x.trim())
+      .filter((x) => x.length > 0);
   }
 
   function parseQuery(query) {
     if (!query || !query.trim()) return [];
     let cleanedQuery = query.replace(/:\s+/g, ":");
-    cleanedQuery = cleanedQuery.replace(/\s+/g, ' ');
+    cleanedQuery = cleanedQuery.replace(/\s+/g, " ");
 
     const tokens = [];
-    let curr = '';
+    let curr = "";
     let parenDepth = 0;
     let inQuotes = false;
     let quoteChar = null;
@@ -51,14 +55,14 @@
         continue;
       }
 
-      if (char === '(') {
+      if (char === "(") {
         parenDepth++;
-      } else if (char === ')') {
+      } else if (char === ")") {
         parenDepth--;
-      } else if (char === ' ' && parenDepth === 0 && !inQuotes) {
+      } else if (char === " " && parenDepth === 0 && !inQuotes) {
         if (curr.trim()) {
           tokens.push(curr.trim());
-          curr = '';
+          curr = "";
         }
         continue;
       }
@@ -89,11 +93,22 @@
   function getQueryString(filters, initialQuery) {
     let queries = parseQuery(initialQuery);
     const [langPref, exLangPref, exCreatorPref, chapPref, expChapPref] = [
-      'language_id', '-language_id', '-creators', 'major_version', 'expected_number_of_chapters'
+      "language_id",
+      "-language_id",
+      "-creators",
+      "major_version",
+      "expected_number_of_chapters",
     ];
 
-    const [queryStr, languagesRaw, excluLanguagesRaw, excludedCreatorsRaw, chapterNumRaw, expectedChaptersRaw] = [
-      getStorageValue(filters, 'query'),
+    const [
+      queryStr,
+      languagesRaw,
+      excluLanguagesRaw,
+      excludedCreatorsRaw,
+      chapterNumRaw,
+      expectedChaptersRaw,
+    ] = [
+      getStorageValue(filters, "query"),
       getStorageList(filters, langPref),
       getStorageList(filters, exLangPref),
       getStorageList(filters, exCreatorPref),
@@ -111,27 +126,27 @@
 
     // languagesList
     const languagesList = languagesRaw
-      .map(x => AO3Extractor.getLangAbb(x))
-      .filter(code => code.trim().length != 0)
-      .map(code => `${langPref}:${code}`)
-      .filter(entry => !queries.includes(entry))
-    const languages = languagesList.join(' OR ');
+      .map((x) => AO3Extractor.getLangAbb(x))
+      .filter((code) => code.trim().length != 0)
+      .map((code) => `${langPref}:${code}`)
+      .filter((entry) => !queries.includes(entry));
+    const languages = languagesList.join(" OR ");
     queries = replaceQueryWithPref(langPref, queries, languages, true);
 
     // excluLanguagesList
     const excluLanguagesList = excluLanguagesRaw
-      .map(x => AO3Extractor.getLangAbb(x))
-      .filter(code => code.trim().length != 0)
-      .map(x => `${exLangPref}:${x}`)
-      .filter(x => !queries.includes(x));
-    const excluLanguages = excluLanguagesList.join(' ');
+      .map((x) => AO3Extractor.getLangAbb(x))
+      .filter((code) => code.trim().length != 0)
+      .map((x) => `${exLangPref}:${x}`)
+      .filter((x) => !queries.includes(x));
+    const excluLanguages = excluLanguagesList.join(" ");
     if (excluLanguages) queries.push(excluLanguages);
 
     // excludedCreators
     const excludedCreators = excludedCreatorsRaw
-      .map(x => `${exCreatorPref}:${x}`)
-      .filter(x => !queries.includes(x))
-      .join(' ');
+      .map((x) => `${exCreatorPref}:${x}`)
+      .filter((x) => !queries.includes(x))
+      .join(" ");
     if (excludedCreators) queries.push(excludedCreators);
 
     // current number of chapters
@@ -139,59 +154,87 @@
       const chapterNums = `${chapPref}:${chapterNumRaw}`;
       queries = replaceQueryWithPref(chapPref, queries, chapterNums, false);
     }
-    
+
     // total number of chapters
     if (expectedChaptersRaw) {
       const expectedChapters = `${expChapPref}:${expectedChaptersRaw}`;
-      queries = replaceQueryWithPref(expChapPref, queries, expectedChapters, false);
+      queries = replaceQueryWithPref(
+        expChapPref,
+        queries,
+        expectedChapters,
+        false,
+      );
     }
 
-    return queries.join(' ');
+    return queries.join(" ");
   }
 
   function setSearchParams(filters, searchParams) {
-    const justSet = ['sort_column', 'crossover', 'complete', 'date_from', 'date_to', 'words_from', 'words_to'];
+    const justSet = [
+      "sort_column",
+      "crossover",
+      "complete",
+      "date_from",
+      "date_to",
+      "words_from",
+      "words_to",
+    ];
     for (const opt of justSet) {
       const value = getStorageValue(filters, opt);
       if (value.length != 0) {
-        const trueValue = value == 'all' ? '' : value;
-        searchParams = AO3UrlParser.setValue(searchParams, `work_search[${opt}]`, trueValue);
+        const trueValue = value == "all" ? "" : value;
+        searchParams = AO3UrlParser.setValue(
+          searchParams,
+          `work_search[${opt}]`,
+          trueValue,
+        );
       }
     }
     return searchParams;
   }
 
   async function formParams(baseUrl, isBookmark) {
-    const { settings = {} } = await browser.storage.local.get('settings');
+    const { settings = {} } = await browser.storage.local.get("settings");
     let filters = settings.filters || [];
     let searchParams = isBookmark
-      ? AO3UrlParser.getBookmarkParams(new URL(baseUrl)) 
+      ? AO3UrlParser.getBookmarkParams(new URL(baseUrl))
       : AO3UrlParser.getParams(new URL(baseUrl));
     if (!isBookmark) searchParams = setSearchParams(filters, searchParams);
 
-    const searchPrefix = isBookmark ? 'bookmark_search' : 'work_search';
+    const searchPrefix = isBookmark ? "bookmark_search" : "work_search";
 
     // append tags
-    const excluTagName = 'excluded_tag_names';
+    const excluTagName = "excluded_tag_names";
     const excludedTags = getStorageList(filters, excluTagName);
     for (const tag of excludedTags) {
-      searchParams = AO3UrlParser.addValue(searchParams, `${searchPrefix}[${excluTagName}]`, tag);
+      searchParams = AO3UrlParser.addValue(
+        searchParams,
+        `${searchPrefix}[${excluTagName}]`,
+        tag,
+      );
     }
 
-    const incluTagName = 'other_tag_names';
+    const incluTagName = "other_tag_names";
     const includedTags = getStorageList(filters, incluTagName);
     for (const tag of includedTags) {
-      searchParams = AO3UrlParser.addValue(searchParams, `${searchPrefix}[${excluTagName}]`, tag);
+      searchParams = AO3UrlParser.addValue(
+        searchParams,
+        `${searchPrefix}[${excluTagName}]`,
+        tag,
+      );
     }
-    
+
     // set tag id
     searchParams = AO3UrlParser.addMissingId(searchParams, baseUrl);
-    const queryKey = isBookmark ? 'bookmark_search[bookmarkable_query]' : 'work_search[query]';
+    const queryKey = isBookmark
+      ? "bookmark_search[bookmarkable_query]"
+      : "work_search[query]";
     const initialQuery = AO3UrlParser.getValue(searchParams, queryKey);
     searchParams = AO3UrlParser.setValue(
       searchParams,
       queryKey,
-      getQueryString(filters, initialQuery));
+      getQueryString(filters, initialQuery),
+    );
     return searchParams;
   }
 
@@ -201,8 +244,8 @@
     const isBookmark = baseUrl.includes("/bookmarks");
 
     const params = await formParams(baseUrl, isBookmark);
-    const tempWord = isBookmark ? 'bookmarks' : 'works';
-    const newUrl = `https://archiveofourown.org/${tempWord}?${AO3UrlParser.buildQuery(params)}`
+    const tempWord = isBookmark ? "bookmarks" : "works";
+    const newUrl = `https://archiveofourown.org/${tempWord}?${AO3UrlParser.buildQuery(params)}`;
     window.location.href = newUrl;
     return;
   }

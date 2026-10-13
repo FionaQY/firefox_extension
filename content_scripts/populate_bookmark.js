@@ -1,58 +1,68 @@
 /* globals browser */
 (() => {
-  if (typeof window.AO3BookmarkHandler === 'function') {
+  if (typeof window.AO3BookmarkHandler === "function") {
     return;
   }
 
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl, false);
-  if (workUrl == '') {
-    console.warn('Current page is not an AO3 work page. Unable to obtain workUrl');
+  if (workUrl == "") {
+    console.warn(
+      "Current page is not an AO3 work page. Unable to obtain workUrl",
+    );
     return;
   }
 
   async function getBookmarkHtml() {
-    let summaryData = await window.AO3Extractor.getSummary(currentUrl, workUrl, false);
+    let summaryData = await window.AO3Extractor.getSummary(
+      currentUrl,
+      workUrl,
+      false,
+    );
     if (!summaryData?.summary) {
       const neworkUrl = window.AO3UrlParser.getWorkUrl(currentUrl, true);
-      summaryData = await window.AO3Extractor.getSummary(currentUrl, neworkUrl, false);
+      summaryData = await window.AO3Extractor.getSummary(
+        currentUrl,
+        neworkUrl,
+        false,
+      );
       if (!summaryData?.summary) {
-        window.AO3Popup.createNotifPopup('Failed to load summary.');
+        window.AO3Popup.createNotifPopup("Failed to load summary.");
         return;
       }
     }
 
     const { heading, summary, tags } = summaryData;
-    
-    const container = document.createElement('div');
-    container.className = 'bookmark-popup';
-    
-    const outerDetails = document.createElement('details');
-    const outerSummary = document.createElement('summary');
-    outerSummary.className = 'bookmark-summary-toggle';
+
+    const container = document.createElement("div");
+    container.className = "bookmark-popup";
+
+    const outerDetails = document.createElement("details");
+    const outerSummary = document.createElement("summary");
+    outerSummary.className = "bookmark-summary-toggle";
     outerDetails.appendChild(outerSummary);
-    
-    const headingDiv = document.createElement('div');
-    headingDiv.className = 'bookmark-heading';
+
+    const headingDiv = document.createElement("div");
+    headingDiv.className = "bookmark-heading";
     headingDiv.appendChild(window.AO3Popup.parseHtmlFragment(heading));
     outerDetails.appendChild(headingDiv);
-    
-    const summaryDiv = document.createElement('div');
-    summaryDiv.className = 'bookmark-summary';
+
+    const summaryDiv = document.createElement("div");
+    summaryDiv.className = "bookmark-summary";
     summaryDiv.textContent = summary;
     outerDetails.appendChild(summaryDiv);
 
     if (tags && Object.keys(tags).length > 0) {
-      const tagsDetails = document.createElement('details');
-      const tagsSummary = document.createElement('summary');
-      tagsSummary.className = 'bookmark-summary-toggle';
-      tagsSummary.textContent = 'Tags';
+      const tagsDetails = document.createElement("details");
+      const tagsSummary = document.createElement("summary");
+      tagsSummary.className = "bookmark-summary-toggle";
+      tagsSummary.textContent = "Tags";
       tagsDetails.appendChild(tagsSummary);
 
       for (const [key, value] of Object.entries(tags)) {
-        const div = document.createElement('div');
-        div.className = 'bookmark-tag-item';
-        div.textContent = `${key}(s): ${value.slice(0,3).join(', ')}`;
+        const div = document.createElement("div");
+        div.className = "bookmark-tag-item";
+        div.textContent = `${key}(s): ${value.slice(0, 3).join(", ")}`;
         tagsDetails.appendChild(div);
       }
       outerDetails.appendChild(tagsDetails);
@@ -64,33 +74,38 @@
 
   function isVisible() {
     const bookmarkForm = document.getElementById("bookmark_form_placement");
-    if (!bookmarkForm || bookmarkForm.style.display == 'none') {
+    if (!bookmarkForm || bookmarkForm.style.display == "none") {
       return false;
     }
     return true;
   }
 
   async function populateBookmark() {
-    const { settings = {} } = await browser.storage.local.get('settings');
-    if (!settings['general']['populateBookmark']) {
+    const { settings = {} } = await browser.storage.local.get("settings");
+    if (!settings["general"]["populateBookmark"]) {
       return;
     }
 
     const bookmarkTextBox = document.getElementById("bookmark_notes");
-    if (settings['general']['overrideBookmark'] || bookmarkTextBox.value.trim().length === 0) {
+    if (
+      settings["general"]["overrideBookmark"] ||
+      bookmarkTextBox.value.trim().length === 0
+    ) {
       window.AO3Popup.createNotifPopup("Getting bookmark info...");
       bookmarkTextBox.value = await getBookmarkHtml();
       window.AO3Popup.createNotifPopup("Bookmark textbox populated.");
     } else {
-      window.AO3Popup.createNotifPopup("No population as textbox is already populated");
+      window.AO3Popup.createNotifPopup(
+        "No population as textbox is already populated",
+      );
     }
   }
-  
+
   async function handleBookmarkClick() {
     if (handleBookmarkClick.listenerAdded) return;
-    
-    document.addEventListener('click', e => {
-      if (e.target.matches('a.bookmark_form_placement_open') && isVisible()) {
+
+    document.addEventListener("click", (e) => {
+      if (e.target.matches("a.bookmark_form_placement_open") && isVisible()) {
         populateBookmark();
       }
     });

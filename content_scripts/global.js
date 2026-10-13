@@ -1,99 +1,210 @@
 /* globals browser */
 (() => {
   const WORK_DEFAULTS = {
-    'work_search[sort_column]': 'revised_at',
-    'work_search[other_tag_names]': '',
-    'work_search[excluded_tag_names]': '',
-    'work_search[crossover]': '',
-    'work_search[complete]': '',
-    'work_search[words_from]': '',
-    'work_search[words_to]': '',
-    'work_search[date_from]': '',
-    'work_search[date_to]': '',
-    'work_search[query]': '',
-    'work_search[language_id]': '',
-    'commit': 'Sort and Filter',
-    'tag_id': '',
-    'page': '1',
-    'pseud_id': '',
-    'user_id': '',
-    'exclude_work_search[archive_warning_ids][]': '',
-    'exclude_work_search[freeform_ids][]': '',
-    'exclude_work_search[rating_ids][]': '',
-    'exclude_work_search[category_ids][]': '',
-    'exclude_work_search[fandom_ids][]': '',
-    'exclude_work_search[character_ids][]': '',
-    'exclude_work_search[relationship_ids][]': '',
-    'include_work_search[archive_warning_ids][]': '',
-    'include_work_search[freeform_ids][]': '',
-    'include_work_search[rating_ids][]': '',
-    'include_work_search[category_ids][]': '',
-    'include_work_search[fandom_ids][]': '',
-    'include_work_search[character_ids][]': '',
-    'include_work_search[relationship_ids][]': '',
+    "work_search[sort_column]": "revised_at",
+    "work_search[other_tag_names]": "",
+    "work_search[excluded_tag_names]": "",
+    "work_search[crossover]": "",
+    "work_search[complete]": "",
+    "work_search[words_from]": "",
+    "work_search[words_to]": "",
+    "work_search[date_from]": "",
+    "work_search[date_to]": "",
+    "work_search[query]": "",
+    "work_search[language_id]": "",
+    commit: "Sort and Filter",
+    tag_id: "",
+    page: "1",
+    pseud_id: "",
+    user_id: "",
+    "exclude_work_search[archive_warning_ids][]": "",
+    "exclude_work_search[freeform_ids][]": "",
+    "exclude_work_search[rating_ids][]": "",
+    "exclude_work_search[category_ids][]": "",
+    "exclude_work_search[fandom_ids][]": "",
+    "exclude_work_search[character_ids][]": "",
+    "exclude_work_search[relationship_ids][]": "",
+    "include_work_search[archive_warning_ids][]": "",
+    "include_work_search[freeform_ids][]": "",
+    "include_work_search[rating_ids][]": "",
+    "include_work_search[category_ids][]": "",
+    "include_work_search[fandom_ids][]": "",
+    "include_work_search[character_ids][]": "",
+    "include_work_search[relationship_ids][]": "",
   };
 
   const BOOKMARK_DEFAULTS = {
-    'bookmark_search[sort_column]': 'created_at',
-    'bookmark_search[other_tag_names]': '',
-    'bookmark_search[other_bookmark_tag_names]': '',
-    'bookmark_search[excluded_tag_names]': '',
-    'bookmark_search[excluded_bookmark_tag_names]': '',
-    'bookmark_search[bookmarkable_query]': '',
-    'bookmark_search[bookmark_query]': '',
-    'bookmark_search[language_id]': '',
-    'bookmark_search[rec]': '',
-    'bookmark_search[with_notes]': '',
-    'commit': 'Sort and Filter',
-    'page': '1',
-    'pseud_id': '',
-    'user_id': '',
-    'exclude_bookmark_search[rating_ids][]': '',
-    'exclude_bookmark_search[archive_warning_ids][]': '',
-    'exclude_bookmark_search[category_ids][]': '',
-    'exclude_bookmark_search[fandom_ids][]': '',
-    'exclude_bookmark_search[character_ids][]': '',
-    'include_bookmark_search[rating_ids][]': '',
-    'include_bookmark_search[archive_warning_ids][]': '',
-    'include_bookmark_search[category_ids][]': '',
-    'include_bookmark_search[fandom_ids][]': '',
-    'include_bookmark_search[character_ids][]': '',
+    "bookmark_search[sort_column]": "created_at",
+    "bookmark_search[other_tag_names]": "",
+    "bookmark_search[other_bookmark_tag_names]": "",
+    "bookmark_search[excluded_tag_names]": "",
+    "bookmark_search[excluded_bookmark_tag_names]": "",
+    "bookmark_search[bookmarkable_query]": "",
+    "bookmark_search[bookmark_query]": "",
+    "bookmark_search[language_id]": "",
+    "bookmark_search[rec]": "",
+    "bookmark_search[with_notes]": "",
+    commit: "Sort and Filter",
+    page: "1",
+    pseud_id: "",
+    user_id: "",
+    "exclude_bookmark_search[rating_ids][]": "",
+    "exclude_bookmark_search[archive_warning_ids][]": "",
+    "exclude_bookmark_search[category_ids][]": "",
+    "exclude_bookmark_search[fandom_ids][]": "",
+    "exclude_bookmark_search[character_ids][]": "",
+    "include_bookmark_search[rating_ids][]": "",
+    "include_bookmark_search[archive_warning_ids][]": "",
+    "include_bookmark_search[category_ids][]": "",
+    "include_bookmark_search[fandom_ids][]": "",
+    "include_bookmark_search[character_ids][]": "",
   };
 
-  const languageCodeMap = {'english': 'en','español': 'es', 'spanish': 'es','français': 'fr','french': 'fr','deutsch': 'de','german': 'de',
-    'italiano': 'it','italian': 'it','português': 'pt','portuguese': 'pt','中文': 'zh','chinese': 'zh','日本語': 'ja','japanese': 'ja',
-    '한국어': 'ko','korean': 'ko','русский': 'ru','russian': 'ru','polski': 'pl','polish': 'pl','nederlands': 'nl','dutch': 'nl',
-    'svenska': 'sv','swedish': 'sv','norsk': 'no','norwegian': 'no','dansk': 'da','danish': 'da','suomi': 'fi','finnish': 'fi',
-    'čeština': 'cs','czech': 'cs','magyar': 'hu','hungarian': 'hu','türkçe': 'tr','turkish': 'tr','العربية': 'ar','arabic': 'ar',
-    'עברית': 'he','hebrew': 'he','ελληνικά': 'el','greek': 'el','bahasa indonesia': 'id','indonesian': 'id','ไทย': 'th','thai': 'th',
-    'việt nam': 'vi','vietnamese': 'vi','հայերեն': 'hy','armenian': 'hy','bosanski': 'bs','bosnian': 'bs','български': 'bg','bulgarian': 'bg',
-    'català': 'ca','catalan': 'ca','hrvatski': 'hr','croatian': 'hr','esperanto': 'eo','eesti': 'et','estonian': 'et','gaeilge': 'ga','irish': 'ga',
-    'íslenska': 'is','icelandic': 'is','lietuvių': 'lt','lithuanian': 'lt','latviešu': 'lv','latvian': 'lv','македонски': 'mk','macedonian': 'mk',
-    'bahasa melayu': 'ms','malay': 'ms','română': 'ro','romanian': 'ro','slovenčina': 'sk','slovak': 'sk','slovenščina': 'sl','slovenian': 'sl',
-    'српски': 'sr','serbian': 'sr','українська': 'uk','ukrainian': 'uk','afrikaans': 'af','shqip': 'sq','albanian': 'sq','euskera': 'eu','basque': 'eu',
-    'беларуская': 'be','belarusian': 'be','বাংলা': 'bn','bengali': 'bn','ქართული': 'ka','georgian': 'ka','ગુજરાતી': 'gu','gujarati': 'gu',
-    'हिन्दी': 'hi','hindi': 'hi','latin': 'la','മലയാളം': 'ml','malayalam': 'ml','मराठी': 'mr','marathi': 'mr','नेपाली': 'ne','nepali': 'ne',
-    'ਪੰਜਾਬੀ': 'pa','punjabi': 'pa','سنڌي': 'sd','sindhi': 'sd','සිංහල': 'si','sinhala': 'si','தமிழ்': 'ta','tamil': 'ta','తెలుగు': 'te','telugu': 'te',
-    'اردو': 'ur','urdu': 'ur','cymraeg': 'cy','welsh': 'cy','gaelic': 'gd','scottish gaelic': 'gd','yiddish': 'yi',
+  const languageCodeMap = {
+    english: "en",
+    español: "es",
+    spanish: "es",
+    français: "fr",
+    french: "fr",
+    deutsch: "de",
+    german: "de",
+    italiano: "it",
+    italian: "it",
+    português: "pt",
+    portuguese: "pt",
+    中文: "zh",
+    chinese: "zh",
+    日本語: "ja",
+    japanese: "ja",
+    한국어: "ko",
+    korean: "ko",
+    русский: "ru",
+    russian: "ru",
+    polski: "pl",
+    polish: "pl",
+    nederlands: "nl",
+    dutch: "nl",
+    svenska: "sv",
+    swedish: "sv",
+    norsk: "no",
+    norwegian: "no",
+    dansk: "da",
+    danish: "da",
+    suomi: "fi",
+    finnish: "fi",
+    čeština: "cs",
+    czech: "cs",
+    magyar: "hu",
+    hungarian: "hu",
+    türkçe: "tr",
+    turkish: "tr",
+    العربية: "ar",
+    arabic: "ar",
+    עברית: "he",
+    hebrew: "he",
+    ελληνικά: "el",
+    greek: "el",
+    "bahasa indonesia": "id",
+    indonesian: "id",
+    ไทย: "th",
+    thai: "th",
+    "việt nam": "vi",
+    vietnamese: "vi",
+    հայերեն: "hy",
+    armenian: "hy",
+    bosanski: "bs",
+    bosnian: "bs",
+    български: "bg",
+    bulgarian: "bg",
+    català: "ca",
+    catalan: "ca",
+    hrvatski: "hr",
+    croatian: "hr",
+    esperanto: "eo",
+    eesti: "et",
+    estonian: "et",
+    gaeilge: "ga",
+    irish: "ga",
+    íslenska: "is",
+    icelandic: "is",
+    lietuvių: "lt",
+    lithuanian: "lt",
+    latviešu: "lv",
+    latvian: "lv",
+    македонски: "mk",
+    macedonian: "mk",
+    "bahasa melayu": "ms",
+    malay: "ms",
+    română: "ro",
+    romanian: "ro",
+    slovenčina: "sk",
+    slovak: "sk",
+    slovenščina: "sl",
+    slovenian: "sl",
+    српски: "sr",
+    serbian: "sr",
+    українська: "uk",
+    ukrainian: "uk",
+    afrikaans: "af",
+    shqip: "sq",
+    albanian: "sq",
+    euskera: "eu",
+    basque: "eu",
+    беларуская: "be",
+    belarusian: "be",
+    বাংলা: "bn",
+    bengali: "bn",
+    ქართული: "ka",
+    georgian: "ka",
+    ગુજરાતી: "gu",
+    gujarati: "gu",
+    हिन्दी: "hi",
+    hindi: "hi",
+    latin: "la",
+    മലയാളം: "ml",
+    malayalam: "ml",
+    मराठी: "mr",
+    marathi: "mr",
+    नेपाली: "ne",
+    nepali: "ne",
+    ਪੰਜਾਬੀ: "pa",
+    punjabi: "pa",
+    سنڌي: "sd",
+    sindhi: "sd",
+    සිංහල: "si",
+    sinhala: "si",
+    தமிழ்: "ta",
+    tamil: "ta",
+    తెలుగు: "te",
+    telugu: "te",
+    اردو: "ur",
+    urdu: "ur",
+    cymraeg: "cy",
+    welsh: "cy",
+    gaelic: "gd",
+    "scottish gaelic": "gd",
+    yiddish: "yi",
   };
 
   function mergeParams(defaults, params) {
     const out = {};
     for (const [key, def] of Object.entries(defaults)) {
       const val = params.get(key)?.trim();
-      out[key] = (!val || val.length === 0) ? def : val;
+      out[key] = !val || val.length === 0 ? def : val;
     }
     return out;
   }
 
   window.AO3Extractor = window.AO3Extractor || {
     extractAllValues(work) {
-      const getText = (selector) => work.querySelector(selector)?.textContent.trim() || '';
-      const getAttr = (selector, attr) => work.querySelector(selector)?.getAttribute(attr) || '';
+      const getText = (selector) =>
+        work.querySelector(selector)?.textContent.trim() || "";
+      const getAttr = (selector, attr) =>
+        work.querySelector(selector)?.getAttribute(attr) || "";
 
       const formatNumber = (raw) => {
         if (!raw || raw.length === 0) return 0;
-        return parseInt(raw.replace(/,/g, ''), 10) || 0;
+        return parseInt(raw.replace(/,/g, ""), 10) || 0;
       };
 
       const formatDate = (raw) => {
@@ -102,29 +213,32 @@
       };
 
       return {
-        language: getAttr('dd.language', 'lang'),
-        word_count: formatNumber(getText('dd.words')),
-        chapters: getText('dd.chapters'),
-        comments_count: formatNumber(getText('dd.comments')),
-        kudos_count: formatNumber(getText('dd.kudos')),
-        bookmarks_count: formatNumber(getText('dd.bookmarks')),
-        hits: formatNumber(getText('dd.hits')),        
-        revised_at: formatDate(getText('p.datetime')),
+        language: getAttr("dd.language", "lang"),
+        word_count: formatNumber(getText("dd.words")),
+        chapters: getText("dd.chapters"),
+        comments_count: formatNumber(getText("dd.comments")),
+        kudos_count: formatNumber(getText("dd.kudos")),
+        bookmarks_count: formatNumber(getText("dd.bookmarks")),
+        hits: formatNumber(getText("dd.hits")),
+        revised_at: formatDate(getText("p.datetime")),
         authors_to_sort_on: getText('a[rel="author"]'),
-      }
+      };
     },
 
     extractRelevantData(work, filterType) {
       const values = this.extractAllValues(work);
-      return values[filterType] || '';
+      return values[filterType] || "";
     },
 
     isValid(relevantData, extractedData) {
       return extractedData > relevantData;
     },
-    
+
     getLangAbb(lang) {
-      const normalized = lang.toLowerCase().trim().replace(/[^\w\s]/g, '');
+      const normalized = lang
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s]/g, "");
       if (/^[a-z]{2,3}(-[a-z]{2,3})?$/i.test(normalized)) {
         return normalized;
       }
@@ -132,42 +246,56 @@
         return languageCodeMap[normalized];
       }
       console.warn(`Unrecognized language: "${lang}"`);
-      return '';
+      return "";
     },
 
     getTagsHelper(doc, query) {
-      return doc.querySelector(query)?.innerText || '';
+      return doc.querySelector(query)?.innerText || "";
     },
 
     getTags(doc, url, needHref) {
-      const TAGCATEGORIES = ['rating', 'warning', 'category', 'fandom', 'relationship', 'character', 'freeform', 'series', 'collections'];
+      const TAGCATEGORIES = [
+        "rating",
+        "warning",
+        "category",
+        "fandom",
+        "relationship",
+        "character",
+        "freeform",
+        "series",
+        "collections",
+      ];
 
-      const summary = this.getTagsHelper(doc, 'div.summary.module');
-      let tags = {}; 
+      const summary = this.getTagsHelper(doc, "div.summary.module");
+      let tags = {};
       for (const cat of TAGCATEGORIES) {
-        const links = [...doc.querySelectorAll(`dd.${cat} a`)].map(x => !needHref ? x.innerText.trim() : `<a href="${x.href}">${x.innerText.trim()}</a>`);
+        const links = [...doc.querySelectorAll(`dd.${cat} a`)].map((x) =>
+          !needHref
+            ? x.innerText.trim()
+            : `<a href="${x.href}">${x.innerText.trim()}</a>`,
+        );
         if (links.length > 0) {
           tags[cat] = links;
         }
       }
 
-      const title = `<a href="${url}">${this.getTagsHelper(doc, 'h2.title.heading')}</a>`;
-      const author = this.getTagsHelper(doc, 'h3.byline.heading');
+      const title = `<a href="${url}">${this.getTagsHelper(doc, "h2.title.heading")}</a>`;
+      const author = this.getTagsHelper(doc, "h3.byline.heading");
       const heading = `${title} by ${author}`;
       return { heading, summary, tags };
     },
 
-    async getSummaryFromWork(currentUrl, url, needHref) {      
+    async getSummaryFromWork(currentUrl, url, needHref) {
       if (currentUrl == url) {
-        if (this.getTagsHelper(document, 'h2.title.heading')) {
+        if (this.getTagsHelper(document, "h2.title.heading")) {
           return this.getTags(document, url, needHref);
         }
         return null;
       }
 
       return new Promise((resolve) => {
-        const iframe = document.createElement('iframe');
-        iframe.classList.add('ao3-offscreen-iframe');
+        const iframe = document.createElement("iframe");
+        iframe.classList.add("ao3-offscreen-iframe");
         iframe.src = url;
 
         iframe.onload = () => {
@@ -175,7 +303,7 @@
             const doc = iframe.contentDocument;
             resolve(window.AO3Extractor.getTags(doc, url, needHref));
           } catch (err) {
-            console.error('Error parsing work in iframe:', err);
+            console.error("Error parsing work in iframe:", err);
             resolve(null);
           } finally {
             iframe.remove();
@@ -189,9 +317,13 @@
     async getSummary(currentUrl, url, needHref = true) {
       window.AO3Popup.createNotifPopup(`Getting summary from ${url}...`);
 
-      const data = await window.AO3Extractor.getSummaryFromWork(currentUrl, url, needHref);
+      const data = await window.AO3Extractor.getSummaryFromWork(
+        currentUrl,
+        url,
+        needHref,
+      );
       if (!data) {
-        window.AO3Popup.createNotifPopup('Failed to load summary.');
+        window.AO3Popup.createNotifPopup("Failed to load summary.");
         return null;
       }
       return data;
@@ -200,7 +332,10 @@
 
   window.AO3UrlParser = window.AO3UrlParser || {
     getParams(baseUrl, isBookmarks = false) {
-      return mergeParams(isBookmarks ? BOOKMARK_DEFAULTS : WORK_DEFAULTS, baseUrl.searchParams);
+      return mergeParams(
+        isBookmarks ? BOOKMARK_DEFAULTS : WORK_DEFAULTS,
+        baseUrl.searchParams,
+      );
     },
 
     getBookmarkParams(baseUrl) {
@@ -209,46 +344,55 @@
 
     setValue(searchParams, key, val) {
       searchParams[key] = val;
-      return searchParams
+      return searchParams;
     },
 
     getValue(searchParams, key) {
-      return searchParams[key] || '';
+      return searchParams[key] || "";
     },
 
     addValue(searchParams, key, val) {
       const rawStr = this.getValue(searchParams, key);
       const blockedTags = rawStr
-        .split(',')
-        .map(t => t.trim())
-        .filter(t => t.length > 0);
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
       if (!blockedTags.includes(val)) {
         blockedTags.push(val);
       }
       return this.setValue(searchParams, key, blockedTags.join(","));
     },
 
-    superEncodeURI(str) { // important
-      return new URLSearchParams({ text: str }).toString().replace(/^text=/, '');
+    superEncodeURI(str) {
+      // important
+      return new URLSearchParams({ text: str })
+        .toString()
+        .replace(/^text=/, "");
     },
 
     buildQuery(paramsObj) {
-      const isBookmarks = paramsObj.user_id != '';
+      const isBookmarks = paramsObj.user_id != "";
       return Object.entries(paramsObj)
-        .filter(([key, val]) => key != 'page' && val.length != 0)
-        .filter(([key]) => isBookmarks ? key != 'tag_id' : key != 'user_id')
-        .map(([key, value]) => `${key}=${value == null 
-          ? '' : value.includes('&') 
-          ? this.superEncodeURI(value) 
-          : value}`)
-        .join('&');
+        .filter(([key, val]) => key != "page" && val.length != 0)
+        .filter(([key]) => (isBookmarks ? key != "tag_id" : key != "user_id"))
+        .map(
+          ([key, value]) =>
+            `${key}=${
+              value == null
+                ? ""
+                : value.includes("&")
+                  ? this.superEncodeURI(value)
+                  : value
+            }`,
+        )
+        .join("&");
     },
 
     extractTagNameFromUrl(url) {
-      try {       
+      try {
         const urlObj = new URL(url);
-        const parts = urlObj.pathname.split('/');
-        const tagIndex = parts.findIndex(part => part === 'tags') + 1;
+        const parts = urlObj.pathname.split("/");
+        const tagIndex = parts.findIndex((part) => part === "tags") + 1;
         return parts[tagIndex];
       } catch (e) {
         console.error("Error parsing URL:", e);
@@ -257,37 +401,39 @@
     },
 
     addTagId(searchParams, tagName) {
-      if (searchParams['tag_id'] != '') {
+      if (searchParams["tag_id"] != "") {
         return searchParams;
       }
-      return this.setValue(searchParams, 'tag_id', tagName);
+      return this.setValue(searchParams, "tag_id", tagName);
     },
 
     addUserId(searchParams, userId, pseudId) {
-      if (searchParams['user_id'] != '') {
+      if (searchParams["user_id"] != "") {
         return searchParams;
       }
-      let temp = this.setValue(searchParams, 'user_id', userId);
-      return this.setValue(temp, 'pseud_id', pseudId);
+      let temp = this.setValue(searchParams, "user_id", userId);
+      return this.setValue(temp, "pseud_id", pseudId);
     },
 
     addMissingId(searchParams, baseUrl) {
-      try {       
+      try {
         const urlObj = new URL(decodeURI(baseUrl));
-        const parts = urlObj.pathname.split('/');
+        const parts = urlObj.pathname.split("/");
         if (parts.includes("tags")) {
-          const tagIndex = parts.findIndex(part => part === 'tags') + 1;
+          const tagIndex = parts.findIndex((part) => part === "tags") + 1;
           return this.addTagId(searchParams, parts[tagIndex]);
         } else if (parts.includes("users")) {
-          const userIndex = parts.findIndex(part => part === 'users') + 1;
-          const pseudId = parts.includes("pseuds") ? parts.findIndex(part => part === 'pseuds') + 1 : userIndex;
+          const userIndex = parts.findIndex((part) => part === "users") + 1;
+          const pseudId = parts.includes("pseuds")
+            ? parts.findIndex((part) => part === "pseuds") + 1
+            : userIndex;
           return this.addUserId(searchParams, parts[userIndex], parts[pseudId]);
         }
         return searchParams;
       } catch (e) {
         console.error("Error parsing URL:", e);
         return null;
-      } 
+      }
     },
 
     getWorkUrl(url, withChapter = true) {
@@ -300,15 +446,15 @@
           link += `/chapters/${chapterId}`;
         }
         return link;
-      } 
+      }
       const match2 = url.match(/\/works\/(\d+)/);
-        if (match2) {
-          const workId = match2[1];
-          let link = `https://archiveofourown.org/works/${workId}`;
-          return link;
-        }
-      return '';
-    }
+      if (match2) {
+        const workId = match2[1];
+        let link = `https://archiveofourown.org/works/${workId}`;
+        return link;
+      }
+      return "";
+    },
   };
 
   window.AO3Popup = window.AO3Popup || {
@@ -317,12 +463,12 @@
      * @param {string} msg - The message to display.
      */
     createNotifPopup(msg) {
-      const popupId = 'ao3-qof-notif-popup';
+      const popupId = "ao3-qof-notif-popup";
       document.getElementById(popupId)?.remove();
 
-      const popup = document.createElement('div');
+      const popup = document.createElement("div");
       popup.id = popupId;
-      popup.classList.add('ao3-notif-popup');
+      popup.classList.add("ao3-notif-popup");
       popup.textContent = msg;
 
       document.body.appendChild(popup);
@@ -342,9 +488,11 @@
       const clickHandler = () => {
         clearTimeout(timer);
         popup.remove();
-        document.body.removeEventListener('click', clickHandler, { once: true });
+        document.body.removeEventListener("click", clickHandler, {
+          once: true,
+        });
       };
-      document.body.addEventListener('click', clickHandler, { once: true });
+      document.body.addEventListener("click", clickHandler, { once: true });
     },
 
     /**
@@ -356,42 +504,46 @@
      * @returns {[Object, HTMLDivElement]} A tuple: [inputsMap, contentContainer].
      */
     optionsPopupHelper(fields, isMobile, currSettings, showHint = false) {
-      const container = document.createElement('div');
-      container.classList.add('ao3-options-content', isMobile ? 'mobile' : 'desktop');
+      const container = document.createElement("div");
+      container.classList.add(
+        "ao3-options-content",
+        isMobile ? "mobile" : "desktop",
+      );
 
       if (showHint) {
-        const hint = document.createElement('div');
-        hint.textContent = 'If multiple values, please put a comma after each value.';
-        hint.classList.add('ao3-options-hint');
+        const hint = document.createElement("div");
+        hint.textContent =
+          "If multiple values, please put a comma after each value.";
+        hint.classList.add("ao3-options-hint");
         container.appendChild(hint);
       }
 
       const inputsMap = {};
       for (const [key, config] of Object.entries(fields)) {
-        const fieldContainer = document.createElement('div');
-        fieldContainer.classList.add('ao3-field-container');
-        if (config.type === 'checkbox') {
-          fieldContainer.classList.add('checkbox');
+        const fieldContainer = document.createElement("div");
+        fieldContainer.classList.add("ao3-field-container");
+        if (config.type === "checkbox") {
+          fieldContainer.classList.add("checkbox");
         }
 
-        const label = document.createElement('label');
+        const label = document.createElement("label");
         label.textContent = `${config.label}:`;
-        label.classList.add('ao3-field-label');
-        if (config.type !== 'checkbox' && !isMobile) {
-          label.classList.add('desktop');
+        label.classList.add("ao3-field-label");
+        if (config.type !== "checkbox" && !isMobile) {
+          label.classList.add("desktop");
         }
 
         const input = this._createInput(config, isMobile, currSettings[key]);
         this._applyInputStyles(input, config, isMobile);
 
-        if (config.type === 'checkbox') {
+        if (config.type === "checkbox") {
           fieldContainer.appendChild(input);
           fieldContainer.appendChild(label);
           input.checked = currSettings[key] || false;
         } else {
           fieldContainer.appendChild(label);
           fieldContainer.appendChild(input);
-          input.value = currSettings[key] || '';
+          input.value = currSettings[key] || "";
         }
 
         inputsMap[key] = { input, type: config.type };
@@ -409,12 +561,12 @@
      * @returns {HTMLButtonElement}
      */
     getButton(variant, isMobile, text) {
-      const butt = document.createElement('button');
-      butt.type = 'button';
+      const butt = document.createElement("button");
+      butt.type = "button";
       butt.textContent = text;
-      butt.classList.add('ao3-bar-button', `ao3-${variant || 'neutral'}`);
+      butt.classList.add("ao3-bar-button", `ao3-${variant || "neutral"}`);
       if (isMobile) {
-        butt.classList.add('mobile');
+        butt.classList.add("mobile");
       }
       return butt;
     },
@@ -426,9 +578,9 @@
      * @returns {HTMLButtonElement} The configured close button.
      */
     createCloseButton(isMobile, onClose) {
-      const btn = document.createElement('button');
-      btn.textContent = '×';
-      btn.classList.add('ao3-close-button', isMobile ? 'mobile' : 'desktop');
+      const btn = document.createElement("button");
+      btn.textContent = "×";
+      btn.classList.add("ao3-close-button", isMobile ? "mobile" : "desktop");
       btn.onclick = () => {
         if (onClose) onClose();
         else {
@@ -451,9 +603,12 @@
      * @returns {HTMLDivElement} The created popup element.
      */
     createPopupContainer(id, isMobile, options = {}) {
-      const popup = document.createElement('div');
+      const popup = document.createElement("div");
       popup.id = id;
-      popup.classList.add('ao3-popup-container', isMobile ? 'mobile' : 'desktop');
+      popup.classList.add(
+        "ao3-popup-container",
+        isMobile ? "mobile" : "desktop",
+      );
       if (options.extraClasses) {
         popup.classList.add(...options.extraClasses);
       }
@@ -479,11 +634,11 @@
      * @returns {HTMLDivElement} The button bar container.
      */
     createButtonBar(buttons, isMobile) {
-      const container = document.createElement('div');
-      container.classList.add('ao3-button-bar');
-      buttons.forEach(btnDef => {
+      const container = document.createElement("div");
+      container.classList.add("ao3-button-bar");
+      buttons.forEach((btnDef) => {
         const btn = this.getButton(btnDef.variant, isMobile, btnDef.text);
-        btn.addEventListener('click', btnDef.onClick);
+        btn.addEventListener("click", btnDef.onClick);
         container.appendChild(btn);
       });
       return container;
@@ -494,7 +649,7 @@
      * @returns {Promise<Object>} The settings object (defaults to empty if none).
      */
     async getSettings() {
-      const { settings = {} } = await browser.storage.local.get('settings');
+      const { settings = {} } = await browser.storage.local.get("settings");
       return settings;
     },
 
@@ -515,15 +670,15 @@
     resetInputs(container, inputsMap) {
       if (inputsMap) {
         for (const { input, type } of Object.values(inputsMap)) {
-          if (type === 'checkbox') input.checked = false;
-          else input.value = '';
+          if (type === "checkbox") input.checked = false;
+          else input.value = "";
         }
       } else {
-        const inputs = container.querySelectorAll('input, select, textarea');
-        inputs.forEach(el => {
-          if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
-          else if (el.tagName === 'SELECT') el.selectedIndex = 0;
-          else el.value = '';
+        const inputs = container.querySelectorAll("input, select, textarea");
+        inputs.forEach((el) => {
+          if (el.type === "checkbox" || el.type === "radio") el.checked = false;
+          else if (el.tagName === "SELECT") el.selectedIndex = 0;
+          else el.value = "";
         });
       }
     },
@@ -546,7 +701,7 @@
      */
     parseHtmlFragment(html) {
       const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
+      const doc = parser.parseFromString(html, "text/html");
       const fragment = document.createDocumentFragment();
       for (const node of Array.from(doc.body.childNodes)) {
         fragment.appendChild(node);
@@ -556,45 +711,48 @@
 
     createSearchBar(options = {}) {
       const {
-        inputPlaceholder = '',
-        inputValue = '',
+        inputPlaceholder = "",
+        inputValue = "",
         buttons = [],
         onInputChange = null,
-        isMobile = window.innerWidth <= 768
+        isMobile = window.innerWidth <= 768,
       } = options;
 
-      const container = document.createElement('div');
-      container.classList.add('ao3-search-bar');
+      const container = document.createElement("div");
+      container.classList.add("ao3-search-bar");
 
-      const input = document.createElement('input');
-      input.type = 'text';
+      const input = document.createElement("input");
+      input.type = "text";
       input.placeholder = inputPlaceholder;
       input.value = inputValue;
-      input.classList.add('ao3-search-input');
+      input.classList.add("ao3-search-input");
       if (isMobile) {
-        input.classList.add('mobile');
+        input.classList.add("mobile");
       }
       if (onInputChange) {
-        input.addEventListener('input', (e) => onInputChange(e.target.value));
+        input.addEventListener("input", (e) => onInputChange(e.target.value));
       }
       container.appendChild(input);
 
       // Buttons
-      buttons.forEach(btnDef => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
+      buttons.forEach((btnDef) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
         btn.textContent = btnDef.text;
-        btn.classList.add('ao3-search-button');
+        btn.classList.add("ao3-search-button");
         if (isMobile) {
-          btn.classList.add('mobile');
+          btn.classList.add("mobile");
         }
         if (btnDef.variant) {
           btn.classList.add(`ao3-${btnDef.variant}`);
         }
         if (btnDef.active) {
-          btn.classList.add('active');
+          btn.classList.add("active");
         }
-        btn.addEventListener('click', (e) => { if (btnDef.onClick) {btnDef.onClick(e);}
+        btn.addEventListener("click", (e) => {
+          if (btnDef.onClick) {
+            btnDef.onClick(e);
+          }
         });
         container.appendChild(btn);
       });
@@ -606,44 +764,44 @@
     _createInput(config) {
       let input;
       switch (config.type) {
-        case 'select':
-          input = document.createElement('select');
+        case "select":
+          input = document.createElement("select");
           for (const [val, opt] of Object.entries(config.options)) {
-            const option = document.createElement('option');
+            const option = document.createElement("option");
             option.value = val;
             option.textContent = opt;
             input.appendChild(option);
           }
           input.selectedIndex = 0;
           break;
-        case 'numberSpecial':
-          input = document.createElement('input');
-          input.type = 'text';
-          input.placeholder = 'e.g. >1, 1, ([5 TO 20] !(7 || 13))';
+        case "numberSpecial":
+          input = document.createElement("input");
+          input.type = "text";
+          input.placeholder = "e.g. >1, 1, ([5 TO 20] !(7 || 13))";
           break;
-        case 'textarea':
-          input = document.createElement('textarea');
-          input.addEventListener('input', () => {
-            input.style.height = 'auto';
-            input.style.height = input.scrollHeight + 'px';
+        case "textarea":
+          input = document.createElement("textarea");
+          input.addEventListener("input", () => {
+            input.style.height = "auto";
+            input.style.height = input.scrollHeight + "px";
           });
           break;
         default:
-          input = document.createElement('input');
+          input = document.createElement("input");
           input.type = config.type;
       }
       return input;
     },
 
     _applyInputStyles(input, config, isMobile) {
-      if (config.type !== 'checkbox') {
-        input.classList.add('ao3-field-input');
+      if (config.type !== "checkbox") {
+        input.classList.add("ao3-field-input");
         if (isMobile) {
-          input.classList.add('mobile');
+          input.classList.add("mobile");
         }
       } else {
-        input.classList.add('ao3-field-checkbox');
+        input.classList.add("ao3-field-checkbox");
       }
-    }
+    },
   };
 })();

@@ -4,8 +4,8 @@
 
 (() => {
   browser.runtime.onMessage.addListener(async (msg) => {
-    if (msg.action === 'initialize') {
-      if (typeof window.A03WorkShrinker === 'function') {
+    if (msg.action === "initialize") {
+      if (typeof window.A03WorkShrinker === "function") {
         return;
       }
       await handleShrinkWorks();
@@ -15,17 +15,17 @@
 
   const currentUrl = window.location.href;
   const workUrl = window.AO3UrlParser.getWorkUrl(currentUrl);
-  if (workUrl != '') {
-    window.AO3Popup.createNotifPopup('No works to shrink here');
+  if (workUrl != "") {
+    window.AO3Popup.createNotifPopup("No works to shrink here");
     return;
   }
 
   function isUndesired(work, workSettings) {
     const stats = window.AO3Extractor.extractAllValues(work);
-    
-    const words = stats['word_count'];
-    const hideWordUnder = workSettings['hideWordUnder'];
-    const hideWordOver = workSettings['hideWordOver'];
+
+    const words = stats["word_count"];
+    const hideWordUnder = workSettings["hideWordUnder"];
+    const hideWordOver = workSettings["hideWordOver"];
     const reasons = [];
     if (hideWordUnder.length != 0 && words < hideWordUnder) {
       reasons.push(`words < ${hideWordUnder}`);
@@ -34,27 +34,41 @@
       reasons.push(`words > ${hideWordOver}`);
     }
 
-    const hideLanguages = workSettings['hideLanguage']?.split(',').filter(x => x.trim().length > 0);
+    const hideLanguages = workSettings["hideLanguage"]
+      ?.split(",")
+      .filter((x) => x.trim().length > 0);
     for (const lang of hideLanguages) {
-      if (stats['language'] == AO3Extractor.getLangAbb(lang)) {
+      if (stats["language"] == AO3Extractor.getLangAbb(lang)) {
         reasons.push(`Language: ${lang}`);
       }
     }
-    
-    const showLanguages = workSettings['showLanguage']?.split(',').filter(x => x.trim().length > 0);
+
+    const showLanguages = workSettings["showLanguage"]
+      ?.split(",")
+      .filter((x) => x.trim().length > 0);
     if (showLanguages.length > 0) {
-      if (!showLanguages.some(x => AO3Extractor.getLangAbb(x) == stats['language'])) {
-        reasons.push(`Language: not ${showLanguages.join(', ')}`);
+      if (
+        !showLanguages.some(
+          (x) => AO3Extractor.getLangAbb(x) == stats["language"],
+        )
+      ) {
+        reasons.push(`Language: not ${showLanguages.join(", ")}`);
       }
     }
-    
 
-    const tags = Array.from(work.querySelectorAll('ul.tags.commas li a')).map(x => x.innerText);
-    const excludeTags = workSettings['hideTags']?.split(',').map(x => x.trim()).filter(x => x.length > 0);
+    const tags = Array.from(work.querySelectorAll("ul.tags.commas li a")).map(
+      (x) => x.innerText,
+    );
+    const excludeTags = workSettings["hideTags"]
+      ?.split(",")
+      .map((x) => x.trim())
+      .filter((x) => x.length > 0);
     for (const ex of excludeTags) {
       const pattern = new RegExp(
-        '^' + ex.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$',
-        'i'
+        "^" +
+          ex.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") +
+          "$",
+        "i",
       );
       for (const tag of tags) {
         if (pattern.test(tag.trim())) {
@@ -62,65 +76,67 @@
         }
       }
     }
-    const excludeAuthors = workSettings['hideAuthor']?.split(',').map(x => x.trim()).filter(x => x.length > 0);
+    const excludeAuthors = workSettings["hideAuthor"]
+      ?.split(",")
+      .map((x) => x.trim())
+      .filter((x) => x.length > 0);
     for (const author of excludeAuthors) {
-      if (stats['authors_to_sort_on'].includes(author)) {
+      if (stats["authors_to_sort_on"].includes(author)) {
         reasons.push(`Author: ${author}`);
       }
     }
-    
-    return reasons.map(x => x.trim()).join(", ");
+
+    return reasons.map((x) => x.trim()).join(", ");
   }
 
   function shrink(work, reason, hideEntirely) {
     if (hideEntirely) {
-      work.classList.add('ao3-hidden');
+      work.classList.add("ao3-hidden");
       return;
     }
-    const header = document.createElement('div');
-    header.classList.add('ao3-shrink-header');
+    const header = document.createElement("div");
+    header.classList.add("ao3-shrink-header");
 
-    const toggle = document.createElement('button');
+    const toggle = document.createElement("button");
     toggle.textContent = "Show/Hide Work";
-    toggle.classList.add('ao3-shrink-toggle');
+    toggle.classList.add("ao3-shrink-toggle");
 
-    const label = document.createElement('span');
-    label.textContent = reason
+    const label = document.createElement("span");
+    label.textContent = reason;
 
     header.appendChild(label);
     header.appendChild(toggle);
-    
-    const content = document.createElement('div');
+
+    const content = document.createElement("div");
     while (work.firstChild) {
       content.appendChild(work.firstChild);
     }
-    content.classList.add('ao3-hidden');
+    content.classList.add("ao3-hidden");
 
     work.appendChild(header);
     work.appendChild(content);
 
-    toggle.addEventListener('click', () => {
-      content.classList.toggle('ao3-hidden');
+    toggle.addEventListener("click", () => {
+      content.classList.toggle("ao3-hidden");
     });
   }
 
-  
   async function handleShrinkWorks() {
-    const { settings = {} } = await browser.storage.local.get('settings');
-    if (!settings['general']['shrinkWorks']) {
+    const { settings = {} } = await browser.storage.local.get("settings");
+    if (!settings["general"]["shrinkWorks"]) {
       return;
     }
     let workSettings = settings.workSettings || {};
-    const works = document.querySelectorAll('.work.blurb.group');
+    const works = document.querySelectorAll(".work.blurb.group");
     for (const work of works) {
       const reason = isUndesired(work, workSettings);
       if (reason.length > 0) {
-        shrink(work, reason, workSettings['hideEntirely']);
+        shrink(work, reason, workSettings["hideEntirely"]);
       }
     }
   }
 
-setTimeout(() => {
-  browser.runtime.sendMessage({action: 'shrinkContentScriptReady'});
-}, 100);
+  setTimeout(() => {
+    browser.runtime.sendMessage({ action: "shrinkContentScriptReady" });
+  }, 100);
 })();

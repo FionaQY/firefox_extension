@@ -21,7 +21,9 @@ async function injectScript(tabId, ...scripts) {
 
   try {
     for (const name of files) {
-      await browser.tabs.executeScript(tabId, { file: `/content_scripts/${name}.js` });
+      await browser.tabs.executeScript(tabId, {
+        file: `/content_scripts/${name}.js`,
+      });
     }
   } catch (error) {
     console.error(`Error injecting ${scripts.join(", ")}:`, error);
@@ -42,7 +44,8 @@ async function downloadDoc(msg) {
     if (
       delta.id === id &&
       delta.state &&
-      (delta.state.current === "complete" || delta.state.current === "interrupted")
+      (delta.state.current === "complete" ||
+        delta.state.current === "interrupted")
     ) {
       URL.revokeObjectURL(blobUrl);
       browser.downloads.onChanged.removeListener(onChanged);
@@ -92,7 +95,7 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
 
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status != "complete" || !tab.url) return;
-  
+
   if (pendingInjection && pendingInjection.tabId == tabId) {
     injectScript(tabId, "scroll", "shrink_works");
   } else if (tab.url.includes("/works/")) {
