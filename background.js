@@ -23,8 +23,10 @@ async function injectScript(tabId, ...scripts) {
         file: `/content_scripts/${name}.bundle.js`,
       });
     }
+    return true;
   } catch (error) {
     console.error(`Error injecting ${scripts.join(", ")}:`, error);
+    return false;
   }
 }
 
@@ -54,9 +56,15 @@ async function downloadDoc(msg) {
 
 // action -> (msg, sender, tab)
 const handlers = {
-  executeMode(msg, sender, tab) {
+  async executeMode(msg, sender, tab) {
     const script = MODE_MAP[msg.mode];
-    if (script) injectScript(tab.id, script);
+    if (!script) return;
+
+    const tabId = sender.tab?.id ?? tab?.id;
+    if (tabId == null) throw new Error("Could not find the active tab");
+    if (!(await injectScript(tabId, script))) {
+      throw new Error(`Could not start ${msg.mode} mode`);
+    }
   },
 
   scrollPage(msg, sender, tab) {

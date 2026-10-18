@@ -7,7 +7,7 @@ import {
   addValue,
   addMissingId,
 } from "./helper/params";
-import { getWorkUrl, fetchDoc } from "./helper/commons";
+import { getWorkUrl, fetchDoc, textOf } from "./helper/commons";
 import { isValid, extractRelevantData } from "./helper/extractor";
 import { createNotifPopup } from "./helper/popup";
 
@@ -30,7 +30,7 @@ import { createNotifPopup } from "./helper/popup";
     const baseUrl = e.target.baseURI;
 
     let searchParams = getParams(new URL(baseUrl));
-    const blockedTag = e.target.innerText;
+    const blockedTag = textOf(e.target);
     createNotifPopup(`Blocking tag ${blockedTag}...`);
     searchParams = addValue(
       searchParams,
@@ -49,7 +49,7 @@ import { createNotifPopup } from "./helper/popup";
     const baseUrl = e.target.baseURI;
 
     let searchParams = getParams(new URL(baseUrl));
-    const rawAuthor = e.target.innerText;
+    const rawAuthor = textOf(e.target);
 
     const authorName = rawAuthor.match(/\((.*?)\)/)?.[1] || rawAuthor;
     createNotifPopup(`Blocking author ${authorName}...`);

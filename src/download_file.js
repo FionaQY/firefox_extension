@@ -1,7 +1,18 @@
 /* globals */
 import { Document, Packer, Paragraph, TextRun } from "docx";
-import { getTags } from "./helper/commons";
+import {
+  safeFilename,
+  sameText,
+  stripLabel,
+  toInteger,
+} from "./helper/commons.js";
+import { extractWorkData } from "./helper/extractor.js";
 
+/* ==========================================================================
+ * CONSTANTS
+ * ========================================================================== */
+
+// Display label -> tag key in extracted work data.
 const TAG_MAP = [
   ["Rating", "rating"],
   ["Archive Warning", "warning"],
@@ -12,245 +23,59 @@ const TAG_MAP = [
   ["Additional Tags", "freeform"],
 ];
 
-const STAT_MAP = [
-  ["Published", "dd.published"],
-  ["Updated", "dd.status"],
-  ["Words", "dd.words"],
-  ["Chapters", "dd.chapters"],
-  ["Comments", "dd.comments"],
-  ["Kudos", "dd.kudos"],
-  ["Bookmarks", "dd.bookmarks"],
-  ["Hits", "dd.hits"],
-];
-
+// Stats that can be added together when merging works.
 const SUM_STATS = ["Words", "Comments", "Kudos", "Bookmarks", "Hits"];
-const CH_RE = /^Chapter\s+\d+\s*:?\s*/i;
+
+// Separates the header block from the story body and appendix.
 const DIVIDER = "----------------------------------------";
 
-const toNum = (s) => parseInt((s || "").replace(/[^\d]/g, ""), 10) || 0;
+export { safeFilename as safe };
 
-const textOf = (el) => (el?.innerText ?? el?.textContent ?? "").trim();
-
-export const safe = (s) => s.replace(/[\\/:*?"<>|]/g, "_").trim();
-
-function getAO3Text(container) {
-  if (!container) return "";
-
-  const target =
-    container.querySelector("blockquote.userstuff") ||
-    container.querySelector("div.userstuff") ||
-    container;
-
-  const cloned = target.cloneNode(true);
-
-  cloned
-    .querySelectorAll(
-      "h3, .heading, .title, .jump, a[href^='#chapter_'], a[href^='#work_']",
-    )
-    .forEach((el) => el.remove());
-
-  cloned.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
-  cloned.querySelectorAll("ol, ul").forEach((list) => {
-    const isOrdered = list.tagName.toLowerCase() === "ol";
-    Array.from(list.children)
-      .filter((el) => el.tagName.toLowerCase() === "li")
-      .forEach((li, idx) => {
-        const prefix = isOrdered ? `${idx + 1}. ` : "- ";
-        const itemText = textOf(li);
-        const newP = cloned.ownerDocument.createElement("p");
-        newP.textContent = `${prefix}${itemText}`;
-        list.parentNode?.insertBefore(newP, list);
-      });
-    list.remove();
-  });
-
-  const paragraphs = Array.from(cloned.querySelectorAll("p, blockquote"))
-    .map(textOf)
-    .filter(Boolean);
-
-  if (paragraphs.length) {
-    return paragraphs.join("\n\n").trim();
-  }
-
-  return textOf(cloned);
+// "Chapter 2: Heading", or just "Chapter 2" when there is no heading.
+function formatChapterHeader(number, heading) {
+  return heading ? `Chapter ${number}: ${heading}` : `Chapter ${number}`;
 }
 
-function stripLabel(text, label) {
-  if (!text) return "";
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return text.replace(new RegExp(`^(?:\\s*${escaped}\\s*)+`, "i"), "").trim();
-}
-
-function getSummaryText(container) {
-  return stripLabel(getAO3Text(container), "Summary:");
-}
-
-function getNotesText(container) {
-  return stripLabel(getAO3Text(container), "Notes:");
-}
-
-function sameText(a, b) {
-  const normalize = (s) => (s || "").replace(/\s+/g, " ").trim().toLowerCase();
-
-  return normalize(a) === normalize(b);
-}
+/* ==========================================================================
+ * SINGLE WORK -> LINES
+ * ========================================================================== */
 
 export function workToLines(doc, href) {
-  const data = getTags(doc, href, false);
-  const summary = getSummaryText(doc.querySelector(".preface .summary"));
+  const {
+    title,
+    author,
+    url,
+    tags,
+    summary,
+    summaryText,
+    stats,
+    chapters,
+    workStartNotes,
+    workEndNotes,
+  } = extractWorkData(doc, href);
 
-  const title =
-    doc.querySelector("h2.title.heading")?.innerText?.trim() || "untitled";
-
-  const author =
-    doc.querySelector("h3.byline.heading")?.innerText?.trim() || "unknown";
-
+  // Tag lines, e.g. "Fandom: A, B, C" (first 3 per category).
   const metaLines = TAG_MAP.map(([label, key]) => {
-    const list = data.tags[key];
+    const list = tags[key];
 
     return list && list.length
       ? `${label}: ${list.slice(0, 3).join(", ")}`
       : null;
   });
 
-  const stats = Object.fromEntries(
-    STAT_MAP.map(([label, selector]) => [
-      label,
-      doc.querySelector(selector)?.innerText?.trim() || "",
-    ]),
-  );
-
   const statLines = Object.entries(stats)
     .filter(([, val]) => val)
     .map(([label, val]) => `${label}: ${val}`);
 
-  const workStartNotes = getNotesText(
-    doc.querySelector(".preface .notes.module"),
-  );
-  const workEndNotesEl = doc.querySelector(
-    "#work_endnotes, div.work.notes.module",
-  );
-  const workEndNotes = getNotesText(workEndNotesEl);
-
-  const chapters = [];
-  const chNodes = doc.querySelectorAll("#chapters > .chapter");
-
-  if (chNodes.length > 0) {
-    chNodes.forEach((chEl) => {
-      const headingEl = chEl.querySelector(
-        "h3.title, h3.heading, .title.heading",
-      );
-
-      const rawHeading = headingEl ? textOf(headingEl) : "";
-      const heading = rawHeading.replace(CH_RE, "").trim();
-      const userstuff = chEl.querySelector(
-        ".userstuff:not(.summary .userstuff):not(.notes .userstuff)",
-      );
-
-      const lines = userstuff
-        ? Array.from(userstuff.querySelectorAll("p"))
-            .filter((p) => !p.closest(".summary, .notes"))
-            .map(textOf)
-            .filter(Boolean)
-        : [];
-
-      // Collect chapter-specific summary and notes while filtering out work-level end notes
-      const notes = [];
-      const summaryEl = chEl.querySelector(".summary");
-      if (summaryEl) {
-        const sumText = getSummaryText(summaryEl);
-        if (sumText) notes.push(`Summary: ${sumText}`);
-      }
-
-      chEl.querySelectorAll(".notes, .end.notes").forEach((notesEl) => {
-        if (
-          workEndNotesEl &&
-          (workEndNotesEl === notesEl || workEndNotesEl.contains(notesEl))
-        ) {
-          return;
-        }
-        if (notesEl.classList.contains("summary")) return;
-
-        // Ensure notes element belongs to this specific chapter
-        const parentChapter = notesEl.closest(".chapter, div[id^='chapter-']");
-        if (
-          parentChapter &&
-          parentChapter !== chEl &&
-          !chEl.contains(notesEl)
-        ) {
-          return;
-        }
-
-        const text = getNotesText(notesEl);
-        if (text && !notes.includes(text)) {
-          notes.push(text);
-        }
-      });
-
-      chapters.push({
-        heading,
-        lines,
-        notes,
-      });
-    });
-  } else {
-    // Single-chapter work / one-shot.
-    const userstuff = doc.querySelector(
-      "#workskin div.userstuff, #chapters div.userstuff",
-    );
-
-    const lines = userstuff
-      ? Array.from(userstuff.querySelectorAll("p"))
-          .filter((p) => !p.closest(".summary, .notes"))
-          .map(textOf)
-          .filter(Boolean)
-      : [];
-
-    const chapterRoot =
-      doc.querySelector("#chapters") || doc.querySelector("#workskin") || doc;
-
-    const notes = [];
-    const summaryEl = chapterRoot.querySelector(".summary");
-    if (summaryEl) {
-      const sumText = getSummaryText(summaryEl);
-      if (sumText) notes.push(`Summary: ${sumText}`);
-    }
-
-    chapterRoot.querySelectorAll(".notes, .end.notes").forEach((notesEl) => {
-      if (
-        workEndNotesEl &&
-        (workEndNotesEl === notesEl || workEndNotesEl.contains(notesEl))
-      ) {
-        return;
-      }
-      if (notesEl.classList.contains("summary")) return;
-      const text = getNotesText(notesEl);
-      if (text && !notes.includes(text)) {
-        notes.push(text);
-      }
-    });
-
-    chapters.push({
-      heading: title,
-      lines,
-      notes,
-    });
-  }
-
-  // --- Document Story Body ---
+  // --- Story body: chapter headers followed by their paragraphs ---
   const body = [];
 
   chapters.forEach((chapter, idx) => {
-    body.push(
-      chapter.heading
-        ? `Chapter ${idx + 1}: ${chapter.heading}`
-        : `Chapter ${idx + 1}`,
-    );
-
+    body.push(formatChapterHeader(idx + 1, chapter.heading));
     body.push(...chapter.lines);
   });
 
-  // --- APPENDIX (Single Work Download) ---
+  // --- Appendix: work notes plus per-chapter summaries and notes ---
   const appendix = ["APPENDIX", DIVIDER];
   let hasAppendixContent = false;
 
@@ -260,14 +85,10 @@ export function workToLines(doc, href) {
   }
 
   chapters.forEach((chapter, idx) => {
-    const chapterHeader = chapter.heading
-      ? `Chapter ${idx + 1}: ${chapter.heading}`
-      : `Chapter ${idx + 1}`;
-
-    appendix.push(chapterHeader);
+    appendix.push(formatChapterHeader(idx + 1, chapter.heading));
 
     chapter.notes.forEach((note) => {
-      // Chapter summaries already have their own label.
+      // Chapter summaries already carry their own label.
       if (/^Summary:/i.test(note)) {
         appendix.push(note);
       } else {
@@ -283,25 +104,27 @@ export function workToLines(doc, href) {
     hasAppendixContent = true;
   }
 
+  // --- Final output ---
   const lines = [
     `URL: ${href}`,
     `Title: ${title}`,
     `Author: ${author}`,
     ...metaLines,
     ...statLines,
-    summary ? `Summary: ${summary}` : null,
+    summaryText ? `Summary: ${summaryText}` : null,
     DIVIDER,
     ...body,
     ...(hasAppendixContent ? ["", ...appendix] : []),
-  ].filter(Boolean);
+  ].filter(Boolean); // drops the null entries
 
+  // Return structured data too, so mergeWorks() can reuse it.
   return {
     title,
     author,
     lines,
-    url: href,
-    tags: data.tags,
-    summary: data.summary,
+    url,
+    tags,
+    summary,
     stats,
     chapters,
     workStartNotes,
@@ -309,12 +132,17 @@ export function workToLines(doc, href) {
   };
 }
 
+/* ==========================================================================
+ * LINES -> DOCX
+ * ========================================================================== */
+
+// Builds a .docx from an array of text lines and returns it as a data URL.
 export async function linesToDataUrl(lines) {
   const doc = new Document({
     sections: [
       {
         children: lines
-          .flatMap((line) => String(line).split(/\n+/))
+          .flatMap((line) => String(line).split(/\n+/)) // one paragraph per line
           .filter((line) => line.trim() !== "")
           .map(
             (line) =>
@@ -338,13 +166,19 @@ export async function linesToDataUrl(lines) {
   });
 }
 
+/* ==========================================================================
+ * MERGE MULTIPLE WORKS (series / bundle)
+ * ========================================================================== */
+
 export function mergeWorks(works, isSeries = false, seriesTitle = "") {
+  // Union of tags across all works (first 3 per category).
   const tagLines = TAG_MAP.map(([label, key]) => {
     const all = [...new Set(works.flatMap((work) => work.tags?.[key] || []))];
 
     return all.length ? `${label}: ${all.slice(0, 3).join(", ")}` : null;
   });
 
+  // Earliest published date and latest updated date (ISO-style strings sort correctly).
   const published = works
     .map((work) => work.stats.Published)
     .filter(Boolean)
@@ -356,8 +190,7 @@ export function mergeWorks(works, isSeries = false, seriesTitle = "") {
     .sort()
     .at(-1);
 
-  // Series bundle: show the series summary.
-  // Non-series bundle: do not add a summary at the beginning.
+  // Series summary: the series title, or a list of the work titles.
   let summaryText = null;
 
   if (isSeries) {
@@ -369,7 +202,7 @@ export function mergeWorks(works, isSeries = false, seriesTitle = "") {
   const body = [];
   const appendix = ["APPENDIX", DIVIDER];
 
-  let globalChapterCount = 0;
+  let globalChapterCount = 0; // chapters are numbered across all works
   let hasAppendixContent = false;
 
   for (const work of works) {
@@ -378,6 +211,8 @@ export function mergeWorks(works, isSeries = false, seriesTitle = "") {
     chapters.forEach((chapter, idx) => {
       globalChapterCount++;
 
+      // The first chapter of each work shows the work title so readers can
+      // see where each work begins.
       let displayHeading;
 
       if (idx === 0) {
@@ -393,9 +228,10 @@ export function mergeWorks(works, isSeries = false, seriesTitle = "") {
         displayHeading = chapter.heading;
       }
 
-      const chapterHeader = displayHeading
-        ? `Chapter ${globalChapterCount}: ${displayHeading}`
-        : `Chapter ${globalChapterCount}`;
+      const chapterHeader = formatChapterHeader(
+        globalChapterCount,
+        displayHeading,
+      );
 
       // Story body.
       body.push(chapterHeader);
@@ -404,8 +240,8 @@ export function mergeWorks(works, isSeries = false, seriesTitle = "") {
       // Appendix: every chapter gets one heading.
       appendix.push(chapterHeader);
 
-      // Work-level summary is added only if it isn't already present
-      // as the first chapter's summary.
+      // Work-level summary goes on the first chapter, unless that chapter's
+      // own summary already matches it.
       if (idx === 0 && work.summary) {
         const summaryAlreadyIncluded = chapter.notes.some((note) => {
           const content = stripLabel(note, "Summary:");
@@ -429,10 +265,10 @@ export function mergeWorks(works, isSeries = false, seriesTitle = "") {
         if (!note) continue;
 
         if (/^Summary:/i.test(note)) {
-          // Never add a second Summary: label.
+          // Re-add the label so it never appears twice.
           appendix.push(`Summary: ${stripLabel(note, "Summary:")}`);
         } else {
-          // Never add a second Notes: label if one is already present.
+          // Same for "Notes:".
           const cleanNote = stripLabel(note, "Notes:");
 
           if (cleanNote) {
@@ -455,13 +291,14 @@ export function mergeWorks(works, isSeries = false, seriesTitle = "") {
     });
   }
 
+  // Combined stats: dates, summed numeric stats, and total chapter count.
   const statLines = [
     published && `Published: ${published}`,
     updated && `Updated: ${updated}`,
     ...SUM_STATS.map(
       (key) =>
         `${key}: ${works
-          .reduce((sum, work) => sum + toNum(work.stats[key]), 0)
+          .reduce((sum, work) => sum + toInteger(work.stats[key]), 0)
           .toLocaleString("en-US")}`,
     ),
     `Chapters: ${globalChapterCount}`,

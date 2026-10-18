@@ -1,5 +1,9 @@
 /* globals browser */
-import { createPopupContainer, getSettings } from "./src/helper/popup";
+import {
+  createNotifPopup,
+  createPopupContainer,
+  getSettings,
+} from "./src/helper/popup";
 
 (() => {
   function injectStyles() {
@@ -82,7 +86,12 @@ import { createPopupContainer, getSettings } from "./src/helper/popup";
             mode: val,
           })
           .then(() => {
-            document.getElementById(popupId)?.remove();
+            popup.remove();
+          })
+          .catch((error) => {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            createNotifPopup(`Could not start ${val} mode: ${message}`);
           });
       });
 
@@ -171,7 +180,7 @@ import { createPopupContainer, getSettings } from "./src/helper/popup";
       expandBtn.classList.add("ao3-control-button", "ao3-expand-button");
       expandBtn.addEventListener("click", () => {
         createExpandedModal();
-        document.getElementById(popupId)?.remove();
+        popup.remove();
       });
       content.appendChild(expandBtn);
     }

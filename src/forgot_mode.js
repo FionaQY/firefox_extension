@@ -14,18 +14,15 @@ import { getSummary, getWorkUrl } from "./helper/commons";
     return;
   }
 
-  const popupId = "ao3-qof-popup";
+  const popupId = "ao3-qof-summary-popup";
   document.getElementById(popupId)?.remove();
 
   async function showSummaryPopup() {
-    let summaryData = await getSummary(currentUrl, workUrl);
-    if (!summaryData?.summary) {
-      const neworkUrl = getWorkUrl(currentUrl, false);
-      summaryData = await getSummary(currentUrl, neworkUrl);
-      if (!summaryData?.summary) {
-        createNotifPopup("Failed to load summary.");
-        return;
-      }
+    const summaryData = await getSummary(currentUrl, workUrl);
+    if (!summaryData) return;
+    if (!summaryData.summary) {
+      createNotifPopup("Failed to load summary.");
+      return;
     }
 
     const { heading, summary, tags } = summaryData;

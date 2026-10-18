@@ -2,7 +2,7 @@
 
 import { getLangAbb, extractAllValues } from "./helper/extractor";
 import { createNotifPopup } from "./helper/popup";
-import { getWorkUrl } from "./helper/commons";
+import { getWorkUrl, textOf } from "./helper/commons";
 
 (() => {
   browser.runtime.onMessage.addListener(async (msg) => {
@@ -55,7 +55,7 @@ import { getWorkUrl } from "./helper/commons";
     }
 
     const tags = Array.from(work.querySelectorAll("ul.tags.commas li a")).map(
-      (x) => x.innerText,
+      textOf,
     );
     const excludeTags = workSettings["hideTags"]
       ?.split(",")

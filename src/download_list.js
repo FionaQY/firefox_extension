@@ -1,12 +1,12 @@
 /* globals browser */
-import {
-  workToLines,
-  linesToDataUrl,
-  mergeWorks,
-  safe,
-} from "./download_file.js";
+import { workToLines, linesToDataUrl, mergeWorks } from "./download_file.js";
 
-import { getWorkUrl, fetchDoc } from "./helper/commons.js";
+import {
+  getWorkUrl,
+  fetchDoc,
+  safeFilename,
+  textOf,
+} from "./helper/commons.js";
 import { workInfo } from "./helper/extractor.js";
 import {
   createLabeledCheckbox,
@@ -21,12 +21,11 @@ function seriesInfo(el) {
   const link = el.querySelector("h4.heading a[href^='/series/']");
   if (link) {
     const id = link.getAttribute("href")?.match(/\/series\/(\d+)/)?.[1];
-    if (id) return { id, title: link.innerText.trim() };
+    if (id) return { id, title: textOf(link) };
   }
   const m = location.pathname.match(/^\/series\/(\d+)/);
   if (m && el.matches("dl.series.meta")) {
-    const title =
-      document.querySelector("h2.heading")?.innerText.trim() || "series";
+    const title = textOf(document.querySelector("h2.heading")) || "series";
     return { id: m[1], title };
   }
   return null;
@@ -229,7 +228,7 @@ async function openDownloadButton() {
           await browser.runtime.sendMessage({
             action: "downloadDoc",
             url,
-            filename: `${safe(title)}_${safe(author)}.docx`,
+            filename: `${safeFilename(title)}_${safeFilename(author)}.docx`,
             saveAs: jobs.length === 1,
           });
         }
@@ -252,7 +251,7 @@ async function openDownloadButton() {
         const isSeriesBundle = seriesTitles.length === 1 && standalone === 0;
         const seriesName = isSeriesBundle ? seriesTitles[0] : "";
         const name = isSeriesBundle
-          ? `${safe(seriesTitles[0])}_series.docx`
+          ? `${safeFilename(seriesTitles[0])}_series.docx`
           : `AO3_bundle_${loaded.length}_works.docx`;
 
         const url = await linesToDataUrl(

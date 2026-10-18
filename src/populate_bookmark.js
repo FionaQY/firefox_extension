@@ -18,9 +18,13 @@ import { createNotifPopup, parseHtmlFragment } from "./helper/popup";
 
   async function getBookmarkHtml() {
     let summaryData = await getSummary(currentUrl, workUrl, false);
-    if (!summaryData?.summary) {
-      const neworkUrl = getWorkUrl(currentUrl, true);
-      summaryData = await getSummary(currentUrl, neworkUrl, false);
+    if (!summaryData) return;
+    if (!summaryData.summary) {
+      const chapterUrl = getWorkUrl(currentUrl, true);
+      if (chapterUrl !== workUrl) {
+        summaryData = await getSummary(currentUrl, chapterUrl, false);
+      }
+      if (!summaryData) return;
       if (!summaryData?.summary) {
         createNotifPopup("Failed to load summary.");
         return;

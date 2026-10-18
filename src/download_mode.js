@@ -1,5 +1,6 @@
 /* globals browser */
-import { workToLines, linesToDataUrl, safe } from "./download_file.js";
+import { workToLines, linesToDataUrl } from "./download_file.js";
+import { safeFilename } from "./helper/commons.js";
 
 (async () => {
   const { title, author, lines } = workToLines(document, window.location.href);
@@ -7,6 +8,6 @@ import { workToLines, linesToDataUrl, safe } from "./download_file.js";
   browser.runtime.sendMessage({
     action: "downloadDoc",
     url,
-    filename: `${safe(title)}_${safe(author)}.docx`,
+    filename: `${safeFilename(title)}_${safeFilename(author)}.docx`,
   });
 })();
