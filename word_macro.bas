@@ -311,23 +311,18 @@ End If
 
 If hasChapterHeadings Then
     Dim firstChapterFound As Boolean
-    Dim chNum As String
-    Dim lastChapterNumber As String
     firstChapterFound = False
     For Each para In ActiveDocument.Paragraphs
-        chNum = GetBodyChapterNumber(para.Range.Text)
-        If Len(chNum) > 0 Then
-            If firstChapterFound = False Or chNum <> lastChapterNumber Then
-                para.Range.Font.Reset
-                para.Range.ParagraphFormat.Reset
-                If firstChapterFound Then
-                    para.Range.InsertBreak Type:=wdSectionBreakNextPage
-                Else
-                    firstChapterFound = True
-                End If
-                para.Range.Style = ActiveDocument.Styles(wdStyleHeading1)
-                lastChapterNumber = chNum
+        If HasChapterMark(para.Range.Text) Then
+            StripChapterMark para
+            para.Range.Font.Reset
+            para.Range.ParagraphFormat.Reset
+            If firstChapterFound Then
+                para.Range.InsertBreak Type:=wdSectionBreakNextPage
+            Else
+                firstChapterFound = True
             End If
+            para.Range.Style = ActiveDocument.Styles(wdStyleHeading1)
         End If
     Next para
 End If
@@ -595,6 +590,7 @@ If chapterNoteEnd22 > chapterNoteStart22 Then
             paraFormat22.Range.ParagraphFormat.keepWithNext = True
             paraFormat22.Range.ParagraphFormat.FirstLineIndent = 0
             paraFormat22.Range.ParagraphFormat.LeftIndent = 0
+            StripChapterMark paraFormat22
         ElseIf LCase$(formatText22) = "notes:" Or LCase$(formatText22) = "summary:" Then
             paraFormat22.Range.Font.Bold = True
             paraFormat22.Range.ParagraphFormat.FirstLineIndent = 0
@@ -610,6 +606,28 @@ MsgBox "Macro ran successfully!", vbInformation
 End Sub
 
 ' ===================== HELPERS =====================
+Private Function ChapterMark() As String
+    ChapterMark = "@@CH@@"
+End Function
+
+Private Function HasChapterMark(ByVal value As String) As Boolean
+    HasChapterMark = (Left$(CleanParaText(value), Len(ChapterMark())) = ChapterMark())
+End Function
+
+' Removes the marker (and the space after it) from the start of a paragraph
+Private Sub StripChapterMark(ByVal para As Paragraph)
+    Dim r As Range
+    Set r = para.Range
+    If Left$(r.Text, Len(ChapterMark())) = ChapterMark() Then
+        r.SetRange r.Start, r.Start + Len(ChapterMark())
+        r.Delete
+        Set r = para.Range
+        If Left$(r.Text, 1) = " " Then
+            r.SetRange r.Start, r.Start + 1
+            r.Delete
+        End If
+    End If
+End Sub
 
 Private Function CleanParaText(ByVal value As String) As String
     Dim result As String
@@ -746,7 +764,7 @@ Private Function CountBodyChapterHeadings(ByVal doc As Document, ByVal sepIdx As
         idx = idx + 1
         If idx > sepIdx Then
             If appIdx > 0 And idx >= appIdx Then Exit For
-            If Len(GetBodyChapterNumber(p.Range.Text)) > 0 Then n = n + 1
+            If HasChapterMark(p.Range.Text) Then n = n + 1
         End If
     Next p
     CountBodyChapterHeadings = n
@@ -971,7 +989,7 @@ Private Function IsChapterHeading(ByVal value As String) As Boolean
 End Function
 
 Private Function IsAppendixChapterHeading(ByVal value As String) As Boolean
-    IsAppendixChapterHeading = IsChapterHeading(value)
+    IsAppendixChapterHeading = HasChapterMark(value)
 End Function
 
 Private Function NormalizeAppendixChapterHeading(ByVal value As String) As String

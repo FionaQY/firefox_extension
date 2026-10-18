@@ -23,17 +23,36 @@ const TAG_MAP = [
   ["Additional Tags", "freeform"],
 ];
 
-// Stats that can be added together when merging works.
 const SUM_STATS = ["Words", "Comments", "Kudos", "Bookmarks", "Hits"];
 
-// Separates the header block from the story body and appendix.
 const DIVIDER = "----------------------------------------";
 
 export { safeFilename as safe };
 
-// "Chapter 2: Heading", or just "Chapter 2" when there is no heading.
+const CHAPTER_MARK = "@@CH@@ ";
+
+// Heading text, or "Chapter N" when there is no heading. Always tagged.
 function formatChapterHeader(number, heading) {
-  return heading ? `Chapter ${number}: ${heading}` : `Chapter ${number}`;
+  return CHAPTER_MARK + (heading || `Chapter ${number}`);
+}
+
+function formatMergedChapterHeader(work, chapter, idx, totalChapters) {
+  if (totalChapters === 1) {
+    return CHAPTER_MARK + work.title;
+  }
+
+  if (idx === 0) {
+    const hasOwnHeading =
+      chapter.heading &&
+      chapter.heading.toLowerCase() !== work.title.toLowerCase();
+
+    return (
+      CHAPTER_MARK +
+      (hasOwnHeading ? `${work.title}: ${chapter.heading}` : work.title)
+    );
+  }
+
+  return formatChapterHeader(idx + 1, chapter.heading);
 }
 
 /* ==========================================================================
@@ -166,12 +185,7 @@ export async function linesToDataUrl(lines) {
   });
 }
 
-/* ==========================================================================
- * MERGE MULTIPLE WORKS (series / bundle)
- * ========================================================================== */
-
 export function mergeWorks(works, isSeries = false, seriesTitle = "") {
-  // Union of tags across all works (first 3 per category).
   const tagLines = TAG_MAP.map(([label, key]) => {
     const all = [...new Set(works.flatMap((work) => work.tags?.[key] || []))];
 
@@ -211,37 +225,18 @@ export function mergeWorks(works, isSeries = false, seriesTitle = "") {
     chapters.forEach((chapter, idx) => {
       globalChapterCount++;
 
-      // The first chapter of each work shows the work title so readers can
-      // see where each work begins.
-      let displayHeading;
-
-      if (idx === 0) {
-        if (
-          !chapter.heading ||
-          chapter.heading.toLowerCase() === work.title.toLowerCase()
-        ) {
-          displayHeading = work.title;
-        } else {
-          displayHeading = `${work.title}: ${chapter.heading}`;
-        }
-      } else {
-        displayHeading = chapter.heading;
-      }
-
-      const chapterHeader = formatChapterHeader(
-        globalChapterCount,
-        displayHeading,
+      const chapterHeader = formatMergedChapterHeader(
+        work,
+        chapter,
+        idx,
+        chapters.length,
       );
 
-      // Story body.
       body.push(chapterHeader);
       body.push(...chapter.lines);
 
-      // Appendix: every chapter gets one heading.
       appendix.push(chapterHeader);
 
-      // Work-level summary goes on the first chapter, unless that chapter's
-      // own summary already matches it.
       if (idx === 0 && work.summary) {
         const summaryAlreadyIncluded = chapter.notes.some((note) => {
           const content = stripLabel(note, "Summary:");
