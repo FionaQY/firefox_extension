@@ -1,10 +1,14 @@
 /* globals browser */
-import { workToLines, linesToDataUrl } from "./helper/download.js";
+import { workToDocument, documentToDataUrl } from "./helper/download.js";
 import { safeFilename } from "./helper/commons.js";
 
 (async () => {
-  const { title, author, lines } = workToLines(document, window.location.href);
-  const url = await linesToDataUrl(lines);
+  const {
+    title,
+    author,
+    document: docx,
+  } = workToDocument(document, window.location.href);
+  const url = await documentToDataUrl(docx);
   browser.runtime.sendMessage({
     action: "downloadDoc",
     url,

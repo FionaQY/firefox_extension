@@ -1,5 +1,9 @@
 /* globals browser */
-import { workToLines, linesToDataUrl, mergeWorks } from "./helper/download.js";
+import {
+  workToDocument,
+  documentToDataUrl,
+  mergeWorks,
+} from "./helper/download.js";
 import {
   getWorkUrl,
   fetchDoc,
@@ -104,7 +108,7 @@ async function loadWork(id) {
   const doc = await fetchDoc(
     `${BASE_URL}/works/${id}?view_full_work=true&view_adult=true`,
   );
-  return workToLines(doc, `${BASE_URL}/works/${id}`);
+  return workToDocument(doc, `${BASE_URL}/works/${id}`);
 }
 
 async function fetchSeriesWorks(id, onPage) {
@@ -137,8 +141,8 @@ async function forEachPaced(items, fn) {
   }
 }
 
-async function downloadDoc(lines, filename, saveAs) {
-  const url = await linesToDataUrl(lines);
+async function downloadDoc(document, filename, saveAs) {
+  const url = await documentToDataUrl(document);
   await browser.runtime.sendMessage({
     action: MSG_DOWNLOAD_DOC,
     url,
@@ -297,7 +301,7 @@ async function openDownloadButton() {
           loaded.push(work);
         } else {
           await downloadDoc(
-            work.lines,
+            work.document,
             docName(title, author),
             jobs.length === 1,
           );

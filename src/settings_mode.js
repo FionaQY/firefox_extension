@@ -6,13 +6,14 @@ import {
   createNotifPopup,
   openModePopup,
   removeModePopup,
+  MODE_ID,
+  MODE_OPTIONS,
 } from "./helper/popup";
 import {
   MOBILE_MAX_WIDTH,
   optionsPopupHelper,
   resetInputs,
 } from "./helper/popup_fields";
-
 (() => {
   removeModePopup();
 
@@ -37,16 +38,6 @@ import {
       label: "Mass Bookmark Works",
       type: "checkbox",
     },
-  };
-
-  const modeTextMap = {
-    block: "🚫 Block tag/author",
-    forgot: "🤔 I forgor",
-    apply: "✅ Apply default filters",
-    save: "💾 Set default filters",
-    hide: "🫣 Hide Works",
-    search: "🔍︎ Search Bar",
-    download: "📥 Download Doc",
   };
 
   function createColumn(title) {
@@ -81,11 +72,17 @@ import {
   }
 
   function populateCols(settings, showCol, hideCol) {
-    const popupOptions = settings.popupOptions || Object.keys(modeTextMap);
+    const all_modes = Object.keys(MODE_OPTIONS)
+      .filter((mode) => mode !== MODE_ID.SETTINGS)
+      .map((mode) => [
+        mode,
+        `${MODE_OPTIONS[mode].icon} ${MODE_OPTIONS[mode].label}`,
+      ]);
+    const popupOptions = settings.popupOptions || all_modes;
     showCol.innerHTML = "";
     hideCol.innerHTML = "";
 
-    for (const [val, opt] of Object.entries(modeTextMap)) {
+    for (const [val, opt] of all_modes) {
       const item = createItem(opt, val, showCol, hideCol);
       if (popupOptions.includes(val)) {
         showCol.appendChild(item);
@@ -97,7 +94,7 @@ import {
 
   async function openSettingsPopup() {
     const settings = await getSettings();
-    let generalSettings = settings.general || {};
+    const generalSettings = { ...(settings.general || {}) };
     const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
 
     const [inputsMap, contentContainer] = optionsPopupHelper(

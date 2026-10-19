@@ -10,6 +10,30 @@ const ID = {
   NOTIFICATION: "ao3-qof-notif-popup",
 };
 
+export const MODE_ID = {
+  SETTINGS: "settings",
+  FORMAT: "format",
+  BLOCK: "block",
+  FORGOT: "forgot",
+  APPLY: "apply",
+  SAVE: "save",
+  HIDE: "hide",
+  SEARCH: "search",
+  DOWNLOAD: "download",
+};
+
+export const MODE_OPTIONS = {
+  [MODE_ID.BLOCK]: { icon: "🚫", label: "Block Tag/Author" },
+  [MODE_ID.FORGOT]: { icon: "🤔", label: "I forgor" },
+  [MODE_ID.APPLY]: { icon: "✅", label: "Apply Default Filters" },
+  [MODE_ID.SAVE]: { icon: "💾", label: "Set Default Filters" },
+  [MODE_ID.HIDE]: { icon: "🫣", label: "Hide Works" },
+  [MODE_ID.SEARCH]: { icon: "🔍", label: "Search Bar" },
+  [MODE_ID.DOWNLOAD]: { icon: "📥", label: "Download Docx" },
+  [MODE_ID.FORMAT]: { icon: "📖", label: "Format Docx" },
+  [MODE_ID.SETTINGS]: { icon: "⚙️", label: "Settings" },
+};
+
 const CLASS = {
   MOBILE: "mobile",
   DESKTOP: "desktop",

@@ -8,6 +8,9 @@ This is a personal Firefox extension I built for myself. It may not be polished 
 - `I forgor` option gets the summary of current work automatically (if u forget what your reading)
 - Apply saved filters
 - Hide/Shrink works with undesired features
+- Download works as book-formatted DOCX files with configurable fonts, font sizes, margins, and appendix metadata
+
+Use the **Document Format** popup mode to adjust DOCX fonts, font sizes, page margins, and whether tags and relationships appear in the appendix. Font names should be installed on the device used to open the document; the defaults match the included Word macro.
 <img height="300" alt="image" src="https://github.com/user-attachments/assets/91fe17b0-c9bc-4a08-be49-58a46d26c31d" />
 
 <img height="300" alt="image" src="https://github.com/user-attachments/assets/6e39469d-7dee-4fc0-952f-625053ac40f4" />
@@ -48,9 +51,11 @@ firefox-extension/
 ├── content.bundle.js
 ├── src/
 │   └── helper/
-│       ├── popup.js       # Popup and other extension UI
-│       ├── extractor.js   # AO3 page parsing and metadata extraction
-│       └── commons.js     # Shared text, URL, and page-loading helpers
+│       ├── popup.js          # Popup and other extension UI
+│       ├── extractor.js      # AO3 page parsing and metadata extraction
+│       ├── download.js       # DOCX content and book-layout generation
+│       ├── document_format.js # Shared DOCX font defaults and settings
+│       └── commons.js       # Shared text, URL, and page-loading helpers
 ├── content_scripts/
 ├── icons/
 ```

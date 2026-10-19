@@ -105,6 +105,7 @@ const STAT_FIELDS = [
 ];
 
 const CHAPTER_NUMBER_PREFIX = /^Chapter\s+\d+\s*:?\s*/i;
+const AO3_NOTES_PLACEHOLDER = /\(See the end of the (?:chapter|work)\b/i;
 
 const makeLink = (url, text) =>
   `<a href="${escapeHtml(url)}">${escapeHtml(text)}</a>`;
@@ -230,12 +231,26 @@ function getContentText(container) {
 
 // Extract summary text without its leading label.
 function getSummaryText(container) {
-  return stripLabel(getContentText(container), LABELS.SUMMARY);
+  return stripLabel(
+    removeAO3NotesPlaceholders(getContentText(container)),
+    LABELS.SUMMARY,
+  );
 }
 
 // Extract notes text without its leading label.
 function getNotesText(container) {
-  return stripLabel(getContentText(container), LABELS.NOTES);
+  return stripLabel(
+    removeAO3NotesPlaceholders(getContentText(container)),
+    LABELS.NOTES,
+  );
+}
+
+function removeAO3NotesPlaceholders(value) {
+  return String(value || "")
+    .split(/\n+/)
+    .filter((paragraph) => !AO3_NOTES_PLACEHOLDER.test(paragraph))
+    .join("\n\n")
+    .trim();
 }
 
 // Collect story paragraphs while excluding summaries and notes.

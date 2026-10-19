@@ -66,6 +66,12 @@ function createInput(config) {
     default:
       input = document.createElement("input");
       input.type = config.type;
+      if (config.type === "number") {
+        if (config.min !== undefined) input.min = config.min;
+        if (config.max !== undefined) input.max = config.max;
+        if (config.step !== undefined) input.step = config.step;
+        if (config.required) input.required = true;
+      }
   }
   return input;
 }

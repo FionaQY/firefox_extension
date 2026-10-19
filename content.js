@@ -3,10 +3,11 @@ import {
   createNotifPopup,
   getSettings,
   openModePopup,
+  MODE_ID,
+  MODE_OPTIONS,
 } from "./src/helper/popup";
 import { MOBILE_MAX_WIDTH } from "./src/helper/popup_fields";
 
-const MODE_ID = { SETTINGS: "settings" };
 const ACTION = { EXECUTE_MODE: "executeMode" };
 const CLASS = {
   MOBILE: "mobile",
@@ -23,17 +24,6 @@ const CLASS = {
 const MESSAGE = {
   SELECT_MODE: "Select mode:",
   MODE_START_ERROR: (mode, reason) => `Could not start ${mode} mode: ${reason}`,
-};
-
-const MODE_OPTIONS = {
-  block: { icon: "🚫", label: "Block Tag/Author" },
-  forgot: { icon: "🤔", label: "I forgor" },
-  apply: { icon: "✅", label: "Apply Default Filters" },
-  save: { icon: "💾", label: "Set Default Filters" },
-  hide: { icon: "🫣", label: "Hide Works" },
-  search: { icon: "🔍", label: "Search Bar" },
-  download: { icon: "📥", label: "Download Doc" },
-  [MODE_ID.SETTINGS]: { icon: "⚙️", label: "Settings" },
 };
 
 function getPopupOptions(settings) {

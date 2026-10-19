@@ -9,6 +9,7 @@ const MODE_MAP = {
   hide: "hide_mode",
   search: "search_mode",
   download: "download_mode",
+  format: "format_docx_mode",
   settings: "settings_mode",
 };
 
