@@ -561,6 +561,8 @@ With rngAuthor22.Find
     If .Execute Then rngAuthor22.Style = wdStyleHeading1
 End With
 
+chapterNoteStart22 = rngAuthor22.Start
+
 If Len(savedText24) > 0 Then
     Set rngAuthor22 = notesSection22.Range
     rngAuthor22.Collapse Direction:=wdCollapseEnd
@@ -570,7 +572,6 @@ End If
 
 Set rngAuthor22 = notesSection22.Range
 rngAuthor22.Collapse Direction:=wdCollapseEnd
-chapterNoteStart22 = rngAuthor22.Start
 
 For chapterIndex95 = 1 To chapterCollection96.Count
     chapterText95 = chapterCollection96.Item(chapterIndex95)
@@ -593,10 +594,13 @@ If chapterNoteEnd22 > chapterNoteStart22 Then
             StripChapterMark paraFormat22
         ElseIf LCase$(formatText22) = "notes:" Or LCase$(formatText22) = "summary:" Then
             paraFormat22.Range.Font.Bold = True
+            paraFormat22.Range.ParagraphFormat.alignment = wdAlignParagraphLeft
             paraFormat22.Range.ParagraphFormat.FirstLineIndent = 0
             paraFormat22.Range.ParagraphFormat.LeftIndent = 0
             paraFormat22.Range.ParagraphFormat.spaceBefore = 6
             paraFormat22.Range.ParagraphFormat.spaceAfter = 3
+        Else
+            paraFormat22.Range.ParagraphFormat.alignment = wdAlignParagraphLeft
         End If
     Next paraFormat22
 End If

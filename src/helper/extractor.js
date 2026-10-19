@@ -1,4 +1,4 @@
-import { getTags, stripLabel, textOf, toInteger } from "./commons.js";
+import { getTags, stripLabel, toInteger } from "./commons.js";
 
 const WORK_SELECTORS = {
   title: "h2.title.heading",
@@ -55,6 +55,59 @@ const STAT_FIELDS = [
 
 const CHAPTER_NUMBER_PREFIX = /^Chapter\s+\d+\s*:?\s*/i;
 
+const BREAK_MARK = "\uE000";
+
+function textOf(element, rich = false) {
+  if (!element) return "";
+
+  const clone = element.cloneNode(true);
+
+  if (rich) {
+    // Images -> text placeholder.
+    clone.querySelectorAll("img").forEach((img) => {
+      const alt = (img.getAttribute("alt") || "").trim();
+      const src = img.getAttribute("src") || img.getAttribute("data-src") || "";
+      const label = [alt, src].filter(Boolean).join(": ");
+
+      img.replaceWith(` [Image${label ? `: ${label}` : ""}] `);
+    });
+
+    // Links
+    clone.querySelectorAll("a[href]").forEach((link) => {
+      const href = (link.getAttribute("href") || "").trim();
+
+      if (
+        !href ||
+        href.startsWith("#") ||
+        /^(mailto|javascript):/i.test(href)
+      ) {
+        return;
+      }
+
+      const url = href.startsWith("/")
+        ? `https://archiveofourown.org${href}`
+        : href;
+
+      const text = link.textContent.trim();
+
+      if (text.replace(/\/$/, "") === url.replace(/\/$/, "")) return;
+
+      link.after(` (${url})`);
+    });
+  }
+
+  clone
+    .querySelectorAll(CONTENT_SELECTORS.lineBreak)
+    .forEach((lineBreak) => lineBreak.replaceWith(BREAK_MARK));
+
+  return clone.textContent
+    .replace(/\s+/g, " ")
+    .split(BREAK_MARK)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
 // Convert an AO3 content block to readable plain text.
 function getContentText(container) {
   if (!container) return "";
@@ -68,9 +121,11 @@ function getContentText(container) {
   cloned
     .querySelectorAll(CONTENT_SELECTORS.removable)
     .forEach((element) => element.remove());
+
+  // Line breaks become markers; textOf() turns them into "\n" at the end.
   cloned
     .querySelectorAll(CONTENT_SELECTORS.lineBreak)
-    .forEach((lineBreak) => lineBreak.replaceWith("\n"));
+    .forEach((lineBreak) => lineBreak.replaceWith(BREAK_MARK));
 
   cloned.querySelectorAll(CONTENT_SELECTORS.lists).forEach((list) => {
     const isOrdered = list.tagName.toLowerCase() === "ol";
@@ -81,7 +136,8 @@ function getContentText(container) {
         const prefix = isOrdered ? `${index + 1}. ` : "- ";
         const paragraph = cloned.ownerDocument.createElement("p");
 
-        paragraph.textContent = `${prefix}${textOf(item)}`;
+        // Links/images inside the item are flattened to text
+        paragraph.textContent = `${prefix}${textOf(item, true).replace(/\n/g, BREAK_MARK)}`;
         list.parentNode?.insertBefore(paragraph, list);
       });
 
@@ -91,10 +147,12 @@ function getContentText(container) {
   const paragraphs = Array.from(
     cloned.querySelectorAll(CONTENT_SELECTORS.textBlocks),
   )
-    .map(textOf)
+    .map((block) => textOf(block, true))
     .filter(Boolean);
 
-  return paragraphs.length ? paragraphs.join("\n\n").trim() : textOf(cloned);
+  return paragraphs.length
+    ? paragraphs.join("\n\n").trim()
+    : textOf(cloned, true);
 }
 
 // Extract summary text without its leading label.
@@ -113,7 +171,7 @@ function getStoryParagraphs(userstuff) {
 
   return Array.from(userstuff.querySelectorAll(CONTENT_SELECTORS.paragraph))
     .filter((paragraph) => !paragraph.closest(NOTE_SELECTORS.summaryOrNotes))
-    .map(textOf)
+    .map((paragraph) => textOf(paragraph, true))
     .filter(Boolean);
 }
 
@@ -232,8 +290,7 @@ export function extractWorkData(doc, href) {
 }
 
 // Read trimmed text from a selected descendant.
-const getText = (el, selector) =>
-  el.querySelector(selector)?.textContent.trim() || "";
+const getText = (el, selector) => textOf(el.querySelector(selector));
 
 // Read an attribute from a selected descendant.
 const getAttr = (el, selector, attr) =>
@@ -252,7 +309,7 @@ export function extractAllValues(work) {
 
   return {
     id: link?.getAttribute("href")?.match(/\/works\/(\d+)/)?.[1] || "",
-    title: link?.textContent.trim() || "",
+    title: textOf(link),
     language: getAttr(work, BLURB_SELECTORS.language, "lang"),
     word_count: toInteger(stats.Words),
     chapters: stats.Chapters,

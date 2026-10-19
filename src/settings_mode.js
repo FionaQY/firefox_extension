@@ -27,7 +27,11 @@ import {
       type: "checkbox",
     },
     downloadWorks: {
-      label: "Download Works as docx (not formatted)",
+      label: "Mass Download Works as docx",
+      type: "checkbox",
+    },
+    bookmarkWorks: {
+      label: "Mass Bookmark Works",
       type: "checkbox",
     },
   };

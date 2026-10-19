@@ -108,6 +108,6 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   } else if (tab.url.includes("/works/")) {
     injectScript(tabId, "populate_bookmark");
   } else {
-    injectScript(tabId, "shrink_works", "download_list");
+    injectScript(tabId, "shrink_works", "download_list", "populate_bookmark");
   }
 });

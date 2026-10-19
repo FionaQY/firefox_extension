@@ -1,5 +1,5 @@
 /* globals browser */
-import { workToLines, linesToDataUrl } from "./download_file.js";
+import { workToLines, linesToDataUrl } from "./helper/download.js";
 import { safeFilename } from "./helper/commons.js";
 
 (async () => {

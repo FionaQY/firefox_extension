@@ -1,6 +1,7 @@
 /* globals browser */
-import { getSummary, getWorkUrl } from "./helper/commons";
-import { createNotifPopup, parseHtmlFragment } from "./helper/popup";
+import { getWorkUrl, getSeriesUrl } from "./helper/commons";
+import { createNotifPopup } from "./helper/popup";
+import { getBookmarkNotes } from "./helper/bookmark";
 
 (() => {
   if (typeof window.AO3BookmarkHandler === "function") {
@@ -8,68 +9,14 @@ import { createNotifPopup, parseHtmlFragment } from "./helper/popup";
   }
 
   const currentUrl = window.location.href;
-  const workUrl = getWorkUrl(currentUrl, false);
-  if (workUrl == "") {
-    createNotifPopup(
-      "Current page is not an AO3 work page. Unable to obtain workUrl",
-    );
-    return;
+
+  let isSeries = false;
+  let pageUrl = getWorkUrl(currentUrl, false);
+  if (!pageUrl) {
+    isSeries = true;
+    pageUrl = getSeriesUrl(currentUrl);
   }
-
-  async function getBookmarkHtml() {
-    let summaryData = await getSummary(currentUrl, workUrl, false);
-    if (!summaryData) return;
-    if (!summaryData.summary) {
-      const chapterUrl = getWorkUrl(currentUrl, true);
-      if (chapterUrl !== workUrl) {
-        summaryData = await getSummary(currentUrl, chapterUrl, false);
-      }
-      if (!summaryData) return;
-      if (!summaryData?.summary) {
-        createNotifPopup("Failed to load summary.");
-        return;
-      }
-    }
-
-    const { heading, summary, tags } = summaryData;
-
-    const container = document.createElement("div");
-    container.className = "bookmark-popup";
-
-    const outerDetails = document.createElement("details");
-    const outerSummary = document.createElement("summary");
-    outerSummary.className = "bookmark-summary-toggle";
-    outerDetails.appendChild(outerSummary);
-
-    const headingDiv = document.createElement("div");
-    headingDiv.className = "bookmark-heading";
-    headingDiv.appendChild(parseHtmlFragment(heading));
-    outerDetails.appendChild(headingDiv);
-
-    const summaryDiv = document.createElement("div");
-    summaryDiv.className = "bookmark-summary";
-    summaryDiv.textContent = summary;
-    outerDetails.appendChild(summaryDiv);
-
-    if (tags && Object.keys(tags).length > 0) {
-      const tagsDetails = document.createElement("details");
-      const tagsSummary = document.createElement("summary");
-      tagsSummary.className = "bookmark-summary-toggle";
-      tagsSummary.textContent = "Tags";
-      tagsDetails.appendChild(tagsSummary);
-
-      for (const [key, value] of Object.entries(tags)) {
-        const div = document.createElement("div");
-        div.className = "bookmark-tag-item";
-        div.textContent = `${key}(s): ${value.slice(0, 3).join(", ")}`;
-        tagsDetails.appendChild(div);
-      }
-      outerDetails.appendChild(tagsDetails);
-    }
-    container.append(outerDetails);
-
-    return container.outerHTML;
-  }
+  if (!pageUrl) return;
 
   function isVisible() {
     const bookmarkForm = document.getElementById("bookmark_form_placement");
@@ -81,18 +28,23 @@ import { createNotifPopup, parseHtmlFragment } from "./helper/popup";
 
   async function populateBookmark() {
     const { settings = {} } = await browser.storage.local.get("settings");
-    if (!settings["general"]["populateBookmark"]) {
-      return;
-    }
+    if (!settings.general?.populateBookmark) return;
 
     const bookmarkTextBox = document.getElementById("bookmark_notes");
+    if (!bookmarkTextBox) return;
+
     if (
-      settings["general"]["overrideBookmark"] ||
+      settings.general?.overrideBookmark ||
       bookmarkTextBox.value.trim().length === 0
     ) {
       createNotifPopup("Getting bookmark info...");
-      bookmarkTextBox.value = await getBookmarkHtml();
-      createNotifPopup("Bookmark textbox populated.");
+
+      try {
+        bookmarkTextBox.value = getBookmarkNotes(pageUrl, document, isSeries);
+        createNotifPopup("Bookmark textbox populated.");
+      } catch (err) {
+        createNotifPopup(`Could not populate bookmark: ${err.message}`);
+      }
     } else {
       createNotifPopup("No population as textbox is already populated");
     }
