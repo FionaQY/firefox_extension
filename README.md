@@ -46,6 +46,11 @@ firefox-extension/
 ├── manifest.json
 ├── background.js
 ├── content.bundle.js
+├── src/
+│   └── helper/
+│       ├── popup.js       # Popup and other extension UI
+│       ├── extractor.js   # AO3 page parsing and metadata extraction
+│       └── commons.js     # Shared text, URL, and page-loading helpers
 ├── content_scripts/
 ├── icons/
 ```

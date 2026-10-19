@@ -1,8 +1,18 @@
-import { getTags, stripLabel, toInteger } from "./commons.js";
+import {
+  BASE_URL,
+  BREAK_MARK,
+  escapeHtml,
+  stripLabel,
+  textOf,
+  toInteger,
+} from "./commons.js";
+
+export const WORK_BLURB_SELECTOR = ".work.blurb.group";
 
 const WORK_SELECTORS = {
   title: "h2.title.heading",
   author: "h3.byline.heading",
+  tagSummary: "div.summary.module",
   summary: ".preface .summary",
   startNotes: ".preface .notes.module",
   endNotes: "#work_endnotes, div.work.notes.module",
@@ -42,6 +52,47 @@ const BLURB_SELECTORS = {
   author: 'a[rel="author"]',
 };
 
+const SERIES_SELECTORS = {
+  title: "h2.heading",
+  metaLabels: "dl.series.meta dt",
+  authors: 'dl.series.meta a[rel="author"]',
+};
+
+const TAG_SELECTORS = {
+  work: {
+    rating: "dd.rating a",
+    warning: "dd.warning a",
+    category: "dd.category a",
+    fandom: "dd.fandom a",
+    relationship: "dd.relationship a",
+    character: "dd.character a",
+    freeform: "dd.freeform a",
+    series: "dd.series a",
+    collections: "dd.collections a",
+  },
+  series: {
+    rating: "li.ratings a",
+    warning: "li.warnings a",
+    category: "li.categories a",
+    fandom: "li.fandoms a",
+    relationship: "li.relationships a",
+    character: "li.characters a",
+    freeform: "li.freeforms a",
+    series: "li.series a",
+    collections: "li.collections a",
+  },
+};
+
+const LABELS = {
+  SUMMARY: "Summary:",
+  NOTES: "Notes:",
+  SERIES_CREATOR: "creator",
+  SERIES_DESCRIPTION: "description",
+  DEFAULT_AUTHOR: "Anonymous",
+  UNTITLED_WORK: "untitled",
+  UNKNOWN_AUTHOR: "unknown",
+};
+
 const STAT_FIELDS = [
   { label: "Published", selector: "dd.published" },
   { label: "Updated", selector: "dd.status" },
@@ -55,57 +106,79 @@ const STAT_FIELDS = [
 
 const CHAPTER_NUMBER_PREFIX = /^Chapter\s+\d+\s*:?\s*/i;
 
-const BREAK_MARK = "\uE000";
+const makeLink = (url, text) =>
+  `<a href="${escapeHtml(url)}">${escapeHtml(text)}</a>`;
 
-function textOf(element, rich = false) {
-  if (!element) return "";
+const buildHeading = (url, title, author) =>
+  `${makeLink(url, title)} by ${escapeHtml(author)}`;
 
-  const clone = element.cloneNode(true);
+function extractTags(root, needHref = false, isSeries = false) {
+  const tags = {};
+  const selectors = isSeries ? TAG_SELECTORS.series : TAG_SELECTORS.work;
 
-  if (rich) {
-    // Images -> text placeholder.
-    clone.querySelectorAll("img").forEach((img) => {
-      const alt = (img.getAttribute("alt") || "").trim();
-      const src = img.getAttribute("src") || img.getAttribute("data-src") || "";
-      const label = [alt, src].filter(Boolean).join(": ");
+  for (const category of Object.keys(selectors)) {
+    const anchors = root.querySelectorAll(selectors[category]);
+    if (anchors.length === 0) continue;
 
-      img.replaceWith(` [Image${label ? `: ${label}` : ""}] `);
-    });
-
-    // Links
-    clone.querySelectorAll("a[href]").forEach((link) => {
-      const href = (link.getAttribute("href") || "").trim();
-
-      if (
-        !href ||
-        href.startsWith("#") ||
-        /^(mailto|javascript):/i.test(href)
-      ) {
-        return;
-      }
-
-      const url = href.startsWith("/")
-        ? `https://archiveofourown.org${href}`
-        : href;
-
-      const text = link.textContent.trim();
-
-      if (text.replace(/\/$/, "") === url.replace(/\/$/, "")) return;
-
-      link.after(` (${url})`);
-    });
+    tags[category] = Array.from(
+      new Map(
+        Array.from(anchors, (anchor) => {
+          const text = textOf(anchor);
+          if (!needHref) return [text, text];
+          const url = new URL(anchor.getAttribute("href") || "", BASE_URL).href;
+          return [text, makeLink(url, text)];
+        }),
+      ).values(),
+    );
   }
+  return tags;
+}
 
-  clone
-    .querySelectorAll(CONTENT_SELECTORS.lineBreak)
-    .forEach((lineBreak) => lineBreak.replaceWith(BREAK_MARK));
+export function getWorkInfo(doc, url, needHref) {
+  return {
+    heading: buildHeading(
+      url,
+      textOf(doc.querySelector(WORK_SELECTORS.title)),
+      textOf(doc.querySelector(WORK_SELECTORS.author)),
+    ),
+    summary: textOf(doc.querySelector(WORK_SELECTORS.tagSummary)),
+    tags: extractTags(doc, needHref),
+  };
+}
 
-  return clone.textContent
-    .replace(/\s+/g, " ")
-    .split(BREAK_MARK)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .join("\n");
+function seriesMeta(doc, label) {
+  const dt = [...doc.querySelectorAll(SERIES_SELECTORS.metaLabels)].find((el) =>
+    el.textContent.trim().toLowerCase().startsWith(label),
+  );
+  return dt?.nextElementSibling ?? null;
+}
+
+export function getSeriesInfo(doc, url, needHref) {
+  const title = textOf(doc.querySelector(SERIES_SELECTORS.title));
+  if (!title) return null;
+
+  const authors = [
+    ...new Set(
+      [...doc.querySelectorAll(SERIES_SELECTORS.authors)]
+        .map((anchor) => textOf(anchor))
+        .filter(Boolean),
+    ),
+  ];
+  const author =
+    authors.join(", ") ||
+    textOf(seriesMeta(doc, LABELS.SERIES_CREATOR)) ||
+    LABELS.DEFAULT_AUTHOR;
+  return {
+    heading: buildHeading(url, title, author),
+    summary: textOf(seriesMeta(doc, LABELS.SERIES_DESCRIPTION)),
+    tags: extractTags(doc, needHref, true),
+    author,
+  };
+}
+
+export function extractWorkSummary(doc, url, needHref = true) {
+  if (!doc.querySelector(WORK_SELECTORS.title)) return null;
+  return getWorkInfo(doc, url, needHref);
 }
 
 // Convert an AO3 content block to readable plain text.
@@ -157,12 +230,12 @@ function getContentText(container) {
 
 // Extract summary text without its leading label.
 function getSummaryText(container) {
-  return stripLabel(getContentText(container), "Summary:");
+  return stripLabel(getContentText(container), LABELS.SUMMARY);
 }
 
 // Extract notes text without its leading label.
 function getNotesText(container) {
-  return stripLabel(getContentText(container), "Notes:");
+  return stripLabel(getContentText(container), LABELS.NOTES);
 }
 
 // Collect story paragraphs while excluding summaries and notes.
@@ -227,10 +300,12 @@ function collectChapterNotes(root, workEndNotesElement, checkOwnership) {
 
 // Extract structured metadata, chapters, and notes from a work page.
 export function extractWorkData(doc, href) {
-  const tagData = getTags(doc, href, false);
+  const tagData = getWorkInfo(doc, href, false);
   const summary = getSummaryText(doc.querySelector(WORK_SELECTORS.summary));
-  const title = textOf(doc.querySelector(WORK_SELECTORS.title)) || "untitled";
-  const author = textOf(doc.querySelector(WORK_SELECTORS.author)) || "unknown";
+  const title =
+    textOf(doc.querySelector(WORK_SELECTORS.title)) || LABELS.UNTITLED_WORK;
+  const author =
+    textOf(doc.querySelector(WORK_SELECTORS.author)) || LABELS.UNKNOWN_AUTHOR;
   const stats = extractStats(doc);
 
   const workStartNotes = getNotesText(
@@ -289,20 +364,16 @@ export function extractWorkData(doc, href) {
   };
 }
 
-// Read trimmed text from a selected descendant.
 const getText = (el, selector) => textOf(el.querySelector(selector));
 
-// Read an attribute from a selected descendant.
 const getAttr = (el, selector, attr) =>
   el.querySelector(selector)?.getAttribute(attr) || "";
 
-// Parse a date string, preserving the original text when it is invalid.
 const toDate = (raw) => {
   const date = new Date(raw);
-  return isNaN(date) ? raw : date;
+  return Number.isNaN(date.getTime()) ? raw : date;
 };
 
-// Extract filterable metadata from a work listing blurb.
 export function extractAllValues(work) {
   const link = work.querySelector(BLURB_SELECTORS.workLink);
   const stats = extractStats(work);
@@ -334,7 +405,11 @@ export const isValid = (relevantData, extractedData) =>
 export function workInfo(work) {
   const { id, title, authors_to_sort_on } = extractAllValues(work);
   if (!id) return null;
-  return { id, title, author: authors_to_sort_on || "Anonymous" };
+  return {
+    id,
+    title,
+    author: authors_to_sort_on || LABELS.DEFAULT_AUTHOR,
+  };
 }
 
 // ---------- language ----------

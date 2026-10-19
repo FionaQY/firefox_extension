@@ -4,6 +4,32 @@
   page content and Archive of Our Own page styles.
 */
 
+/* Shared dark theme and selection colors for every extension UI surface. */
+.ao3-popup-container,
+.ao3-notif-popup,
+.ao3-modal-overlay,
+.ao3-search-picker-overlay,
+mark.ao3-search-highlight,
+.ao3-dl-check,
+#ao3-dl-panel {
+  --ao3-bg: #1e1e2f;
+  --ao3-surface: #2a2a3d;
+  --ao3-surface-raised: #2f2f45;
+  --ao3-surface-hover: #3f3f55;
+  --ao3-border: #444;
+  --ao3-border-strong: #555;
+  --ao3-text: #eee;
+  --ao3-text-muted: #ccc;
+  --ao3-text-strong: #fff;
+  --ao3-accent: #4a90e2;
+  --ao3-accent-hover: #7a7aff;
+  --ao3-danger: #ee5555;
+  --ao3-success: #28a745;
+  --ao3-highlight: rgba(74, 144, 226, 0.35);
+  --ao3-highlight-text: #000;
+  --ao3-overlay: rgba(0, 0, 0, 0.7);
+}
+
 /* Popup Container Styles */
 /* Base popup container used by all extension overlay panels. */
 .ao3-popup-container {
@@ -11,14 +37,14 @@
   font-family: sans-serif;
   position: fixed;
   box-sizing: border-box;
-  background: #1e1e2f;
-  color: #eee;
-  border: 1px solid #444;
+  background: var(--ao3-bg);
+  color: var(--ao3-text);
+  border: 1px solid var(--ao3-border);
   height: auto;
   z-index: 99999;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   scrollbar-width: thin;
-  scrollbar-color: #555 #2e2e3e;
+  scrollbar-color: var(--ao3-border-strong) var(--ao3-surface);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -84,9 +110,9 @@
 /* Compact toast-style notification used for quick user feedback. */
 .ao3-notif-popup {
   position: fixed;
-  background: #1e1e2f;
-  color: #eee;
-  border: 1px solid #444;
+  background: var(--ao3-bg);
+  color: var(--ao3-text);
+  border: 1px solid var(--ao3-border);
   border-radius: 8px;
   padding: 0.5em 2em 0.5em 1em;
   max-width: 280px;
@@ -101,7 +127,7 @@
 
 /* Label Styles */
 .ao3-popup-label {
-  color: #ccc;
+  color: var(--ao3-text-muted);
   display: block;
   margin-bottom: 0.75em;
   font-size: 0.95rem;
@@ -144,10 +170,10 @@
   box-sizing: border-box;
   cursor: pointer;
   width: 100%;
-  border: 1px solid #444;
+  border: 1px solid var(--ao3-border);
   border-radius: 12px;
-  background-color: #252535;
-  color: white;
+  background-color: var(--ao3-surface);
+  color: var(--ao3-text-strong);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -173,8 +199,8 @@
 }
 
 .ao3-mode-button:hover {
-  background-color: #2f2f45;
-  border-color: #7a7aff;
+  background-color: var(--ao3-surface-hover);
+  border-color: var(--ao3-accent-hover);
   transform: translateY(-1px);
 }
 
@@ -231,7 +257,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--ao3-overlay);
   z-index: 10000;
   display: flex;
   align-items: center;
@@ -247,8 +273,8 @@
 }
 
 .ao3-modal-container {
-  background: #1e1e2f;
-  border: 1px solid #444;
+  background: var(--ao3-bg);
+  border: 1px solid var(--ao3-border);
   border-radius: 12px;
   padding: 2rem;
   max-width: 90vw;
@@ -266,7 +292,7 @@
 }
 
 .ao3-modal-title {
-  color: #eee;
+  color: var(--ao3-text);
   margin: 0;
   font-size: 1.5rem;
   font-family: inherit;
@@ -281,10 +307,10 @@
 
 /* Button Styles (Expand/Contract/Back) */
 .ao3-control-button {
-  background: #2f2f45;
-  border: 1px solid #555;
+  background: var(--ao3-surface-raised);
+  border: 1px solid var(--ao3-border-strong);
   border-radius: 8px;
-  color: #ccc;
+  color: var(--ao3-text-muted);
   font-size: 0.9rem;
   cursor: pointer;
   padding: 0.5em 1em;
@@ -293,9 +319,9 @@
 }
 
 .ao3-control-button:hover {
-  background-color: #3f3f55;
-  border-color: #7a7aff;
-  color: #fff;
+  background-color: var(--ao3-surface-hover);
+  border-color: var(--ao3-accent-hover);
+  color: var(--ao3-text-strong);
 }
 
 .ao3-expand-button {
@@ -310,7 +336,7 @@
   background: none;
   border: none;
   font-weight: bold;
-  color: #ccc;
+  color: var(--ao3-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -338,7 +364,7 @@
 
 .ao3-close-button:hover {
   background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  color: var(--ao3-text-strong);
 }
 
 /* Button Bar */
@@ -353,7 +379,7 @@
 .ao3-bar-button {
   flex: 1 1 auto;
   padding: 8px 12px;
-  color: white;
+  color: var(--ao3-text-strong);
   border: none;
   border-radius: 4px;
   font-size: 0.95rem;
@@ -365,19 +391,19 @@
 /* Button Colour Variants */
 /* These button colour variants are applied dynamically from JS as ao3-{variant}. */
 .ao3-primary {
-  background: #4a90e2;
+  background: var(--ao3-accent);
 }
 
 .ao3-danger {
-  background: #ee5555;
+  background: var(--ao3-danger);
 }
 
 .ao3-neutral {
-  background: #6c757d;
+  background: var(--ao3-surface-raised);
 }
 
 .ao3-success {
-  background: #28a745;
+  background: var(--ao3-success);
 }
 
 /* Search Bar */
@@ -387,19 +413,19 @@
   align-items: center;
   gap: 0.5em;
   padding: 0.5em;
-  background: #2a2a3d;
+  background: var(--ao3-surface);
   border-radius: 4px;
-  border: 1px solid #444;
+  border: 1px solid var(--ao3-border);
 }
 
 .ao3-search-input {
   flex: 1;
   padding: 8px 10px;
   font-size: 0.95rem;
-  border: 1px solid #555;
+  border: 1px solid var(--ao3-border-strong);
   border-radius: 4px;
-  background: #1e1e2f;
-  color: white;
+  background: var(--ao3-bg);
+  color: var(--ao3-text-strong);
   outline: none;
   min-width: 0;
   font-family: inherit;
@@ -408,7 +434,7 @@
 .ao3-search-button {
   padding: 8px 12px;
   background: transparent;
-  color: white;
+  color: var(--ao3-text-strong);
   border: none;
   border-radius: 4px;
   font-size: 0.95rem;
@@ -426,11 +452,11 @@
 }
 
 .ao3-search-button.active {
-  background: #4a90e2;
+  background: var(--ao3-accent);
 }
 
 .ao3-search-status {
-  color: #ccc;
+  color: var(--ao3-text-muted);
   font-size: 0.85rem;
   min-height: 1.2em;
   padding: 0.4em 0.2em 0;
@@ -442,14 +468,15 @@
 
 /* Search Matches */
 mark.ao3-search-highlight {
-  background: #ffe066;
-  color: #000;
+  background: var(--ao3-highlight);
+  color: var(--ao3-highlight-text);
   padding: 0;
 }
 
 mark.ao3-search-highlight.current {
-  background: #ff9f1c;
-  outline: 2px solid #ff9f1c;
+  background: var(--ao3-accent);
+  outline: 2px solid var(--ao3-accent);
+  color: var(--ao3-highlight-text);
 }
 
 /* Search picker overlay and controls */
@@ -466,8 +493,9 @@ mark.ao3-search-highlight.current {
 }
 
 .ao3-search-picker-box {
-  background: var(--ao3-popup-bg, #fff);
-  color: #000;
+  background: var(--ao3-bg);
+  color: var(--ao3-text);
+  border: 1px solid var(--ao3-border);
   border-radius: 12px;
   padding: 14px;
   width: 200px;
@@ -491,8 +519,8 @@ mark.ao3-search-highlight.current {
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch;
-  border-top: 1px solid #ccc;
-  border-bottom: 1px solid #ccc;
+  border-top: 1px solid var(--ao3-border-strong);
+  border-bottom: 1px solid var(--ao3-border-strong);
   padding: 45px 0;
   box-sizing: border-box;
 }
@@ -505,11 +533,17 @@ mark.ao3-search-highlight.current {
   cursor: pointer;
 }
 
+.ao3-search-picker-item.current {
+  background: var(--ao3-highlight);
+  color: var(--ao3-text-strong);
+  font-weight: bold;
+}
+
 .ao3-search-picker-close {
   padding: 4px 14px;
   border: none;
-  background: #900;
-  color: #fff;
+  background: var(--ao3-accent);
+  color: var(--ao3-text-strong);
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
@@ -546,11 +580,7 @@ mark.ao3-search-highlight.current {
 }
 
 .ao3-search-bar.mobile {
-  display: flex;
-  flex-wrap: nowrap;
   gap: 4px;
-  align-items: center;
-  height: auto;
 }
 
 /* Options Form */
@@ -590,7 +620,7 @@ mark.ao3-search-highlight.current {
 }
 
 .ao3-field-label {
-  color: #ccc;
+  color: var(--ao3-text-muted);
   font-size: 0.9rem;
   display: block;
 }
@@ -603,10 +633,10 @@ mark.ao3-search-highlight.current {
   width: 100%;
   padding: 8px;
   font-size: 0.95rem;
-  border: 1px solid #555;
+  border: 1px solid var(--ao3-border-strong);
   border-radius: 4px;
-  background-color: #2a2a3d;
-  color: white;
+  background-color: var(--ao3-surface);
+  color: var(--ao3-text-strong);
   box-sizing: border-box;
   font-family: inherit;
 }
@@ -620,7 +650,7 @@ textarea.ao3-field-input {
 .ao3-field-checkbox {
   width: 18px;
   height: 18px;
-  accent-color: #ee5555;
+  accent-color: var(--ao3-accent);
   cursor: pointer;
 }
 
@@ -633,22 +663,22 @@ textarea.ao3-field-input {
 
 .ao3-drop-column {
   flex: 1;
-  background: #2a2a3d;
+  background: var(--ao3-surface);
   padding: 0.5em;
   border-radius: 6px;
   min-height: 150px;
   display: flex;
   flex-direction: column;
   gap: 0.4em;
-  border: 2px solid #444;
+  border: 2px solid var(--ao3-border);
 }
 
 .ao3-drop-column.show {
-  border-color: #4caf50;
+  border-color: var(--ao3-success);
 }
 
 .ao3-drop-column.hide {
-  border-color: #f44336;
+  border-color: var(--ao3-danger);
 }
 
 .ao3-drop-column-header {
@@ -656,20 +686,20 @@ textarea.ao3-field-input {
   margin-bottom: 0.5em;
   font-size: 1rem;
   text-align: center;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid var(--ao3-border);
   padding-bottom: 0.25em;
 }
 
 .ao3-drop-column.show .ao3-drop-column-header {
-  color: #4caf50;
+  color: var(--ao3-success);
 }
 
 .ao3-drop-column.hide .ao3-drop-column-header {
-  color: #f44336;
+  color: var(--ao3-danger);
 }
 
 .ao3-drop-item {
-  background: #3a3a4d;
+  background: var(--ao3-surface-raised);
   padding: 0.4em 0.6em;
   border-radius: 4px;
   cursor: grab;
@@ -758,7 +788,7 @@ li.blurb.group {
   width: 15px !important;
   height: 15px !important;
   cursor: pointer !important;
-  accent-color: #900 !important; /* Matches default AO3 red accent */
+  accent-color: var(--ao3-accent) !important;
   margin: 0 !important;
   vertical-align: middle !important;
 }
@@ -772,10 +802,10 @@ li.blurb.group {
   left: auto !important;
   z-index: 999999 !important;
 
-  background: #1e1e2f !important;
-  color: #eee !important;
+  background: var(--ao3-bg) !important;
+  color: var(--ao3-text) !important;
 
-  border: 1px solid #444 !important;
+  border: 1px solid var(--ao3-border) !important;
   border-radius: 10px !important;
 
   padding: 10px 14px !important;
@@ -790,13 +820,9 @@ li.blurb.group {
 
 /* Panel label styling */
 #ao3-dl-panel label {
-  color: #eee !important;
+  color: var(--ao3-text) !important;
   font-weight: normal !important;
   margin: 0 !important;
-}
-
-.ao3-dl-btn {
-  color: #000000 !important;
 }
 
 /* Buttons inside download panel */
@@ -804,17 +830,17 @@ li.blurb.group {
   cursor: pointer !important;
   padding: 6px 12px !important;
   border-radius: 6px !important;
-  border: 1px solid #555 !important;
-  background: #2f2f45 !important;
-  color: #fff !important;
+  border: 1px solid var(--ao3-border-strong) !important;
+  background: var(--ao3-surface-raised) !important;
+  color: var(--ao3-text-strong) !important;
   font-size: 13px !important;
   font-family: inherit !important;
   transition: background 0.2s ease !important;
 }
 
 #ao3-dl-panel button:hover {
-  background: #3f3f55 !important;
-  border-color: #7a7aff !important;
+  background: var(--ao3-surface-hover) !important;
+  border-color: var(--ao3-accent-hover) !important;
 }
 
 #ao3-dl-panel button:disabled {
@@ -824,5 +850,5 @@ li.blurb.group {
 
 #ao3-dl-status {
   font-size: 12px !important;
-  color: #ccc !important;
+  color: var(--ao3-text-muted) !important;
 }

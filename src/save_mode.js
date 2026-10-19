@@ -1,15 +1,18 @@
 /* globals browser */
 import {
-  optionsPopupHelper,
-  createPopupContainer,
-  resetInputs,
   saveSettings,
   getSettings,
+  openModePopup,
+  removeModePopup,
 } from "./helper/popup";
+import {
+  MOBILE_MAX_WIDTH,
+  optionsPopupHelper,
+  resetInputs,
+} from "./helper/popup_fields";
 
 (() => {
-  const popupId = "ao3-qof-popup";
-  document.getElementById(popupId)?.remove();
+  removeModePopup();
 
   const fields = {
     query: {
@@ -108,7 +111,7 @@ import {
   async function openFilterPopup() {
     const settings = await getSettings();
     const filters = settings.filters || {};
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
 
     const [inputsMap, contentContainer] = optionsPopupHelper(
       fields,
@@ -148,13 +151,11 @@ import {
       },
     ];
 
-    const popup = createPopupContainer(popupId, isMobile, {
+    openModePopup(isMobile, {
       content: contentContainer,
       buttons: buttons,
       extraClasses: isMobile ? [] : ["flush-bottom"],
     });
-
-    document.body.appendChild(popup);
   }
 
   openFilterPopup();

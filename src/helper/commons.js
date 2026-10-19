@@ -1,13 +1,16 @@
-import { createNotifPopup } from "./popup.js";
-
 export const BASE_URL = "https://archiveofourown.org";
 
 export const BREAK_MARK = "\uE000";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 const HTTP_RATE_LIMITED = 429;
-const DEFAULT_SERIES_AUTHOR = "Anonymous";
 const IFRAME_CLASS = "ao3-offscreen-iframe";
+
+const SELECTORS = {
+  IMAGE: "img",
+  LINK_WITH_HREF: "a[href]",
+  LINE_BREAK: "br",
+};
 
 const RE = {
   WORK_PATH: /\/works\/(\d+)(?:\/chapters\/(\d+))?/,
@@ -20,37 +23,7 @@ const RE = {
   NON_NAVIGABLE_HREF: /^(mailto|javascript):/i,
 };
 
-const SEL = {
-  WORK_TITLE: "h2.title.heading",
-  WORK_BYLINE: "h3.byline.heading",
-  WORK_SUMMARY: "div.summary.module",
-  SERIES_TITLE: "h2.heading",
-  SERIES_META_LABELS: "dl.series.meta dt",
-  SERIES_AUTHORS: 'dl.series.meta a[rel="author"]',
-};
-
-const SERIES_LABEL = {
-  CREATOR: "creator",
-  DESCRIPTION: "description",
-};
-
-const TAG_CATEGORIES = [
-  "rating",
-  "warning",
-  "category",
-  "fandom",
-  "relationship",
-  "character",
-  "freeform",
-  "series",
-  "collections",
-];
-
-const tagLinkSelector = (category) => `dd.${category} a`;
-
 const MSG = {
-  SUMMARY_FAILED: "Failed to load summary.",
-  SUMMARY_ERROR: (reason) => `Error loading work: ${reason}`,
   RATE_LIMITED: "Rate limited by AO3 (429)",
   TIMED_OUT: (url, ms) => `Timed out loading ${url} after ${ms}ms`,
   IFRAME_FAILED: (url) => `Failed to load ${url}`,
@@ -88,7 +61,7 @@ const isNavigableHref = (href) =>
   Boolean(href) && !href.startsWith("#") && !RE.NON_NAVIGABLE_HREF.test(href);
 
 function replaceImagesWithPlaceholders(root) {
-  for (const img of root.querySelectorAll("img")) {
+  for (const img of root.querySelectorAll(SELECTORS.IMAGE)) {
     const alt = (img.getAttribute("alt") || "").trim();
     const src = img.getAttribute("src") || img.getAttribute("data-src") || "";
     const label = [alt, src].filter(Boolean).join(": ");
@@ -99,7 +72,7 @@ function replaceImagesWithPlaceholders(root) {
 
 // Links keep their text and get the URL appended.
 function appendLinkUrls(root) {
-  for (const anchor of root.querySelectorAll("a[href]")) {
+  for (const anchor of root.querySelectorAll(SELECTORS.LINK_WITH_HREF)) {
     const href = (anchor.getAttribute("href") || "").trim();
     if (!isNavigableHref(href)) continue;
 
@@ -124,7 +97,7 @@ export function textOf(element, rich = false) {
   }
 
   clone
-    .querySelectorAll("br")
+    .querySelectorAll(SELECTORS.LINE_BREAK)
     .forEach((lineBreak) => lineBreak.replaceWith(BREAK_MARK));
 
   return collapseWhitespace(clone.textContent)
@@ -173,14 +146,6 @@ const HTML_ESCAPES = {
 
 export const escapeHtml = (value) =>
   String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
-
-// Escaped <a> tag.
-const link = (url, text) =>
-  `<a href="${escapeHtml(url)}">${escapeHtml(text)}</a>`;
-
-// "<a>Title</a> by Author" as an HTML string.
-const buildHeading = (url, title, author) =>
-  `${link(url, title)} by ${escapeHtml(author)}`;
 
 /* ==========================================================================
  * URLS & LOADING PAGES
@@ -264,103 +229,4 @@ export function loadInIframe(url, parse, timeout = DEFAULT_TIMEOUT_MS) {
     iframe.src = url;
     document.body.appendChild(iframe);
   });
-}
-
-/* ==========================================================================
- * TAGS & SUMMARY
- * ========================================================================== */
-function extractTags(doc, needHref) {
-  const tags = {};
-
-  for (const category of TAG_CATEGORIES) {
-    const anchors = [...doc.querySelectorAll(tagLinkSelector(category))];
-    if (!anchors.length) continue;
-
-    tags[category] = anchors.map((anchor) =>
-      needHref
-        ? link(toAbsoluteUrl(anchor.getAttribute("href") || ""), textOf(anchor))
-        : textOf(anchor),
-    );
-  }
-
-  return tags;
-}
-
-export function getTags(doc, url, needHref) {
-  return {
-    heading: buildHeading(
-      url,
-      textOf(doc.querySelector(SEL.WORK_TITLE)),
-      textOf(doc.querySelector(SEL.WORK_BYLINE)),
-    ),
-    summary: textOf(doc.querySelector(SEL.WORK_SUMMARY)),
-    tags: extractTags(doc, needHref),
-  };
-}
-
-// The <dd> that follows a <dt> whose label starts with `label`.
-function seriesMeta(doc, label) {
-  const dt = [...doc.querySelectorAll(SEL.SERIES_META_LABELS)].find((el) =>
-    el.textContent.trim().toLowerCase().startsWith(label),
-  );
-  return dt?.nextElementSibling ?? null;
-}
-
-export function getSeriesInfo(doc, url) {
-  const title = textOf(doc.querySelector(SEL.SERIES_TITLE));
-  if (!title) return null;
-
-  const authors = [
-    ...new Set(
-      [...doc.querySelectorAll(SEL.SERIES_AUTHORS)]
-        .map((anchor) => textOf(anchor))
-        .filter(Boolean),
-    ),
-  ];
-  const author =
-    authors.join(", ") ||
-    textOf(seriesMeta(doc, SERIES_LABEL.CREATOR)) ||
-    DEFAULT_SERIES_AUTHOR;
-
-  return {
-    heading: buildHeading(url, title, author),
-    summary: textOf(seriesMeta(doc, SERIES_LABEL.DESCRIPTION)),
-    tags: [],
-    author,
-  };
-}
-
-// Reads from the live page when we're already on `url`, otherwise fetches it.
-async function summaryFrom(currentUrl, url, readySelector, parse) {
-  if (currentUrl === url) {
-    return document.querySelector(readySelector) ? parse(document) : null;
-  }
-  return parse(await fetchDoc(url));
-}
-
-export const getSummaryFromWork = (currentUrl, url, needHref) =>
-  summaryFrom(currentUrl, url, SEL.WORK_TITLE, (doc) =>
-    getTags(doc, url, needHref),
-  );
-
-export const getSummaryFromSeries = (currentUrl, url) =>
-  summaryFrom(currentUrl, url, SEL.SERIES_TITLE, (doc) =>
-    getSeriesInfo(doc, url),
-  );
-
-export async function getSummary(currentUrl, url, needHref = true) {
-  console.log(`Getting summary from ${url}...`);
-
-  try {
-    const data = await getSummaryFromWork(currentUrl, url, needHref);
-    if (!data) {
-      createNotifPopup(MSG.SUMMARY_FAILED, 0);
-      return null;
-    }
-    return data;
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    createNotifPopup(MSG.SUMMARY_ERROR(reason), 0);
-    return null;
-  }
 }

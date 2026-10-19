@@ -2,16 +2,19 @@
 /* globals browser */
 /* eslint-enable no-unused-vars */
 import {
-  optionsPopupHelper,
-  createPopupContainer,
-  resetInputs,
   saveSettings,
   getSettings,
+  openModePopup,
+  removeModePopup,
 } from "./helper/popup";
+import {
+  MOBILE_MAX_WIDTH,
+  optionsPopupHelper,
+  resetInputs,
+} from "./helper/popup_fields";
 
 (() => {
-  const popupId = "ao3-qof-popup";
-  document.getElementById(popupId)?.remove();
+  removeModePopup();
 
   const fields = {
     hideEntirely: {
@@ -51,7 +54,7 @@ import {
   async function openHideWorksPopup() {
     const settings = await getSettings();
     let workSettings = settings.workSettings || {};
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
 
     // Create content with fields (no hint)
     const [inputsMap, contentContainer] = optionsPopupHelper(
@@ -74,7 +77,7 @@ import {
           }
           settings.workSettings = workSettings;
           await saveSettings(settings);
-          document.getElementById(popupId)?.remove();
+          removeModePopup();
         },
       },
       {
@@ -91,13 +94,11 @@ import {
     ];
 
     // Create popup
-    const popup = createPopupContainer(popupId, isMobile, {
+    openModePopup(isMobile, {
       content: contentContainer,
       buttons: buttons,
       extraClasses: isMobile ? [] : ["flush-bottom"],
     });
-
-    document.body.appendChild(popup);
   }
 
   openHideWorksPopup();

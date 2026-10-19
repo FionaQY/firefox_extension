@@ -1,5 +1,9 @@
 /* globals browser */
-import { isValid, extractRelevantData } from "./helper/extractor";
+import {
+  isValid,
+  extractRelevantData,
+  WORK_BLURB_SELECTOR,
+} from "./helper/extractor";
 
 (() => {
   browser.runtime.onMessage.addListener(async (msg) => {
@@ -18,7 +22,7 @@ import { isValid, extractRelevantData } from "./helper/extractor";
     }
 
     console.log(`Scrolling now...`);
-    const works = document.querySelectorAll(".work.blurb.group");
+    const works = document.querySelectorAll(WORK_BLURB_SELECTOR);
     for (let i = works.length - 1; i > 0; i--) {
       const work = works[i];
 

@@ -1,23 +1,22 @@
 /* globals browser */
 import { workToLines, linesToDataUrl, mergeWorks } from "./helper/download.js";
 import {
-  getSeriesInfo,
   getWorkUrl,
   fetchDoc,
   safeFilename,
   textOf,
+  BASE_URL,
 } from "./helper/commons.js";
-import { workInfo } from "./helper/extractor.js";
+import { getSeriesInfo, workInfo } from "./helper/extractor.js";
 import { bookmarkWork } from "./helper/bookmark.js";
+import { getButton, createNotifPopup } from "./helper/popup.js";
 import {
   createLabeledCheckbox,
-  getButton,
-  createNotifPopup,
-} from "./helper/popup.js";
+  MOBILE_MAX_WIDTH,
+} from "./helper/popup_fields.js";
 
 const DELAY_MS = 3000;
 const MAX_SERIES_PAGES = 50;
-const MOBILE_MAX_WIDTH = 768;
 
 const TYPE = { WORK: "work", SERIES: "series" };
 const MSG_DOWNLOAD_DOC = "downloadDoc";
@@ -40,8 +39,11 @@ const SEL = {
   WORK_BLURB: "li.work.blurb.group",
   SERIES_META: "dl.series.meta",
   SERIES_LINK: "h4.heading a[href^='/series/']",
+  SERIES_TITLE: "h2.heading",
   NEXT_PAGE: "ol.pagination li.next a",
 };
+
+const FALLBACK_SERIES_TITLE = "series";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -53,7 +55,8 @@ function seriesInfo(el) {
 
   const m = location.pathname.match(/^\/series\/(\d+)/);
   if (m && el.matches(SEL.SERIES_META)) {
-    const title = textOf(document.querySelector("h2.heading")) || "series";
+    const title =
+      textOf(document.querySelector(SEL.SERIES_TITLE)) || FALLBACK_SERIES_TITLE;
     return { id: m[1], title };
   }
   return null;
@@ -99,13 +102,13 @@ function injectCheckboxes() {
  * ========================================================================== */
 async function loadWork(id) {
   const doc = await fetchDoc(
-    `${location.origin}/works/${id}?view_full_work=true&view_adult=true`,
+    `${BASE_URL}/works/${id}?view_full_work=true&view_adult=true`,
   );
-  return workToLines(doc, `${location.origin}/works/${id}`);
+  return workToLines(doc, `${BASE_URL}/works/${id}`);
 }
 
 async function fetchSeriesWorks(id, onPage) {
-  const seriesUrl = `${location.origin}/series/${id}`;
+  const seriesUrl = `${BASE_URL}/series/${id}`;
   const works = [];
   let info = null;
 
@@ -191,9 +194,6 @@ async function downloadBundle(loaded, seriesList, standalone) {
   await downloadDoc(mergeWorks(loaded, series), name, true);
 }
 
-/* ==========================================================================
- * PANEL
- * ========================================================================== */
 function buildPanel({ downloadOn, bookmarkOn }) {
   const compact = window.innerWidth <= MOBILE_MAX_WIDTH;
 

@@ -1,9 +1,104 @@
 /* globals browser */
 import {
   createNotifPopup,
-  createPopupContainer,
   getSettings,
+  openModePopup,
 } from "./src/helper/popup";
+import { MOBILE_MAX_WIDTH } from "./src/helper/popup_fields";
+
+const MODE_ID = { SETTINGS: "settings" };
+const ACTION = { EXECUTE_MODE: "executeMode" };
+const CLASS = {
+  MOBILE: "mobile",
+  DESKTOP: "desktop",
+  MODE_BUTTON: "ao3-mode-button",
+  MODE_ICON: "ao3-mode-button-icon",
+  MODE_LABEL: "ao3-mode-button-text",
+  CONTENT: "ao3-popup-content",
+  LABEL: "ao3-popup-label",
+  BUTTON_GRID: "ao3-button-grid",
+  MODE_CONTAINER: "modes",
+};
+
+const MESSAGE = {
+  SELECT_MODE: "Select mode:",
+  MODE_START_ERROR: (mode, reason) => `Could not start ${mode} mode: ${reason}`,
+};
+
+const MODE_OPTIONS = {
+  block: { icon: "🚫", label: "Block Tag/Author" },
+  forgot: { icon: "🤔", label: "I forgor" },
+  apply: { icon: "✅", label: "Apply Default Filters" },
+  save: { icon: "💾", label: "Set Default Filters" },
+  hide: { icon: "🫣", label: "Hide Works" },
+  search: { icon: "🔍", label: "Search Bar" },
+  download: { icon: "📥", label: "Download Doc" },
+  [MODE_ID.SETTINGS]: { icon: "⚙️", label: "Settings" },
+};
+
+function getPopupOptions(settings) {
+  if (!("popupOptions" in settings)) return Object.keys(MODE_OPTIONS);
+  return [...(settings.popupOptions || []), MODE_ID.SETTINGS];
+}
+
+function createModeButton(mode, isMobile, popup) {
+  const { icon = "", label = "" } = MODE_OPTIONS[mode] || {};
+  const deviceClass = isMobile ? CLASS.MOBILE : CLASS.DESKTOP;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.mode = mode;
+  button.classList.add(CLASS.MODE_BUTTON, deviceClass);
+
+  const iconElement = document.createElement("div");
+  iconElement.textContent = icon;
+  iconElement.classList.add(CLASS.MODE_ICON, deviceClass);
+
+  const labelElement = document.createElement("div");
+  labelElement.textContent = label;
+  labelElement.classList.add(CLASS.MODE_LABEL, deviceClass);
+  button.append(iconElement, labelElement);
+
+  button.addEventListener("click", () => {
+    browser.runtime
+      .sendMessage({ action: ACTION.EXECUTE_MODE, mode })
+      .then(() => popup.remove())
+      .catch((error) => {
+        const reason = error instanceof Error ? error.message : String(error);
+        createNotifPopup(MESSAGE.MODE_START_ERROR(mode, reason));
+      });
+  });
+
+  return button;
+}
+
+async function showPopup() {
+  const settings = await getSettings();
+  const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
+  const deviceClass = isMobile ? CLASS.MOBILE : CLASS.DESKTOP;
+  const popupOptions = getPopupOptions(settings);
+
+  const content = document.createElement("div");
+  content.classList.add(CLASS.CONTENT, deviceClass);
+
+  const label = document.createElement("label");
+  label.textContent = MESSAGE.SELECT_MODE;
+  label.classList.add(CLASS.LABEL, deviceClass);
+
+  const grid = document.createElement("div");
+  grid.classList.add(CLASS.BUTTON_GRID, deviceClass);
+
+  const popup = openModePopup(isMobile, {
+    content,
+    extraClasses: [CLASS.MODE_CONTAINER],
+  });
+
+  for (const mode of popupOptions.filter(Boolean)) {
+    grid.appendChild(createModeButton(mode, isMobile, popup));
+  }
+  content.append(label, grid);
+  document.body.appendChild(popup);
+}
 
 (() => {
   function injectStyles() {
@@ -23,173 +118,4 @@ import {
       await showPopup();
     }
   });
-
-  const modeTextMap = {
-    block: { icon: "🚫", label: "Block Tag/Author" },
-    forgot: { icon: "🤔", label: "I forgor" },
-    apply: { icon: "✅", label: "Apply Default Filters" },
-    save: { icon: "💾", label: "Set Default Filters" },
-    hide: { icon: "🫣", label: "Hide Works" },
-    search: { icon: "🔍", label: "Search Bar" },
-    download: { icon: "📥", label: "Download Doc" },
-    settings: { icon: "⚙️", label: "Settings" },
-  };
-
-  async function showPopup() {
-    const popupId = "ao3-qof-popup";
-    if (document.getElementById(popupId)) {
-      document.getElementById(popupId).remove();
-    }
-
-    const settings = await getSettings();
-    const isMobile = window.innerWidth <= 768;
-
-    function createButton(val, isExpanded = false) {
-      const { icon = "", label = "" } = modeTextMap[val] || {};
-
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.mode = val;
-
-      button.classList.add("ao3-mode-button");
-      if (isExpanded) {
-        button.classList.add("expanded");
-      } else {
-        button.classList.add(isMobile ? "mobile" : "desktop");
-      }
-
-      const iconEl = document.createElement("div");
-      iconEl.textContent = icon;
-      iconEl.classList.add("ao3-mode-button-icon");
-      if (isExpanded) {
-        iconEl.classList.add("expanded");
-      } else {
-        iconEl.classList.add(isMobile ? "mobile" : "desktop");
-      }
-
-      const textEl = document.createElement("div");
-      textEl.textContent = label;
-      textEl.classList.add("ao3-mode-button-text");
-      if (isExpanded) {
-        textEl.classList.add("expanded");
-      } else {
-        textEl.classList.add(isMobile ? "mobile" : "desktop");
-      }
-
-      button.appendChild(iconEl);
-      button.appendChild(textEl);
-
-      button.addEventListener("click", () => {
-        browser.runtime
-          .sendMessage({
-            action: "executeMode",
-            mode: val,
-          })
-          .then(() => {
-            popup.remove();
-          })
-          .catch((error) => {
-            const message =
-              error instanceof Error ? error.message : String(error);
-            createNotifPopup(`Could not start ${val} mode: ${message}`);
-          });
-      });
-
-      return button;
-    }
-
-    let popupOptions = settings.popupOptions || [];
-    const allModes = Object.keys(modeTextMap);
-    if (!("popupOptions" in settings)) {
-      popupOptions = allModes;
-    } else {
-      popupOptions = [...popupOptions, "settings"];
-    }
-
-    // Create expanded fullscreen modal (desktop only)
-    function createExpandedModal() {
-      const modalId = "ao3-qof-modal";
-      document.getElementById(modalId)?.remove();
-
-      const modal = document.createElement("div");
-      modal.id = modalId;
-      modal.classList.add("ao3-modal-overlay");
-
-      const container = document.createElement("div");
-      container.classList.add("ao3-modal-container");
-
-      const header = document.createElement("div");
-      header.classList.add("ao3-modal-header");
-
-      const title = document.createElement("h2");
-      title.textContent = "Select Mode";
-      title.classList.add("ao3-modal-title");
-      header.appendChild(title);
-
-      const contractBtn = document.createElement("button");
-      contractBtn.textContent = "⇦ Contract";
-      contractBtn.classList.add("ao3-control-button");
-      contractBtn.addEventListener("click", () => {
-        modal.remove();
-        showPopup();
-      });
-      header.appendChild(contractBtn);
-
-      container.appendChild(header);
-
-      const expandedGrid = document.createElement("div");
-      expandedGrid.classList.add("ao3-expanded-grid");
-
-      popupOptions.forEach((val) => {
-        if (val === "") return;
-        const expandedButton = createButton(val, true);
-        expandedGrid.appendChild(expandedButton);
-      });
-
-      container.appendChild(expandedGrid);
-
-      const footer = document.createElement("div");
-      footer.classList.add("ao3-modal-footer");
-
-      container.appendChild(footer);
-      modal.appendChild(container);
-      document.body.appendChild(modal);
-    }
-
-    const content = document.createElement("div");
-    content.classList.add("ao3-popup-content", isMobile ? "mobile" : "desktop");
-
-    const label = document.createElement("label");
-    label.textContent = "Select mode:";
-    label.classList.add("ao3-popup-label", isMobile ? "mobile" : "desktop");
-    content.appendChild(label);
-
-    const grid = document.createElement("div");
-    grid.classList.add("ao3-button-grid", isMobile ? "mobile" : "desktop");
-
-    popupOptions.forEach((val) => {
-      if (val === "") return;
-      grid.appendChild(createButton(val, false));
-    });
-
-    content.appendChild(grid);
-
-    if (!isMobile) {
-      const expandBtn = document.createElement("button");
-      expandBtn.textContent = "⛶ Expand";
-      expandBtn.classList.add("ao3-control-button", "ao3-expand-button");
-      expandBtn.addEventListener("click", () => {
-        createExpandedModal();
-        popup.remove();
-      });
-      content.appendChild(expandBtn);
-    }
-
-    const popup = createPopupContainer(popupId, isMobile, {
-      content: content,
-      extraClasses: ["modes"],
-    });
-
-    document.body.appendChild(popup);
-  }
 })();

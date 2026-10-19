@@ -1,9 +1,27 @@
-import { fetchDoc, getTags, getSeriesInfo, stripLabel } from "./commons.js";
+import { fetchDoc, stripLabel, BASE_URL } from "./commons.js";
+import { getWorkInfo, getSeriesInfo } from "./extractor.js";
 import { parseHtmlFragment } from "./popup.js";
 
-const ORIGIN = "https://archiveofourown.org";
+const SELECTORS = {
+  FORM: "form#new_bookmark, #bookmark_form_placement form",
+  EDIT_METHOD: 'input[name="_method"][value="patch"]',
+  NOTES_FIELD: "#bookmark_notes, textarea[name*='notes']",
+  PRIVATE_FIELD: 'input[type="checkbox"][name="bookmark[private]"]',
+};
 
-function buildNotesHtml({ heading, summary, tags }) {
+const LABELS = {
+  SUMMARY: "Summary:",
+  TAGS: "Tags",
+  CREATE_BOOKMARK: "Create",
+};
+
+const MESSAGES = {
+  PAGE_DETAILS_UNAVAILABLE: "could not read the page details",
+  FORM_UNAVAILABLE: "bookmark form not found (are you logged in?)",
+  NOTES_FIELD_UNAVAILABLE: "notes field not found",
+};
+
+function buildNotesHtml({ heading, summary, tags, includeAllTags = false }) {
   const container = document.createElement("div");
   container.className = "bookmark-popup";
 
@@ -26,14 +44,15 @@ function buildNotesHtml({ heading, summary, tags }) {
     const tagsDetails = document.createElement("details");
     const tagsSummary = document.createElement("summary");
     tagsSummary.className = "bookmark-summary-toggle";
-    tagsSummary.textContent = "Tags";
+    tagsSummary.textContent = LABELS.TAGS;
     tagsDetails.appendChild(tagsSummary);
 
-    for (const [key, value] of Object.entries(tags)) {
+    for (const [category, value] of Object.entries(tags)) {
       if (!value?.length) continue;
       const div = document.createElement("div");
       div.className = "bookmark-tag-item";
-      div.textContent = `${key}(s): ${value.slice(0, 3).join(", ")}`;
+      const displayedTags = includeAllTags ? value : value.slice(0, 3);
+      div.textContent = `${category}(s): ${displayedTags.join(", ")}`;
       tagsDetails.appendChild(div);
     }
     outerDetails.appendChild(tagsDetails);
@@ -44,13 +63,15 @@ function buildNotesHtml({ heading, summary, tags }) {
 }
 
 export function getBookmarkNotes(url, doc, isSeries = false) {
-  const info = isSeries ? getSeriesInfo(doc, url) : getTags(doc, url, false);
-  if (!info) throw new Error("could not read the page details");
+  const info = isSeries
+    ? getSeriesInfo(doc, url, false)
+    : getWorkInfo(doc, url, false);
+  if (!info) throw new Error(MESSAGES.PAGE_DETAILS_UNAVAILABLE);
 
   return buildNotesHtml({
     heading: info.heading,
-    summary: stripLabel(info.summary || "", "Summary:"),
-    tags: info.tags,
+    summary: stripLabel(info?.summary || "", LABELS.SUMMARY),
+    tags: info?.tags,
   });
 }
 
@@ -59,30 +80,24 @@ export function populateBookmarkField(
   doc,
   { makePrivate = false, overrideNotes = false, isSeries = false } = {},
 ) {
-  const form = doc.querySelector(
-    "form#new_bookmark, #bookmark_form_placement form",
-  );
+  const form = doc.querySelector(SELECTORS.FORM);
   if (!form) {
-    throw new Error("bookmark form not found (are you logged in?)");
+    throw new Error(MESSAGES.FORM_UNAVAILABLE);
   }
 
   // An existing bookmark turns the form into an edit form.
   const isEdit =
-    form.querySelector('input[name="_method"][value="patch"]') ||
+    form.querySelector(SELECTORS.EDIT_METHOD) ||
     /\/bookmarks\/\d+/.test(form.getAttribute("action") || "");
   if (isEdit && !overrideNotes) return null;
 
-  const notesField = form.querySelector(
-    "#bookmark_notes, textarea[name*='notes']",
-  );
-  if (!notesField) throw new Error("notes field not found");
+  const notesField = form.querySelector(SELECTORS.NOTES_FIELD);
+  if (!notesField) throw new Error(MESSAGES.NOTES_FIELD_UNAVAILABLE);
 
   const data = new FormData(form); // includes the CSRF token + defaults
   data.set(notesField.name, getBookmarkNotes(url, doc, isSeries));
 
-  const privateBox = form.querySelector(
-    'input[type="checkbox"][name="bookmark[private]"]',
-  );
+  const privateBox = form.querySelector(SELECTORS.PRIVATE_FIELD);
   if (privateBox) data.set(privateBox.name, makePrivate ? "1" : "0");
 
   return { form, data };
@@ -94,8 +109,8 @@ export async function bookmarkWork(
   id,
   { makePrivate = false, overrideNotes = false, isSeries = false } = {},
 ) {
-  const url = isSeries ? `${ORIGIN}/series/${id}` : `${ORIGIN}/works/${id}`;
-  const doc = await fetchDoc(`${url}?view_adult=true`);
+  const url = `${BASE_URL}/${isSeries ? "series" : "works"}/${id}?view_adult=true`;
+  const doc = await fetchDoc(url);
 
   const populated = populateBookmarkField(url, doc, {
     makePrivate,
@@ -105,9 +120,9 @@ export async function bookmarkWork(
   if (!populated) return "skipped";
 
   const { form, data } = populated;
-  data.set("commit", "Create");
+  data.set("commit", LABELS.CREATE_BOOKMARK);
 
-  const action = new URL(form.getAttribute("action"), ORIGIN).href;
+  const action = new URL(form.getAttribute("action"), BASE_URL).href;
   const res = await fetch(action, {
     method: "POST",
     body: data,

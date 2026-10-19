@@ -1,12 +1,16 @@
 /* globals */
 
-import { createSearchBar, createPopupContainer } from "./helper/popup";
+import { MODE_POPUP_ID, openModePopup, removeModePopup } from "./helper/popup";
+import { createSearchBar, MOBILE_MAX_WIDTH } from "./helper/popup_fields";
 
 (() => {
-  const popupId = "ao3-qof-popup";
-  document.getElementById(popupId)?.remove();
+  removeModePopup();
 
   const HIGHLIGHT_CLASS = "ao3-search-highlight";
+  const SELECTORS = {
+    MAIN: "#main",
+    SEARCH_INPUT: "input",
+  };
   const SKIP_TAGS = new Set([
     "SCRIPT",
     "STYLE",
@@ -16,7 +20,7 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
     "SELECT",
     "OPTION",
   ]);
-  const OWN_UI_SELECTOR = `#${popupId}, .ao3-notif-popup, .ao3-modal-overlay`;
+  const OWN_UI_SELECTOR = `#${MODE_POPUP_ID}, .ao3-notif-popup, .ao3-modal-overlay`;
 
   let isMatchCase = false;
   let isMatchWholeWord = false;
@@ -24,6 +28,7 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
   let matches = [];
   let currentIndex = -1;
   let lastQuery = "";
+  let pickerItems = [];
 
   function buildRegex(query) {
     const pattern = isUseRegex
@@ -100,7 +105,7 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
   }
 
   function openSearchBar() {
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
 
     const status = document.createElement("div");
     status.classList.add("ao3-search-status");
@@ -123,6 +128,7 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
     function openScrollPicker() {
       if (matches.length === 0) return;
 
+      pickerItems = [];
       const overlay = document.createElement("div");
       overlay.className = "ao3-search-picker-overlay";
 
@@ -140,10 +146,11 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
         const item = document.createElement("div");
         item.textContent = `${idx + 1} / ${matches.length}`;
         item.className = "ao3-search-picker-item";
-        item.style.fontWeight = idx === currentIndex ? "bold" : "normal";
+        item.classList.toggle("current", idx === currentIndex);
+        pickerItems.push(item);
         item.addEventListener("click", () => {
           goToMatch(idx);
-          overlay.remove();
+          closePicker();
         });
         scrollWheel.appendChild(item);
       });
@@ -167,15 +174,20 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
       const closeBtn = document.createElement("button");
       closeBtn.textContent = "Done";
       closeBtn.className = "ao3-search-picker-close";
-      closeBtn.onclick = () => overlay.remove();
+      closeBtn.onclick = () => closePicker();
 
       pickerBox.appendChild(title);
       pickerBox.appendChild(scrollWheel);
       pickerBox.appendChild(closeBtn);
       overlay.appendChild(pickerBox);
 
+      const closePicker = () => {
+        overlay.remove();
+        pickerItems = [];
+      };
+
       overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) overlay.remove();
+        if (e.target === overlay) closePicker();
       });
 
       document.body.appendChild(overlay);
@@ -193,6 +205,9 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
         matches[currentIndex].classList.remove("current");
       }
       currentIndex = (index + matches.length) % matches.length;
+      pickerItems.forEach((item, idx) =>
+        item.classList.toggle("current", idx === currentIndex),
+      );
       const mark = matches[currentIndex];
       mark.classList.add("current");
       mark.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -223,7 +238,7 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
         return;
       }
 
-      const root = document.querySelector("#main") || document.body;
+      const root = document.querySelector(SELECTORS.MAIN) || document.body;
       for (const node of getTextNodes(root)) {
         matches.push(...highlightNode(node, regex));
       }
@@ -273,7 +288,7 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
       ],
     });
 
-    const getInput = () => searchBar.querySelector("input");
+    const getInput = () => searchBar.querySelector(SELECTORS.SEARCH_INPUT);
 
     getInput().addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
@@ -312,7 +327,7 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
       },
     ];
 
-    const popup = createPopupContainer(popupId, isMobile, {
+    const popup = openModePopup(isMobile, {
       content: content,
       buttons: buttons,
       extraClasses: ["flush-bottom"],
@@ -323,12 +338,11 @@ import { createSearchBar, createPopupContainer } from "./helper/popup";
     });
 
     if (isMobile) {
-      popup.classList.add("search-popup", "mobile");
+      popup.classList.add("search-popup");
       content.classList.add("ao3-search-popup-content");
       searchBar.classList.add("mobile");
     }
 
-    document.body.appendChild(popup);
     getInput().focus();
   }
 

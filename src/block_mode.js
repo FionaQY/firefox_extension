@@ -11,6 +11,12 @@ import { getWorkUrl, fetchDoc, textOf } from "./helper/commons";
 import { isValid, extractRelevantData } from "./helper/extractor";
 import { createNotifPopup } from "./helper/popup";
 
+const SELECTORS = {
+  WORK: ".work",
+  USER_LINK: 'a[href*="/users/"]',
+  TAG_WORK_LINK: 'a[href*="/tags/"][href*="/works"]',
+};
+
 (() => {
   const workUrl = getWorkUrl(window.location.href);
   if (workUrl != "") {
@@ -109,7 +115,7 @@ import { createNotifPopup } from "./helper/popup";
   async function checkPageForWork(url, page, relevantData, filterType) {
     createNotifPopup(`Checking page ${page}..`);
     const doc = await fetchDoc(`${url}&page=${page}`);
-    return [...doc.querySelectorAll(".work")]
+    return [...doc.querySelectorAll(SELECTORS.WORK)]
       .slice(1)
       .some((work) =>
         isValid(relevantData, extractRelevantData(work, filterType)),
@@ -117,8 +123,8 @@ import { createNotifPopup } from "./helper/popup";
   }
 
   async function handleTagClick(e) {
-    const blockUser = e.target.matches('a[href*="/users/"]');
-    if (!e.target.matches('a[href*="/tags/"][href*="/works"]') && !blockUser) {
+    const blockUser = e.target.matches(SELECTORS.USER_LINK);
+    if (!e.target.matches(SELECTORS.TAG_WORK_LINK) && !blockUser) {
       createNotifPopup(`You did not click a tag/user...`);
       return;
     }

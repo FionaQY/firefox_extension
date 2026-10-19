@@ -1,17 +1,20 @@
 /* globals */
 
 import {
-  optionsPopupHelper,
-  createPopupContainer,
-  resetInputs,
   saveSettings,
   getSettings,
   createNotifPopup,
+  openModePopup,
+  removeModePopup,
 } from "./helper/popup";
+import {
+  MOBILE_MAX_WIDTH,
+  optionsPopupHelper,
+  resetInputs,
+} from "./helper/popup_fields";
 
 (() => {
-  const popupId = "ao3-qof-popup";
-  document.getElementById(popupId)?.remove();
+  removeModePopup();
 
   const fields = {
     populateBookmark: {
@@ -95,7 +98,7 @@ import {
   async function openSettingsPopup() {
     const settings = await getSettings();
     let generalSettings = settings.general || {};
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
 
     const [inputsMap, contentContainer] = optionsPopupHelper(
       fields,
@@ -146,7 +149,7 @@ import {
                 throw new Error("Invalid settings format");
               }
               await saveSettings(imported);
-              document.getElementById(popupId)?.remove();
+              removeModePopup();
             } catch {
               createNotifPopup("Invalid settings format");
             }
@@ -168,7 +171,7 @@ import {
           settings.popupOptions = popupOptions;
           settings.general = generalSettings;
           await saveSettings(settings);
-          document.getElementById(popupId)?.remove();
+          removeModePopup();
         },
       },
       {
@@ -186,13 +189,11 @@ import {
       },
     ];
 
-    const popup = createPopupContainer(popupId, isMobile, {
+    openModePopup(isMobile, {
       content: contentContainer,
       buttons: buttons,
       extraClasses: isMobile ? [] : ["flush-bottom"],
     });
-
-    document.body.appendChild(popup);
   }
 
   openSettingsPopup();

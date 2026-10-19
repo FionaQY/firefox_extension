@@ -1,8 +1,16 @@
 /* globals browser */
 
-import { getLangAbb, extractAllValues } from "./helper/extractor";
+import {
+  getLangAbb,
+  extractAllValues,
+  WORK_BLURB_SELECTOR,
+} from "./helper/extractor";
 import { createNotifPopup } from "./helper/popup";
 import { getWorkUrl, textOf } from "./helper/commons";
+
+const SELECTORS = {
+  TAG_LINKS: "ul.tags.commas li a",
+};
 
 (() => {
   browser.runtime.onMessage.addListener(async (msg) => {
@@ -54,7 +62,7 @@ import { getWorkUrl, textOf } from "./helper/commons";
       }
     }
 
-    const tags = Array.from(work.querySelectorAll("ul.tags.commas li a")).map(
+    const tags = Array.from(work.querySelectorAll(SELECTORS.TAG_LINKS)).map(
       textOf,
     );
     const excludeTags = workSettings["hideTags"]
@@ -125,7 +133,7 @@ import { getWorkUrl, textOf } from "./helper/commons";
       return;
     }
     let workSettings = settings.workSettings || {};
-    const works = document.querySelectorAll(".work.blurb.group");
+    const works = document.querySelectorAll(WORK_BLURB_SELECTOR);
     for (const work of works) {
       const reason = isUndesired(work, workSettings);
       if (reason.length > 0) {

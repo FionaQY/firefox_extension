@@ -3,6 +3,12 @@ import { getWorkUrl, getSeriesUrl } from "./helper/commons";
 import { createNotifPopup } from "./helper/popup";
 import { getBookmarkNotes } from "./helper/bookmark";
 
+const SELECTORS = {
+  BOOKMARK_FORM: "#bookmark_form_placement",
+  BOOKMARK_NOTES: "#bookmark_notes",
+  BOOKMARK_OPEN_LINK: "a.bookmark_form_placement_open",
+};
+
 (() => {
   if (typeof window.AO3BookmarkHandler === "function") {
     return;
@@ -19,7 +25,7 @@ import { getBookmarkNotes } from "./helper/bookmark";
   if (!pageUrl) return;
 
   function isVisible() {
-    const bookmarkForm = document.getElementById("bookmark_form_placement");
+    const bookmarkForm = document.querySelector(SELECTORS.BOOKMARK_FORM);
     if (!bookmarkForm || bookmarkForm.style.display == "none") {
       return false;
     }
@@ -30,7 +36,7 @@ import { getBookmarkNotes } from "./helper/bookmark";
     const { settings = {} } = await browser.storage.local.get("settings");
     if (!settings.general?.populateBookmark) return;
 
-    const bookmarkTextBox = document.getElementById("bookmark_notes");
+    const bookmarkTextBox = document.querySelector(SELECTORS.BOOKMARK_NOTES);
     if (!bookmarkTextBox) return;
 
     if (
@@ -54,7 +60,7 @@ import { getBookmarkNotes } from "./helper/bookmark";
     if (handleBookmarkClick.listenerAdded) return;
 
     document.addEventListener("click", (e) => {
-      if (e.target.matches("a.bookmark_form_placement_open") && isVisible()) {
+      if (e.target.matches(SELECTORS.BOOKMARK_OPEN_LINK) && isVisible()) {
         populateBookmark();
       }
     });
