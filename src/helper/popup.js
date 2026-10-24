@@ -110,12 +110,6 @@ export function createCloseButton(isMobile, onClose) {
   return btn;
 }
 
-/**
- * Creates a horizontal button bar from an array of button definitions.
- * @param {Array} buttons - Array of { text, variant, onClick }.
- * @param {boolean} isMobile - Whether the device is mobile.
- * @returns {HTMLDivElement}
- */
 export function createButtonBar(buttons, isMobile) {
   const container = document.createElement("div");
   container.classList.add(CLASS.BUTTON_BAR);

@@ -1,3 +1,4 @@
+/* globals browser */
 import {
   AlignmentType,
   Document,
@@ -11,10 +12,17 @@ import {
   VerticalAlignSection,
 } from "docx";
 import JSZip from "jszip";
-import { sameText, stripLabel, toInteger } from "./commons.js";
-import { getSettings } from "./popup.js";
+import {
+  BASE_URL,
+  fetchDoc,
+  safeFilename,
+  sameText,
+  stripLabel,
+  toInteger,
+} from "./commons.js";
+import { createNotifPopup, getSettings } from "./popup.js";
 import { getDocxFormat } from "./document_format.js";
-import { extractWorkData } from "./extractor.js";
+import { extractWorkData, getSeriesInfo, workInfo } from "./extractor.js";
 
 const TAG_KEYS = [
   "rating",
@@ -47,10 +55,12 @@ const PAGE = {
 /* Chapter / appendix assembly                                         */
 /* ------------------------------------------------------------------ */
 
+// Return a chapter heading or its generated chapter number.
 function formatChapterHeader(number, heading) {
   return heading || `Chapter ${number}`;
 }
 
+// Format chapter headings differently for merged works and their first chapter.
 function formatMergedChapterHeader(work, chapter, idx, totalChapters) {
   if (totalChapters === 1) return work.title;
 
@@ -65,10 +75,12 @@ function formatMergedChapterHeader(work, chapter, idx, totalChapters) {
   return formatChapterHeader(idx + 1, chapter.heading);
 }
 
+// Convert work metadata into document appendix.
 function getWorkMetadataNotes(work) {
   const notes = work.url ? [`URL: ${work.url}`] : [];
   const tags = Object.entries(work.tags || {}).filter(
-    ([category, values]) => category !== "relationship" && values?.length,
+    ([category, values]) =>
+      category !== "relationship" && category !== "series" && values?.length,
   );
 
   if (tags.length) {
@@ -81,6 +93,13 @@ function getWorkMetadataNotes(work) {
     );
   }
 
+  const series = work.series?.length
+    ? work.series.map(({ title, part }) =>
+        part ? `Part ${part} of ${title}` : title,
+      )
+    : work.tags?.series || [];
+  if (series.length) notes.push(`Series: ${series.join(", ")}`);
+
   const relationships = work.tags?.relationship || [];
   if (relationships.length) {
     notes.push(`Relationships: ${relationships.join(", ")}`);
@@ -89,6 +108,7 @@ function getWorkMetadataNotes(work) {
   return notes;
 }
 
+// Assemble chapter content and corresponding notes for a set of works.
 function buildBodyAndAppendix(works, { headerFor, includeWorkSummary }) {
   const chapters = [];
   const appendix = [];
@@ -148,15 +168,18 @@ function buildBodyAndAppendix(works, { headerFor, includeWorkSummary }) {
   return { chapters, appendix };
 }
 
+// Extract a four-digit year from a date-like value.
 function getYear(value) {
   return String(value || "").match(/\b\d{4}\b/)?.[0] || "";
 }
 
+// Check whether the chapter count represents a single-chapter work.
 function isSingleChapter(value) {
   const chapters = String(value || "").trim();
   return !chapters || chapters === "1" || chapters === "1/1";
 }
 
+// Check whether a multi-chapter work has reached its final chapter.
 function isCompleteMultiChapterWork(value) {
   const [current, total] = String(value || "")
     .split("/")
@@ -164,7 +187,8 @@ function isCompleteMultiChapterWork(value) {
   return total > 1 && current === total;
 }
 
-function getMacroCompletedYear(stats) {
+// Get the completed year for work
+function getCompletedYear(stats) {
   const chapters = String(stats.Chapters || "").trim();
   if (isSingleChapter(chapters)) return "";
 
@@ -178,12 +202,14 @@ function getMacroCompletedYear(stats) {
   return updatedYear !== publishedYear ? updatedYear : "";
 }
 
+// Omit duplicate series descriptions from the work summary.
 function getInfoSummary(summaryText) {
   const summary = String(summaryText || "").trim();
   return /^Series:/i.test(summary) ? "" : summary;
 }
 
 //  three blank lines, the details, with the same blank-line spacing.
+// Format the title-page metadata and summary as display lines.
 function makeInfoLines({
   tags,
   stats,
@@ -225,6 +251,7 @@ function makeInfoLines({
   return lines;
 }
 
+// Split multiline text into trimmed, nonempty paragraphs.
 function splitParagraphs(value) {
   return String(value || "")
     .split(/\n+/)
@@ -249,6 +276,7 @@ const SCENE_BREAKS = new Set([
   ".",
 ]);
 
+// Normalize story paragraph spacing and scene-break markers.
 function normalizeStoryParagraph(value) {
   const source = String(value)
     .replace(/\u00a0/g, " ")
@@ -258,6 +286,7 @@ function normalizeStoryParagraph(value) {
   return source.replace(/--/g, "—");
 }
 
+// Normalize a note paragraph and strip leading quote or heading markers.
 function normalizeNoteParagraph(value) {
   let text = normalizeStoryParagraph(value);
   while (text.startsWith(">") || text.startsWith("#")) {
@@ -270,7 +299,9 @@ function normalizeNoteParagraph(value) {
 /* Styles (the macro's Heading 1-5 and Subtitle)                       */
 /* ------------------------------------------------------------------ */
 
+// Build document styles from the selected fonts and size settings.
 function makeStyles(fonts, sizes) {
+  // Build a run style using the selected heading font and point size.
   const run = (points, extra = {}) => ({
     font: fonts.headings,
     size: Math.round(points * 2),
@@ -280,6 +311,7 @@ function makeStyles(fonts, sizes) {
     ...extra,
   });
 
+  // Build a centered paragraph style with consistent Word spacing defaults.
   const paragraph = (extra = {}) => ({
     alignment: AlignmentType.CENTER,
     indent: { left: 0, right: 0, firstLine: 0 },
@@ -295,9 +327,7 @@ function makeStyles(fonts, sizes) {
     },
   });
 
-  // docx ships its own blue Heading 1-6 styles; overriding them through
-  // `default.headingN` replaces them (adding paragraphStyles with the same
-  // ids would create duplicates, and Word would use the blue built-ins).
+  // Pair a heading run style with its outline and paragraph settings.
   const heading = (outlineLevel, runOpts, paraOpts) => ({
     run: runOpts,
     paragraph: { ...paragraph(paraOpts), outlineLevel },
@@ -360,6 +390,7 @@ const HEADING_LEVELS = {
 };
 
 // Formatting comes from the style, so editing the style in Word restyles all.
+// Create a heading paragraph at the requested hierarchy level.
 function makeHeading(text, level, runOptions = {}) {
   return new Paragraph({
     heading: HEADING_LEVELS[level],
@@ -367,6 +398,7 @@ function makeHeading(text, level, runOptions = {}) {
   });
 }
 
+// Create a metadata paragraph using the subtitle style.
 function makeInfoParagraph(text) {
   return new Paragraph({
     style: "Subtitle",
@@ -378,6 +410,7 @@ function makeInfoParagraph(text) {
 /* Body paragraphs and footers                                         */
 /* ------------------------------------------------------------------ */
 
+// Create a paragraph with shared typography and layout options.
 function makeTextParagraph(text, font, size, options = {}) {
   const {
     alignment,
@@ -413,6 +446,7 @@ function makeTextParagraph(text, font, size, options = {}) {
   });
 }
 
+// Create a justified, first-line-indented story paragraph.
 function makeBodyParagraph(text, font, sizes) {
   return makeTextParagraph(text, font, sizes.body, {
     alignment: AlignmentType.JUSTIFIED,
@@ -422,6 +456,7 @@ function makeBodyParagraph(text, font, sizes) {
   });
 }
 
+// Create a left-aligned paragraph for notes and appendix content.
 function makeNoteParagraph(text, font, sizes, options = {}) {
   const { fontSize = sizes.notes, ...paragraphOptions } = options;
   return makeTextParagraph(text, font, fontSize, {
@@ -434,7 +469,9 @@ function makeNoteParagraph(text, font, sizes, options = {}) {
 
 // Odd pages: number on the right. Even pages: number on the left.
 // First page of a section: no number (the macro blanks the first-page footer).
+// Create odd, even, and blank first-page footer definitions.
 function makePageFooters(font) {
+  // Create a page-number footer with the requested alignment.
   const createFooter = (alignment) =>
     new Footer({
       children: [
@@ -463,6 +500,7 @@ function makePageFooters(font) {
 /* Sections                                                            */
 /* ------------------------------------------------------------------ */
 
+// Build a document section for one work chapter.
 function makeChapterSection(chapter, fonts, sizes, page, footers) {
   const children = [
     makeHeading(chapter.heading, 1),
@@ -480,6 +518,7 @@ function makeChapterSection(chapter, fonts, sizes, page, footers) {
   };
 }
 
+// Build the notes appendix section while honoring tag and relationship settings.
 function makeAppendixSection(appendix, fonts, sizes, page, format, footers) {
   const children = [
     makeHeading("Author's Notes", 1),
@@ -543,6 +582,7 @@ function makeAppendixSection(appendix, fonts, sizes, page, format, footers) {
 }
 
 // Section 2 in the macro carries hidden "Intentionally Blank" text, centered.
+// Build a blank section, optionally containing hidden centered text.
 function makeBlankSection(page, { hiddenText } = {}) {
   return {
     properties: {
@@ -561,6 +601,7 @@ function makeBlankSection(page, { hiddenText } = {}) {
   };
 }
 
+// Assemble the complete DOCX document from prepared work data and formatting.
 function buildDocument(data, format) {
   const { fonts, sizes } = format;
   const page = {
@@ -603,8 +644,6 @@ function buildDocument(data, format) {
     makeBlankSection(page, { hiddenText: "Intentionally Blank" }),
     titlePage,
     infoPage,
-    makeBlankSection(page),
-    makeBlankSection(page),
     ...data.chapters.map((chapter) =>
       makeChapterSection(
         chapter,
@@ -660,6 +699,7 @@ const SETTINGS_BEFORE_MIRROR = [
   "saveFormsData",
 ];
 
+// Insert the mirror-margins setting in schema order if it is not already present.
 function addMirrorMargins(xml) {
   if (/<w:mirrorMargins\b/.test(xml)) return xml;
 
@@ -681,6 +721,7 @@ function addMirrorMargins(xml) {
   return `${xml.slice(0, insertAt)}<w:mirrorMargins/>${xml.slice(insertAt)}`;
 }
 
+// Patch a generated DOCX package with the required Word settings.
 async function patchPackage(base64) {
   const zip = await JSZip.loadAsync(base64, { base64: true });
 
@@ -698,19 +739,38 @@ async function patchPackage(base64) {
   });
 }
 
-export async function documentToDataUrl(data) {
+// Build a formatted DOCX package and return its base64 content.
+async function documentToBase64(data) {
   const settings = await getSettings();
   const format = getDocxFormat(settings.general || {});
   const base64 = await Packer.toBase64String(buildDocument(data, format));
-  const patched = await patchPackage(base64);
+  return patchPackage(base64);
+}
 
-  return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${patched}`;
+// Build a DOCX document and return its downloadable data URL.
+export async function documentToDataUrl(data) {
+  const base64 = await documentToBase64(data);
+  return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`;
+}
+
+// Package multiple generated DOCX documents into a downloadable ZIP data URL.
+export async function documentsToZipDataUrl(entries) {
+  const zip = new JSZip();
+  for (const { path, document } of entries) {
+    zip.file(path, await documentToBase64(document), { base64: true });
+  }
+  const base64 = await zip.generateAsync({
+    type: "base64",
+    compression: "DEFLATE",
+  });
+  return `data:application/zip;base64,${base64}`;
 }
 
 /* ------------------------------------------------------------------ */
 /* Data assembly                                                       */
 /* ------------------------------------------------------------------ */
 
+// Combine category tag arrays while removing duplicate tags.
 function combineTags(tagSets) {
   return Object.fromEntries(
     TAG_KEYS.map((key) => [
@@ -720,6 +780,7 @@ function combineTags(tagSets) {
   );
 }
 
+// Create the common document data structure used by the DOCX builder.
 function createDocumentData({
   url,
   title,
@@ -746,39 +807,48 @@ function createDocumentData({
   };
 }
 
-export function workToDocument(doc, href) {
-  const data = extractWorkData(doc, href);
-  const { chapters, appendix } = buildBodyAndAppendix([data], {
+// Format series membership using the part number extracted from the work page.
+function getWorkSeriesTitle(work) {
+  return (
+    work.series
+      ?.map(({ title, part }) => (part ? `Part ${part} of ${title}` : title))
+      .join(", ") ||
+    work.tags?.series?.join(", ") ||
+    ""
+  );
+}
+
+// Format extracted work data into the input expected by the DOCX builder.
+export function workToDocument(work) {
+  const { chapters, appendix } = buildBodyAndAppendix([work], {
     headerFor: (_work, chapter, idx) =>
       formatChapterHeader(idx + 1, chapter.heading),
     includeWorkSummary: false,
   });
-  const summary = getInfoSummary(data.summaryText);
+  const summary = getInfoSummary(work.summaryText);
   const formattedAppendixNotes = [
     ...(summary ? [`Summary: ${summary}`] : []),
-    ...getWorkMetadataNotes(data),
+    ...getWorkMetadataNotes(work),
   ];
   const formattedAppendix = formattedAppendixNotes.length
     ? [{ notes: formattedAppendixNotes }, ...appendix]
     : appendix;
 
-  return {
-    ...data,
-    document: createDocumentData({
-      url: href,
-      title: data.title,
-      author: data.author,
-      tags: data.tags,
-      stats: data.stats,
-      summaryText: data.summaryText,
-      seriesTitle: data.tags?.series?.join(", "),
-      completedYear: getMacroCompletedYear(data.stats),
-      chapters,
-      appendix: formattedAppendix,
-    }),
-  };
+  return createDocumentData({
+    url: work.url,
+    title: work.title,
+    author: work.author,
+    tags: work.tags,
+    stats: work.stats,
+    summaryText: work.summaryText,
+    seriesTitle: getWorkSeriesTitle(work),
+    completedYear: getCompletedYear(work.stats),
+    chapters,
+    appendix: formattedAppendix,
+  });
 }
 
+// Return a shared completion year when every merged work finished together.
 function completedYear(works) {
   const completeWorks = works.filter((work) =>
     isCompleteMultiChapterWork(work.stats.Chapters),
@@ -789,6 +859,7 @@ function completedYear(works) {
   return years.every(Boolean) && new Set(years).size === 1 ? years[0] : "";
 }
 
+// Merge work metadata and chapters into one document, optionally for a series.
 export function mergeWorks(works, series) {
   const published = works
     .map((work) => work.stats.Published)
@@ -822,7 +893,7 @@ export function mergeWorks(works, series) {
 
   return createDocumentData({
     url: works.map((work) => work.url).join(", "),
-    title: series?.title || `AO3 Bundle (${works.length} works)`,
+    title: series?.title || works[0]?.title || "Untitled",
     author: [...new Set(works.map((work) => work.author))].join(", "),
     tags,
     stats,
@@ -832,4 +903,265 @@ export function mergeWorks(works, series) {
     chapters,
     appendix,
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* Download workflows                                                  */
+/* ------------------------------------------------------------------ */
+
+const DOWNLOAD_DELAY_MS = 3000;
+const MAX_SERIES_PAGES = 50;
+const DOWNLOAD_TYPE = { WORK: "work", SERIES: "series" };
+const DOWNLOAD_MESSAGE = "downloadDoc";
+const SERIES_SELECTORS = {
+  WORK_BLURB: "li.work.blurb.group",
+  NEXT_PAGE: "ol.pagination li.next a",
+};
+
+// Run asynchronous work sequentially with a pause between items.
+export async function forEachPaced(items, fn) {
+  for (let i = 0; i < items.length; i++) {
+    await fn(items[i], i);
+    if (i < items.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_DELAY_MS));
+    }
+  }
+}
+
+// Fetch and convert a full work into the extension's document model.
+async function loadWork(id) {
+  const url = `${BASE_URL}/works/${id}`;
+  const doc = await fetchDoc(`${url}?view_full_work=true&view_adult=true`);
+  return extractWorkData(doc, url);
+}
+
+// Fetch all pages of a series and report page-level progress.
+async function fetchSeriesWorks(id, onPage) {
+  const seriesUrl = `${BASE_URL}/series/${id}`;
+  const works = [];
+  let info = null;
+
+  for (let page = 1; page <= MAX_SERIES_PAGES; page++) {
+    const doc = await fetchDoc(`${seriesUrl}?page=${page}`);
+    if (page === 1) info = getSeriesInfo(doc, seriesUrl);
+
+    const found = [...doc.querySelectorAll(SERIES_SELECTORS.WORK_BLURB)]
+      .map((item) => workInfo(item))
+      .filter(Boolean);
+    works.push(...found);
+    onPage?.(page, works.length);
+
+    if (!found.length || !doc.querySelector(SERIES_SELECTORS.NEXT_PAGE)) break;
+    await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_DELAY_MS));
+  }
+
+  return { works, info };
+}
+
+// Expand selected series to unique work jobs and retain series metadata.
+async function expandDownloadSelection(items, setStatus) {
+  const jobs = new Map();
+  const seriesList = [];
+  let standalone = 0;
+
+  for (const checkbox of items) {
+    const { type, id, title, author } = checkbox.dataset;
+    if (type === DOWNLOAD_TYPE.SERIES) {
+      setStatus(`Reading series: ${title}`);
+      try {
+        const { works, info } = await fetchSeriesWorks(id, (page, count) =>
+          setStatus(`Reading series: ${title} (page ${page}, ${count} works)`),
+        );
+        seriesList.push({
+          title,
+          summary: info?.summary ?? "",
+          author: info?.author ?? "",
+          workIds: works.map((work) => work.id),
+        });
+        for (const work of works) {
+          if (!jobs.has(work.id)) jobs.set(work.id, work);
+        }
+        checkbox.checked = false;
+      } catch (error) {
+        createNotifPopup(`Cannot download series :(: ${error}`);
+        setStatus(`Failed to read series: ${title}`);
+      }
+    } else if (!jobs.has(id)) {
+      jobs.set(id, { id, title, author });
+      standalone++;
+    }
+  }
+
+  return { jobs: [...jobs.values()], seriesList, standalone };
+}
+
+// Send a generated file URL to the background download handler.
+async function downloadFile(url, filename, saveAs) {
+  await browser.runtime.sendMessage({
+    action: DOWNLOAD_MESSAGE,
+    url,
+    filename,
+    saveAs,
+  });
+}
+
+// Generate and download one DOCX document.
+async function downloadDoc(document, filename, saveAs) {
+  await downloadFile(await documentToDataUrl(document), filename, saveAs);
+}
+
+// Create a consistent safe filename for a work's DOCX document.
+function getWorkFilename(title, author) {
+  return `${safeFilename(title)}_${safeFilename(author)}.docx`;
+}
+
+// Prefix a series work filename with its zero-padded position in the series.
+function getSeriesWorkFilename(work, position, totalWorks) {
+  const order = String(position).padStart(String(totalWorks).length, "0");
+  return `${order}_${getWorkFilename(work.title, work.author)}`;
+}
+
+// Merge loaded works into the selected bundle DOCX and download it.
+async function downloadBundle(loadedById, seriesList, standalone) {
+  const series =
+    seriesList.length === 1 && standalone === 0 ? seriesList[0] : null;
+  const works = [...loadedById.values()];
+  const seriesAuthor =
+    series?.author ||
+    [...new Set(works.map((work) => work.author).filter(Boolean))].join(", ");
+  const filename = series
+    ? [series.title, seriesAuthor, "series"]
+        .filter(Boolean)
+        .map(safeFilename)
+        .join("_") + ".docx"
+    : [works[0].title, works[0].author, "bundle"]
+        .filter(Boolean)
+        .map(safeFilename)
+        .join("_") + ".docx";
+
+  await downloadDoc(mergeWorks(works, series), filename, true);
+}
+
+// Package a series' separate DOCX files into a named ZIP download.
+async function downloadSeriesZip(series, works) {
+  const entries = works.map(({ work, position }) => ({
+    path: getSeriesWorkFilename(work, position, series.workIds.length),
+    document: workToDocument(work),
+  }));
+  const url = await documentsToZipDataUrl(entries);
+  const filename =
+    [series.title, series.author].filter(Boolean).map(safeFilename).join("_") +
+    ".zip";
+  await downloadFile(url, filename, false);
+}
+
+// Load selected jobs and download standalone works, retaining series and bundle works.
+async function loadSelectedWorks(
+  jobs,
+  items,
+  { bundle, seriesWorkIds, notInSeries, setStatus },
+) {
+  const loadedById = new Map();
+  const tally = { downloaded: 0, skipped: 0, failed: 0 };
+
+  await forEachPaced(jobs, async ({ id, title, author }, index) => {
+    setStatus(`${index + 1}/${jobs.length}: ${title}`);
+    try {
+      const work = await loadWork(id);
+      if (notInSeries && work.tags?.series?.length) {
+        setStatus(`Skipping ${title} (in series)`);
+        tally.skipped++;
+      } else if (bundle || seriesWorkIds.has(id)) {
+        loadedById.set(id, work);
+      } else {
+        await downloadDoc(
+          workToDocument(work),
+          getWorkFilename(title, author),
+          jobs.length === 1,
+        );
+        tally.downloaded++;
+      }
+
+      const checkbox = items.find(
+        (item) =>
+          item.dataset.type === DOWNLOAD_TYPE.WORK && item.dataset.id === id,
+      );
+      if (checkbox) checkbox.checked = false;
+    } catch (error) {
+      tally.failed++;
+      createNotifPopup(`sadge :(: ${error}`);
+      setStatus(`Failed: ${title}`);
+    }
+  });
+
+  return { loadedById, tally };
+}
+
+// Download each selected series as a ZIP containing its successfully loaded works.
+async function downloadSeriesZips(seriesList, loadedById, setStatus, tally) {
+  for (const series of seriesList) {
+    const works = series.workIds
+      .map((id, index) => ({
+        work: loadedById.get(id),
+        position: index + 1,
+      }))
+      .filter(({ work }) => work);
+    if (!works.length) continue;
+
+    setStatus(`Building ZIP: ${series.title}`);
+    try {
+      await downloadSeriesZip(series, works);
+      tally.downloaded += works.length;
+    } catch (error) {
+      createNotifPopup(`Cannot ZIP series "${series.title}": ${error}`);
+      tally.failed += works.length;
+    }
+  }
+}
+
+// Report the final download counts in the panel.
+function setDownloadSummary({ downloaded, skipped, failed }, setStatus) {
+  setStatus(
+    `Done: ${downloaded} downloaded` +
+      (skipped ? `, ${skipped} skipped` : "") +
+      (failed ? `, ${failed} failed` : ""),
+  );
+}
+
+// Download selected works individually, as series ZIPs, or as one merged bundle.
+export async function downloadSelectedWorks(
+  items,
+  { bundle: bundleRequested, notInSeries, setStatus },
+) {
+  const { jobs, seriesList, standalone } = await expandDownloadSelection(
+    items,
+    setStatus,
+  );
+  if (!jobs.length) return;
+
+  const bundle = bundleRequested && jobs.length > 1;
+  const seriesWorkIds = new Set(seriesList.flatMap((series) => series.workIds));
+  const { loadedById, tally } = await loadSelectedWorks(jobs, items, {
+    bundle,
+    seriesWorkIds,
+    notInSeries,
+    setStatus,
+  });
+
+  if (bundle && loadedById.size > 1) {
+    setStatus("Building bundle...");
+    try {
+      await downloadBundle(loadedById, seriesList, standalone);
+      tally.downloaded += loadedById.size;
+    } catch (error) {
+      createNotifPopup(`Cannot bundle :(: ${error}`);
+      setStatus("Failed to build bundle");
+      tally.failed += loadedById.size;
+      return;
+    }
+  } else if (seriesList.length) {
+    await downloadSeriesZips(seriesList, loadedById, setStatus, tally);
+  }
+
+  setDownloadSummary(tally, setStatus);
 }

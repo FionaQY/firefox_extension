@@ -1,17 +1,7 @@
 /* globals browser */
-import {
-  workToDocument,
-  documentToDataUrl,
-  mergeWorks,
-} from "./helper/download.js";
-import {
-  getWorkUrl,
-  fetchDoc,
-  safeFilename,
-  textOf,
-  BASE_URL,
-} from "./helper/commons.js";
-import { getSeriesInfo, workInfo } from "./helper/extractor.js";
+import { downloadSelectedWorks, forEachPaced } from "./helper/download.js";
+import { getWorkUrl, textOf } from "./helper/commons.js";
+import { workInfo } from "./helper/extractor.js";
 import { bookmarkWork } from "./helper/bookmark.js";
 import { getButton, createNotifPopup } from "./helper/popup.js";
 import {
@@ -19,20 +9,24 @@ import {
   MOBILE_MAX_WIDTH,
 } from "./helper/popup_fields.js";
 
-const DELAY_MS = 3000;
-const MAX_SERIES_PAGES = 50;
-
 const TYPE = { WORK: "work", SERIES: "series" };
-const MSG_DOWNLOAD_DOC = "downloadDoc";
 const BOOKMARK_CREATED = "created";
 
-const CLS = { CHECK: "ao3-dl-check", HIDDEN: "ao3-hidden" };
+const CLS = {
+  CHECK: "ao3-dl-check",
+  HIDDEN: "ao3-hidden",
+  ROW: "ao3-dl-row",
+  SELECTION_ROW: "ao3-dl-selection-row",
+  DOWNLOAD_ROW: "ao3-dl-download-row",
+  BOOKMARK_ROW: "ao3-dl-bookmark-row",
+};
 
 const ID = {
   PANEL: "ao3-dl-panel",
   ALL: "ao3-dl-all",
   BUNDLE: "ao3-dl-bundle",
   PRIVATE: "ao3-bm-private",
+  NOT_SERIES: "ao3-dl-not-in-series",
   DOWNLOAD: "ao3-dl-btn",
   BOOKMARK: "ao3-bm-btn",
   STATUS: "ao3-dl-status",
@@ -40,18 +34,18 @@ const ID = {
 
 const SEL = {
   BLURB: ".work.blurb.group, li.blurb.group",
-  WORK_BLURB: "li.work.blurb.group",
   SERIES_META: "dl.series.meta",
   SERIES_LINK: "h4.heading a[href^='/series/']",
   SERIES_TITLE: "h2.heading",
-  NEXT_PAGE: "ol.pagination li.next a",
 };
 
 const FALLBACK_SERIES_TITLE = "series";
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/* ==========================================================================
+ * WORK SELECTION
+ * ========================================================================== */
 
-// checkboxes
+/** Read series metadata from a work blurb or the current series page. */
 function seriesInfo(el) {
   const link = el.querySelector(SEL.SERIES_LINK);
   const id = link?.getAttribute("href")?.match(/\/series\/(\d+)/)?.[1];
@@ -66,6 +60,7 @@ function seriesInfo(el) {
   return null;
 }
 
+/** Add the selection checkbox and its work/series metadata to a page item. */
 function addCheckbox(container, data) {
   const cb = document.createElement("input");
   cb.type = "checkbox";
@@ -83,6 +78,7 @@ function addCheckbox(container, data) {
   container.appendChild(cb);
 }
 
+/** Add selection checkboxes to work and series blurbs, including new content. */
 function injectCheckboxes() {
   const targets = document.querySelectorAll(`${SEL.BLURB}, ${SEL.SERIES_META}`);
 
@@ -102,111 +98,65 @@ function injectCheckboxes() {
 }
 
 /* ==========================================================================
- * FETCHING
+ * DOWNLOAD AND BOOKMARK WORKFLOWS
  * ========================================================================== */
-async function loadWork(id) {
-  const doc = await fetchDoc(
-    `${BASE_URL}/works/${id}?view_full_work=true&view_adult=true`,
-  );
-  return workToDocument(doc, `${BASE_URL}/works/${id}`);
-}
 
-async function fetchSeriesWorks(id, onPage) {
-  const seriesUrl = `${BASE_URL}/series/${id}`;
-  const works = [];
-  let info = null;
-
-  for (let page = 1; page <= MAX_SERIES_PAGES; page++) {
-    const doc = await fetchDoc(`${seriesUrl}?page=${page}`);
-    if (page === 1) info = getSeriesInfo(doc, seriesUrl);
-
-    const found = [...doc.querySelectorAll(SEL.WORK_BLURB)]
-      .map((li) => workInfo(li))
-      .filter(Boolean);
-
-    works.push(...found);
-    onPage?.(page, works.length);
-
-    if (!found.length || !doc.querySelector(SEL.NEXT_PAGE)) break;
-    await sleep(DELAY_MS);
-  }
-  return { works, info };
-}
-
-// helper functions
-async function forEachPaced(items, fn) {
-  for (let i = 0; i < items.length; i++) {
-    await fn(items[i], i);
-    if (i < items.length - 1) await sleep(DELAY_MS);
-  }
-}
-
-async function downloadDoc(document, filename, saveAs) {
-  const url = await documentToDataUrl(document);
-  await browser.runtime.sendMessage({
-    action: MSG_DOWNLOAD_DOC,
-    url,
-    filename,
-    saveAs,
+/** Bookmark selected works and series while reporting a final outcome tally. */
+async function bookmarkSelected(items, { ui, general, setStatus }) {
+  const seen = new Set();
+  const uniqueItems = items.filter(({ dataset }) => {
+    const key = `${dataset.type}:${dataset.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
-}
+  const tally = { created: 0, skipped: 0, failed: 0 };
 
-const docName = (title, author) =>
-  `${safeFilename(title)}_${safeFilename(author)}.docx`;
+  await forEachPaced(uniqueItems, async (checkbox, i) => {
+    const { id, title, type } = checkbox.dataset;
+    setStatus(`Bookmarking ${i + 1}/${uniqueItems.length}: ${title}`);
 
-async function expandSelection(items, setStatus) {
-  const jobs = new Map();
-  const seriesList = [];
-  let standalone = 0;
-
-  for (const cb of items) {
-    const { type, id, title, author } = cb.dataset;
-
-    if (type === TYPE.SERIES) {
-      setStatus(`Reading series: ${title}`);
-      try {
-        const { works, info } = await fetchSeriesWorks(id, (page, count) =>
-          setStatus(`Reading series: ${title} (page ${page}, ${count} works)`),
-        );
-
-        seriesList.push({
-          title: [title, info?.author].filter(Boolean).join("_"),
-          summary: info?.summary ?? "",
-        });
-        for (const w of works) if (!jobs.has(w.id)) jobs.set(w.id, w);
-        cb.checked = false;
-      } catch (err) {
-        createNotifPopup(`Cannot download series :(: ${err}`);
-        setStatus(`Failed to read series: ${title}`);
-      }
-    } else if (!jobs.has(id)) {
-      jobs.set(id, { id, title, author });
-      standalone++;
+    try {
+      const result = await bookmarkWork(id, {
+        makePrivate: Boolean(ui.private?.checked),
+        overrideNotes: Boolean(general.overrideBookmark),
+        isSeries: type === TYPE.SERIES,
+      });
+      tally[result === BOOKMARK_CREATED ? "created" : "skipped"]++;
+      checkbox.checked = false;
+    } catch (err) {
+      tally.failed++;
+      createNotifPopup(`Could not bookmark "${title}": ${err.message}`);
     }
-  }
+  });
 
-  return { jobs: [...jobs.values()], seriesList, standalone };
+  setStatus(
+    `Done: ${tally.created} bookmarked` +
+      (tally.skipped ? `, ${tally.skipped} already bookmarked` : "") +
+      (tally.failed ? `, ${tally.failed} failed` : ""),
+  );
 }
 
-async function downloadBundle(loaded, seriesList, standalone) {
-  const series =
-    seriesList.length === 1 && standalone === 0 ? seriesList[0] : null;
-  const name = series
-    ? `${safeFilename(series.title)}_series.docx`
-    : `AO3_bundle_${loaded.length}_works.docx`;
+/* ==========================================================================
+ * PANEL UI
+ * ========================================================================== */
 
-  await downloadDoc(mergeWorks(loaded, series), name, true);
-}
-
+/** Create the floating panel and the controls enabled by current settings. */
 function buildPanel({ downloadOn, bookmarkOn }) {
   const compact = window.innerWidth <= MOBILE_MAX_WIDTH;
-
+  // Create a panel action button with its initial selection count.
   const actionButton = (id, label) => {
     const btn = getButton("primary", compact, `${label} (0)`);
     btn.id = id;
     return btn;
   };
-
+  // Wrap related controls in a row with the matching layout class.
+  const row = (className, ...children) => {
+    const element = document.createElement("div");
+    element.classList.add(CLS.ROW, className);
+    element.append(...children.filter(Boolean));
+    return element;
+  };
   const status = document.createElement("span");
   status.id = ID.STATUS;
 
@@ -214,17 +164,120 @@ function buildPanel({ downloadOn, bookmarkOn }) {
   panel.id = ID.PANEL;
   panel.append(
     ...[
-      createLabeledCheckbox(ID.ALL, "All"),
-      downloadOn && createLabeledCheckbox(ID.BUNDLE, "Bundle"),
-      bookmarkOn && createLabeledCheckbox(ID.PRIVATE, "Private"),
-      downloadOn && actionButton(ID.DOWNLOAD, "Download"),
-      bookmarkOn && actionButton(ID.BOOKMARK, "Bookmark"),
+      row(CLS.SELECTION_ROW, createLabeledCheckbox(ID.ALL, "All")),
+      downloadOn &&
+        row(
+          CLS.DOWNLOAD_ROW,
+          createLabeledCheckbox(ID.NOT_SERIES, "Not in Series"),
+          createLabeledCheckbox(ID.BUNDLE, "Bundle"),
+          actionButton(ID.DOWNLOAD, "Download"),
+        ),
+      bookmarkOn &&
+        row(
+          CLS.BOOKMARK_ROW,
+          createLabeledCheckbox(ID.PRIVATE, "Private"),
+          actionButton(ID.BOOKMARK, "Bookmark"),
+        ),
       status,
     ].filter(Boolean),
   );
   return panel;
 }
 
+/** Find panel controls once and expose them by purpose rather than selector. */
+function getPanelControls(panel) {
+  // Find a control by its panel-local ID.
+  const find = (id) => panel.querySelector(`#${id}`);
+  return {
+    status: find(ID.STATUS),
+    all: find(ID.ALL),
+    bundle: find(ID.BUNDLE),
+    private: find(ID.PRIVATE),
+    notSeries: find(ID.NOT_SERIES),
+    download: find(ID.DOWNLOAD),
+    bookmark: find(ID.BOOKMARK),
+  };
+}
+
+/** Return all injected work and series selection checkboxes on the page. */
+function getSelectionCheckboxes() {
+  return [...document.querySelectorAll(`.${CLS.CHECK}`)];
+}
+
+/** Update action button counts from the current page selection. */
+function refreshPanelCounts(ui) {
+  const count = getSelectionCheckboxes().filter(
+    (checkbox) => checkbox.checked,
+  ).length;
+  if (ui.download) ui.download.textContent = `Download (${count})`;
+  if (ui.bookmark) ui.bookmark.textContent = `Bookmark (${count})`;
+}
+
+/** Disable panel actions and item checkboxes while a workflow is running. */
+function setPanelBusy(ui, busy) {
+  if (ui.download) ui.download.disabled = busy;
+  if (ui.bookmark) ui.bookmark.disabled = busy;
+  getSelectionCheckboxes().forEach((checkbox) => (checkbox.disabled = busy));
+}
+
+/** Run an action while disabling the panel, then restore controls and counts. */
+function withBusy(fn, ui) {
+  return async () => {
+    setPanelBusy(ui, true);
+    try {
+      await fn();
+    } finally {
+      setPanelBusy(ui, false);
+      refreshPanelCounts(ui);
+    }
+  };
+}
+
+/** Connect selection, download, and bookmark interactions to panel controls. */
+function wirePanel(ui, general) {
+  // Return the selected work and series checkboxes on the page.
+  const selected = () =>
+    getSelectionCheckboxes().filter((checkbox) => checkbox.checked);
+  // Display progress text in the panel's status element.
+  const setStatus = (text) => {
+    ui.status.textContent = text;
+  };
+  // Refresh action labels to reflect the live selection.
+  const refresh = () => refreshPanelCounts(ui);
+
+  document.addEventListener("change", (event) => {
+    if (event.target.classList?.contains(CLS.CHECK)) refresh();
+  });
+  ui.all.addEventListener("change", () => {
+    getSelectionCheckboxes()
+      .filter((checkbox) => checkbox.dataset.type === TYPE.WORK)
+      .forEach((checkbox) => (checkbox.checked = ui.all.checked));
+    refresh();
+  });
+  ui.download?.addEventListener(
+    "click",
+    withBusy(
+      () =>
+        downloadSelectedWorks(selected(), {
+          bundle: Boolean(ui.bundle?.checked),
+          notInSeries: Boolean(ui.notSeries?.checked),
+          setStatus,
+        }),
+      ui,
+    ),
+  );
+  ui.bookmark?.addEventListener(
+    "click",
+    withBusy(
+      () => bookmarkSelected(selected(), { ui, general, setStatus }),
+      ui,
+    ),
+  );
+
+  refresh();
+}
+
+/** Load settings, observe dynamic page content, and display the download panel. */
 async function openDownloadButton() {
   const { settings = {} } = await browser.storage.local.get("settings");
   const general = settings.general ?? {};
@@ -240,151 +293,7 @@ async function openDownloadButton() {
 
   const panel = buildPanel({ downloadOn, bookmarkOn });
   document.body.appendChild(panel);
-
-  const $ = (id) => panel.querySelector(`#${id}`);
-  const ui = {
-    status: $(ID.STATUS),
-    all: $(ID.ALL),
-    bundle: $(ID.BUNDLE),
-    private: $(ID.PRIVATE),
-    download: $(ID.DOWNLOAD),
-    bookmark: $(ID.BOOKMARK),
-  };
-
-  const setStatus = (text) => (ui.status.textContent = text);
-  const checks = () => [...document.querySelectorAll(`.${CLS.CHECK}`)];
-  const selected = () => checks().filter((c) => c.checked);
-
-  const refresh = () => {
-    const n = selected().length;
-    if (ui.download) ui.download.textContent = `Download (${n})`;
-    if (ui.bookmark) ui.bookmark.textContent = `Bookmark (${n})`;
-  };
-
-  const setBusy = (busy) => {
-    if (ui.download) ui.download.disabled = busy;
-    if (ui.bookmark) ui.bookmark.disabled = busy;
-    checks().forEach((c) => (c.disabled = busy));
-  };
-
-  // Disables the UI while fn runs and always restores it afterwards.
-  const withBusy = (fn) => async () => {
-    setBusy(true);
-    try {
-      await fn();
-    } finally {
-      setBusy(false);
-      refresh();
-    }
-  };
-
-  /* ---------------------------- DOWNLOAD ---------------------------- */
-  async function downloadSelected() {
-    const items = selected();
-    if (!items.length) return;
-
-    const { jobs, seriesList, standalone } = await expandSelection(
-      items,
-      setStatus,
-    );
-    if (!jobs.length) return;
-
-    const bundle = Boolean(ui.bundle?.checked) && jobs.length > 1;
-    const loaded = [];
-
-    await forEachPaced(jobs, async ({ id, title, author }, i) => {
-      setStatus(`${i + 1}/${jobs.length}: ${title}`);
-      try {
-        const work = await loadWork(id);
-
-        if (bundle) {
-          loaded.push(work);
-        } else {
-          await downloadDoc(
-            work.document,
-            docName(title, author),
-            jobs.length === 1,
-          );
-        }
-
-        const cb = items.find(
-          (c) => c.dataset.type === TYPE.WORK && c.dataset.id === id,
-        );
-        if (cb) cb.checked = false;
-      } catch (err) {
-        createNotifPopup(`sadge :(: ${err}`);
-        setStatus(`Failed: ${title}`);
-      }
-    });
-
-    if (bundle && loaded.length > 1) {
-      setStatus("Building bundle...");
-      try {
-        await downloadBundle(loaded, seriesList, standalone);
-      } catch (err) {
-        createNotifPopup(`Cannot bundle :(: ${err}`);
-        setStatus("Failed to build bundle");
-        return;
-      }
-    }
-
-    setStatus("Done");
-  }
-
-  /* ---------------------------- BOOKMARK ---------------------------- */
-  async function bookmarkSelected() {
-    const seen = new Set();
-    const items = selected().filter(({ dataset }) => {
-      const key = `${dataset.type}:${dataset.id}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    const tally = { created: 0, skipped: 0, failed: 0 };
-
-    await forEachPaced(items, async (cb, i) => {
-      const { id, title, type } = cb.dataset;
-      setStatus(`Bookmarking ${i + 1}/${items.length}: ${title}`);
-
-      try {
-        const result = await bookmarkWork(id, {
-          makePrivate: Boolean(ui.private?.checked),
-          overrideNotes: Boolean(general.overrideBookmark),
-          isSeries: type === TYPE.SERIES,
-        });
-
-        tally[result === BOOKMARK_CREATED ? "created" : "skipped"]++;
-        cb.checked = false;
-      } catch (err) {
-        tally.failed++;
-        createNotifPopup(`Could not bookmark "${title}": ${err.message}`);
-      }
-    });
-
-    setStatus(
-      `Done: ${tally.created} bookmarked` +
-        (tally.skipped ? `, ${tally.skipped} already bookmarked` : "") +
-        (tally.failed ? `, ${tally.failed} failed` : ""),
-    );
-  }
-
-  /* ---------------------------- WIRING ---------------------------- */
-  document.addEventListener("change", (e) => {
-    if (e.target.classList?.contains(CLS.CHECK)) refresh();
-  });
-
-  ui.all.addEventListener("change", () => {
-    checks()
-      .filter((c) => c.dataset.type === TYPE.WORK)
-      .forEach((c) => (c.checked = ui.all.checked));
-    refresh();
-  });
-
-  ui.download?.addEventListener("click", withBusy(downloadSelected));
-  ui.bookmark?.addEventListener("click", withBusy(bookmarkSelected));
-
-  refresh(); // sets the initial "(0)" labels
+  wirePanel(getPanelControls(panel), general);
 }
 
 (() => {

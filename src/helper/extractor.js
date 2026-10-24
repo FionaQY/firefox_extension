@@ -56,6 +56,8 @@ const SERIES_SELECTORS = {
   title: "h2.heading",
   metaLabels: "dl.series.meta dt",
   authors: 'dl.series.meta a[rel="author"]',
+  workEntries: "dd.series span.position, ul.series > li",
+  workLink: "a[href^='/series/']",
 };
 
 const TAG_SELECTORS = {
@@ -67,7 +69,7 @@ const TAG_SELECTORS = {
     relationship: "dd.relationship a",
     character: "dd.character a",
     freeform: "dd.freeform a",
-    series: "dd.series a",
+    series: "dd.series a[href^='/series/']",
     collections: "dd.collections a",
   },
   series: {
@@ -182,7 +184,6 @@ export function extractWorkSummary(doc, url, needHref = true) {
   return getWorkInfo(doc, url, needHref);
 }
 
-// Convert an AO3 content block to readable plain text.
 function getContentText(container) {
   if (!container) return "";
 
@@ -196,7 +197,6 @@ function getContentText(container) {
     .querySelectorAll(CONTENT_SELECTORS.removable)
     .forEach((element) => element.remove());
 
-  // Line breaks become markers; textOf() turns them into "\n" at the end.
   cloned
     .querySelectorAll(CONTENT_SELECTORS.lineBreak)
     .forEach((lineBreak) => lineBreak.replaceWith(BREAK_MARK));
@@ -210,7 +210,7 @@ function getContentText(container) {
         const prefix = isOrdered ? `${index + 1}. ` : "- ";
         const paragraph = cloned.ownerDocument.createElement("p");
 
-        // Links/images inside the item are flattened to text
+        // Links/images are flattened to text
         paragraph.textContent = `${prefix}${textOf(item, true).replace(/\n/g, BREAK_MARK)}`;
         list.parentNode?.insertBefore(paragraph, list);
       });
@@ -229,7 +229,6 @@ function getContentText(container) {
     : textOf(cloned, true);
 }
 
-// Extract summary text without its leading label.
 function getSummaryText(container) {
   return stripLabel(
     removeAO3NotesPlaceholders(getContentText(container)),
@@ -237,12 +236,24 @@ function getSummaryText(container) {
   );
 }
 
-// Extract notes text without its leading label.
 function getNotesText(container) {
   return stripLabel(
     removeAO3NotesPlaceholders(getContentText(container)),
     LABELS.NOTES,
   );
+}
+
+// Extract series titles and part numbers from a work's series metadata.
+function extractWorkSeries(doc) {
+  const entries = [...doc.querySelectorAll(SERIES_SELECTORS.workEntries)];
+  return entries.flatMap((entry) => {
+    const link = entry.querySelector(SERIES_SELECTORS.workLink);
+    if (!link) return [];
+
+    const title = textOf(link).trim();
+    const part = textOf(entry).match(/Part\s+(\d+)/i)?.[1] || "";
+    return [{ title, part }];
+  });
 }
 
 function removeAO3NotesPlaceholders(value) {
@@ -316,6 +327,7 @@ function collectChapterNotes(root, workEndNotesElement, checkOwnership) {
 // Extract structured metadata, chapters, and notes from a work page.
 export function extractWorkData(doc, href) {
   const tagData = getWorkInfo(doc, href, false);
+  const series = extractWorkSeries(doc);
   const summary = getSummaryText(doc.querySelector(WORK_SELECTORS.summary));
   const title =
     textOf(doc.querySelector(WORK_SELECTORS.title)) || LABELS.UNTITLED_WORK;
@@ -365,11 +377,17 @@ export function extractWorkData(doc, href) {
     ];
   }
 
+  const tags = {
+    ...tagData.tags,
+    ...(series.length ? { series: series.map(({ title }) => title) } : {}),
+  };
+
   return {
     title,
     author,
     url: href,
-    tags: tagData.tags,
+    tags,
+    series,
     summary: tagData.summary,
     summaryText: summary,
     stats,
