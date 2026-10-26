@@ -10,7 +10,7 @@
     }
   },
   "name": "AO3 QOF",
-  "version": "2.2.2",
+  "version": "2.2.3",
 
   "description": "Adds features to better my ao3 experience",
 
@@ -40,7 +40,7 @@
     "webNavigation",
     "storage",
     "downloads",
-    "*://archiveofourown.org/*"
+    "<all_urls>"
   ],
 
   "web_accessible_resources": ["styles.css"],

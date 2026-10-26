@@ -264,13 +264,31 @@ function removeAO3NotesPlaceholders(value) {
     .trim();
 }
 
+// Flatten a paragraph to text, leaving a marker with the URL where each image was.
+function paragraphText(paragraph) {
+  const clone = paragraph.cloneNode(true);
+  clone.querySelectorAll("img").forEach((img) => {
+    const src = img.getAttribute("src") || "";
+    let marker = "";
+    try {
+      const url = new URL(src, BASE_URL);
+      if (/^https?:$/.test(url.protocol))
+        marker = `\u27E6IMG:${url.href}\u27E7`;
+    } catch {
+      // ignore unparseable src
+    }
+    img.replaceWith(clone.ownerDocument.createTextNode(marker));
+  });
+  return textOf(clone, true);
+}
+
 // Collect story paragraphs while excluding summaries and notes.
 function getStoryParagraphs(userstuff) {
   if (!userstuff) return [];
 
   return Array.from(userstuff.querySelectorAll(CONTENT_SELECTORS.paragraph))
     .filter((paragraph) => !paragraph.closest(NOTE_SELECTORS.summaryOrNotes))
-    .map((paragraph) => textOf(paragraph, true))
+    .map((paragraph) => paragraphText(paragraph))
     .filter(Boolean);
 }
 

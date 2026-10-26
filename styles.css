@@ -838,7 +838,8 @@ li.blurb.group {
 }
 
 #ao3-dl-panel .ao3-dl-download-row,
-#ao3-dl-panel .ao3-dl-bookmark-row {
+#ao3-dl-panel .ao3-dl-bookmark-row,
+#ao3-dl-panel .ao3-dl-page-download-row {
   padding: 7px 9px !important;
   background: var(--ao3-surface) !important;
   border-radius: 6px !important;
@@ -881,6 +882,9 @@ li.blurb.group {
 #ao3-dl-status {
   display: block !important;
   font-size: 12px !important;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: normal;
   color: var(--ao3-text-muted) !important;
   overflow-wrap: anywhere !important;
 }

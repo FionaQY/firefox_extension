@@ -5,7 +5,7 @@ import {
   extractAllValues,
   WORK_BLURB_SELECTOR,
 } from "./helper/extractor";
-import { createNotifPopup } from "./helper/popup";
+import { createNotifPopup, getSettings } from "./helper/popup";
 import { getWorkUrl, textOf } from "./helper/commons";
 
 const SELECTORS = {
@@ -128,7 +128,7 @@ const SELECTORS = {
   }
 
   async function handleShrinkWorks() {
-    const { settings = {} } = await browser.storage.local.get("settings");
+    const settings = await getSettings();
     if (!settings["general"]["shrinkWorks"]) {
       return;
     }

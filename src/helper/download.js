@@ -10,6 +10,7 @@ import {
   SectionType,
   TextRun,
   VerticalAlignSection,
+  ImageRun,
 } from "docx";
 import JSZip from "jszip";
 import {
@@ -19,10 +20,46 @@ import {
   sameText,
   stripLabel,
   toInteger,
+  textOf,
 } from "./commons.js";
 import { createNotifPopup, getSettings } from "./popup.js";
 import { getDocxFormat } from "./document_format.js";
 import { extractWorkData, getSeriesInfo, workInfo } from "./extractor.js";
+
+/* ==========================================================================
+ * SAVED "BUNDLE THIS SERIES" CHOICES
+ * ========================================================================== */
+
+const BUNDLE_KEY = "bundleSeriesIds";
+let bundleWriteQueue = Promise.resolve();
+
+/** Load the set of series IDs the user marked to be bundled. */
+export async function getBundleIds() {
+  const { [BUNDLE_KEY]: ids, settings = {} } = await browser.storage.local.get([
+    BUNDLE_KEY,
+    "settings",
+  ]);
+  if (Array.isArray(ids)) return new Set(ids);
+
+  const legacyIds = settings[BUNDLE_KEY];
+  if (!Array.isArray(legacyIds)) return new Set();
+
+  await browser.storage.local.set({ [BUNDLE_KEY]: legacyIds });
+  return new Set(legacyIds);
+}
+
+/** Save or clear one series choice without racing other checkbox changes. */
+export function setBundleId(id, on) {
+  const update = async () => {
+    const ids = await getBundleIds();
+    if (on) ids.add(id);
+    else ids.delete(id);
+    await browser.storage.local.set({ [BUNDLE_KEY]: [...ids] });
+  };
+
+  bundleWriteQueue = bundleWriteQueue.catch(() => {}).then(update);
+  return bundleWriteQueue;
+}
 
 const TAG_KEYS = [
   "rating",
@@ -497,18 +534,130 @@ function makePageFooters(font) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Images                                                              */
+/* ------------------------------------------------------------------ */
+
+const IMG_RE = /\u27E6IMG:([^\u27E7]+)\u27E7/;
+const IMG_SPLIT = /(\u27E6IMG:[^\u27E7]+\u27E7)/;
+const IMG_ALL = /\u27E6IMG:([^\u27E7]+)\u27E7/g;
+const IMAGE_MAX = { width: 420, height: 600 };
+
+function collectImageUrls(data) {
+  const urls = new Set();
+  for (const chapter of data.chapters) {
+    for (const paragraph of chapter.paragraphs) {
+      for (const match of String(paragraph).matchAll(IMG_ALL)) {
+        urls.add(match[1]);
+      }
+    }
+  }
+  return urls;
+}
+
+// Download one image, convert unsupported formats to PNG, and scale it to fit.
+async function loadImage(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  let blob = await response.blob();
+  const bitmap = await createImageBitmap(blob);
+
+  try {
+    const { width, height } = bitmap;
+    let type = { "image/jpeg": "jpg", "image/png": "png" }[blob.type] || "";
+    let data;
+
+    if (type) {
+      data = Uint8Array.from(new Uint8Array(await blob.arrayBuffer()));
+    } else {
+      // Word can't use webp/gif/etc., so redraw as PNG.
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(bitmap, 0, 0);
+
+      // A string crosses the page/extension boundary safely; blobs and buffers don't.
+      const base64 = canvas.toDataURL("image/png").split(",")[1];
+      const binary = atob(base64);
+      data = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) data[i] = binary.charCodeAt(i);
+      type = "png";
+    }
+
+    const scale = Math.min(
+      1,
+      IMAGE_MAX.width / width,
+      IMAGE_MAX.height / height,
+    );
+    return {
+      data,
+      type,
+      width: Math.max(1, Math.round(width * scale)),
+      height: Math.max(1, Math.round(height * scale)),
+    };
+  } finally {
+    bitmap.close?.();
+  }
+}
+
+// Load every image a document uses. Failed ones are left out and become "[image]".
+async function loadImages(data) {
+  const images = new Map();
+  for (const url of collectImageUrls(data)) {
+    try {
+      images.set(url, await loadImage(url));
+    } catch (error) {
+      console.warn(`AO3 download: could not load image ${url}`, error);
+    }
+  }
+  return images;
+}
+
+// Create a centered paragraph holding one image.
+function makeImageParagraph({ data, type, width, height }) {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 120, after: 120 },
+    keepLines: true,
+    children: [new ImageRun({ type, data, transformation: { width, height } })],
+  });
+}
+
+// Turn one story paragraph into text paragraphs and image paragraphs.
+function makeStoryParagraphs(rawText, fonts, sizes, images) {
+  if (!IMG_RE.test(rawText)) {
+    const text = normalizeStoryParagraph(rawText);
+    return text ? [makeBodyParagraph(text, fonts.body, sizes)] : [];
+  }
+
+  const out = [];
+  for (const part of rawText.split(IMG_SPLIT)) {
+    const match = part.match(IMG_RE);
+    if (match) {
+      const image = images.get(match[1]);
+      out.push(
+        image
+          ? makeImageParagraph(image)
+          : makeBodyParagraph("[image]", fonts.body, sizes),
+      );
+    } else {
+      const text = normalizeStoryParagraph(part);
+      if (text) out.push(makeBodyParagraph(text, fonts.body, sizes));
+    }
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ */
 /* Sections                                                            */
 /* ------------------------------------------------------------------ */
 
 // Build a document section for one work chapter.
-function makeChapterSection(chapter, fonts, sizes, page, footers) {
+function makeChapterSection(chapter, fonts, sizes, page, footers, images) {
   const children = [
     makeHeading(chapter.heading, 1),
     ...chapter.paragraphs
       .flatMap(splitParagraphs)
-      .map(normalizeStoryParagraph)
-      .filter(Boolean)
-      .map((text) => makeBodyParagraph(text, fonts.body, sizes)),
+      .flatMap((text) => makeStoryParagraphs(text, fonts, sizes, images)),
   ];
 
   return {
@@ -602,7 +751,7 @@ function makeBlankSection(page, { hiddenText } = {}) {
 }
 
 // Assemble the complete DOCX document from prepared work data and formatting.
-function buildDocument(data, format) {
+function buildDocument(data, format, images) {
   const { fonts, sizes } = format;
   const page = {
     ...PAGE,
@@ -651,6 +800,7 @@ function buildDocument(data, format) {
         sizes,
         page,
         makePageFooters(fonts.body),
+        images,
       ),
     ),
   ];
@@ -743,7 +893,10 @@ async function patchPackage(base64) {
 async function documentToBase64(data) {
   const settings = await getSettings();
   const format = getDocxFormat(settings.general || {});
-  const base64 = await Packer.toBase64String(buildDocument(data, format));
+  const images = await loadImages(data);
+  const base64 = await Packer.toBase64String(
+    buildDocument(data, format, images),
+  );
   return patchPackage(base64);
 }
 
@@ -910,6 +1063,7 @@ export function mergeWorks(works, series) {
 /* ------------------------------------------------------------------ */
 
 const DOWNLOAD_DELAY_MS = 3000;
+const LISTING_DOWNLOAD_DELAY_MS = 20_000;
 const MAX_SERIES_PAGES = 50;
 const DOWNLOAD_TYPE = { WORK: "work", SERIES: "series" };
 const DOWNLOAD_MESSAGE = "downloadDoc";
@@ -917,14 +1071,33 @@ const SERIES_SELECTORS = {
   WORK_BLURB: "li.work.blurb.group",
   NEXT_PAGE: "ol.pagination li.next a",
 };
+const LISTING_SELECTORS = {
+  WORK_BLURBS: ".work.blurb.group, li.blurb.group",
+  SERIES_LINK: "h4.heading a[href^='/series/']",
+  NEXT_PAGE: "ol.pagination li.next a",
+};
+
+// Create an empty result tally. failedItems holds a name for each failure.
+function createTally() {
+  return { downloaded: 0, skipped: 0, failed: 0, failedItems: [] };
+}
+
+// Record one failed item (a work, series or bundle) in the tally.
+function recordFailure(tally, name, count = 1) {
+  tally.failed += count;
+  tally.failedItems.push(name);
+}
+
+// Pause between AO3 requests to reduce the chance of rate limiting.
+function waitForDownloadDelay(delayMs) {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
 
 // Run asynchronous work sequentially with a pause between items.
-export async function forEachPaced(items, fn) {
+export async function forEachPaced(items, fn, delayMs = DOWNLOAD_DELAY_MS) {
   for (let i = 0; i < items.length; i++) {
     await fn(items[i], i);
-    if (i < items.length - 1) {
-      await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_DELAY_MS));
-    }
+    if (i < items.length - 1) await waitForDownloadDelay(delayMs);
   }
 }
 
@@ -935,8 +1108,174 @@ async function loadWork(id) {
   return extractWorkData(doc, url);
 }
 
+// Load work jobs, apply shared filters, and either download or retain each work.
+async function processWorkJobs(
+  jobs,
+  {
+    bundle,
+    notInSeries,
+    setStatus,
+    statusForWork,
+    shouldRetainWork = () => false,
+    onWorkSkipped = () => {},
+    onWorkProcessed = () => {},
+    delayMs = DOWNLOAD_DELAY_MS,
+    errorMessage,
+  },
+) {
+  const retainedWorks = [];
+  const tally = createTally();
+
+  await forEachPaced(
+    jobs,
+    async ({ id, title, author }, index) => {
+      setStatus(statusForWork(title, index, jobs.length));
+      try {
+        const work = await loadWork(id);
+        if (notInSeries && work.tags?.series?.length) {
+          tally.skipped++;
+          onWorkSkipped(title);
+          onWorkProcessed(id);
+          return;
+        }
+
+        if (bundle || shouldRetainWork(id)) {
+          retainedWorks.push({ ...work, id });
+        } else {
+          await downloadDoc(
+            workToDocument(work),
+            getWorkFilename(work.title || title, work.author || author),
+            jobs.length === 1,
+          );
+          tally.downloaded++;
+        }
+        onWorkProcessed(id);
+      } catch (error) {
+        recordFailure(tally, title || `work ${id}`);
+        createNotifPopup(errorMessage(title, error));
+        setStatus(`Failed: ${title}`);
+      }
+    },
+    delayMs,
+  );
+
+  return { retainedWorks, tally };
+}
+
+// Download retained works as one bundle and include the result in the tally.
+async function downloadWorksBundle(
+  works,
+  { label, setStatus, tally, errorMessage, singleWorkAsDocx = false },
+) {
+  if (!works.length) return;
+
+  setStatus(`Building ${label} bundle...`);
+  try {
+    if (singleWorkAsDocx && works.length === 1) {
+      const [work] = works;
+      await downloadDoc(
+        workToDocument(work),
+        getWorkFilename(work.title, work.author),
+        true,
+      );
+    } else {
+      await downloadBundle(works, null);
+    }
+    tally.downloaded += works.length;
+  } catch (error) {
+    recordFailure(tally, `${label} bundle`, works.length);
+    createNotifPopup(errorMessage(error));
+  }
+}
+
+// Download every unique work and series found across an AO3 listing's pages.
+export async function downloadAllListingWorks(
+  url,
+  { label, bundle, notInSeries, setStatus },
+) {
+  const startUrl = new URL(url);
+  const works = new Map();
+  const seriesMap = new Map();
+  const visitedPages = new Set();
+  let pageUrl = startUrl.href;
+
+  while (pageUrl) {
+    const currentPage = new URL(pageUrl);
+    if (
+      currentPage.origin !== BASE_URL ||
+      currentPage.pathname !== startUrl.pathname
+    ) {
+      throw new Error("AO3 listing pagination linked to an unexpected page");
+    }
+    if (visitedPages.has(currentPage.href)) {
+      throw new Error("AO3 listing pagination repeated a page");
+    }
+    visitedPages.add(currentPage.href);
+
+    setStatus(
+      `Reading ${label} (page ${currentPage.searchParams.get("page") || 1})`,
+    );
+    const doc = await fetchDoc(currentPage.href);
+    for (const blurb of doc.querySelectorAll(LISTING_SELECTORS.WORK_BLURBS)) {
+      const info = workInfo(blurb);
+      if (info) {
+        if (!works.has(info.id)) works.set(info.id, info);
+        continue;
+      }
+      const link = blurb.querySelector(LISTING_SELECTORS.SERIES_LINK);
+      const id = link?.getAttribute("href")?.match(/\/series\/(\d+)/)?.[1];
+      if (id && !seriesMap.has(id)) {
+        seriesMap.set(id, { id, title: textOf(link) });
+      }
+    }
+
+    const nextLink = doc.querySelector(LISTING_SELECTORS.NEXT_PAGE);
+    pageUrl = nextLink
+      ? new URL(nextLink.getAttribute("href"), currentPage).href
+      : "";
+
+    if (pageUrl) {
+      const nextPage = new URL(pageUrl);
+      if (
+        nextPage.origin !== BASE_URL ||
+        nextPage.pathname !== startUrl.pathname
+      ) {
+        throw new Error("AO3 listing pagination linked to an unexpected page");
+      }
+      if (visitedPages.has(nextPage.href)) {
+        throw new Error("AO3 listing pagination repeated a page");
+      }
+      await waitForDownloadDelay(LISTING_DOWNLOAD_DELAY_MS);
+    }
+  }
+
+  if (!works.size && !seriesMap.size) {
+    throw new Error(`No works found in ${label}`);
+  }
+
+  const savedBundle = await getBundleIds();
+
+  const items = [
+    ...[...works.values()].map((work) => ({
+      dataset: { type: DOWNLOAD_TYPE.WORK, ...work },
+      checked: false,
+    })),
+    ...[...seriesMap.values()].map((series) => ({
+      dataset: { type: DOWNLOAD_TYPE.SERIES, ...series, author: "" },
+      checked: false,
+      bundle: savedBundle.has(series.id),
+    })),
+  ];
+
+  await downloadSelectedWorks(items, {
+    bundle,
+    notInSeries,
+    setStatus,
+  });
+}
+
 // Fetch all pages of a series and report page-level progress.
-async function fetchSeriesWorks(id, onPage) {
+async function fetchSeriesWorks(id, onPage, delayMs = DOWNLOAD_DELAY_MS) {
   const seriesUrl = `${BASE_URL}/series/${id}`;
   const works = [];
   let info = null;
@@ -952,37 +1291,59 @@ async function fetchSeriesWorks(id, onPage) {
     onPage?.(page, works.length);
 
     if (!found.length || !doc.querySelector(SERIES_SELECTORS.NEXT_PAGE)) break;
-    await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_DELAY_MS));
+    await waitForDownloadDelay(delayMs);
   }
 
   return { works, info };
 }
 
 // Expand selected series to unique work jobs and retain series metadata.
-async function expandDownloadSelection(items, setStatus) {
+async function expandDownloadSelection(
+  items,
+  setStatus,
+  delayMs = DOWNLOAD_DELAY_MS,
+) {
   const jobs = new Map();
   const seriesList = [];
+  const readFailures = [];
   let standalone = 0;
+  let readAnySeries = false;
 
   for (const checkbox of items) {
     const { type, id, title, author } = checkbox.dataset;
     if (type === DOWNLOAD_TYPE.SERIES) {
+      if (readAnySeries) await waitForDownloadDelay(delayMs);
+      readAnySeries = true;
+
       setStatus(`Reading series: ${title}`);
       try {
-        const { works, info } = await fetchSeriesWorks(id, (page, count) =>
-          setStatus(`Reading series: ${title} (page ${page}, ${count} works)`),
+        const { works, info } = await fetchSeriesWorks(
+          id,
+          (page, count) =>
+            setStatus(
+              `Reading series: ${title} (page ${page}, ${count} works)`,
+            ),
+          delayMs,
         );
         seriesList.push({
           title,
           summary: info?.summary ?? "",
           author: info?.author ?? "",
           workIds: works.map((work) => work.id),
+          bundle:
+            checkbox.bundle ??
+            Boolean(
+              checkbox.parentElement?.querySelector(".ao3-dl-series-bundle")
+                ?.checked,
+            ),
         });
+
         for (const work of works) {
           if (!jobs.has(work.id)) jobs.set(work.id, work);
         }
         checkbox.checked = false;
       } catch (error) {
+        readFailures.push(`${title} (series)`);
         createNotifPopup(`Cannot download series :(: ${error}`);
         setStatus(`Failed to read series: ${title}`);
       }
@@ -992,7 +1353,7 @@ async function expandDownloadSelection(items, setStatus) {
     }
   }
 
-  return { jobs: [...jobs.values()], seriesList, standalone };
+  return { jobs: [...jobs.values()], seriesList, standalone, readFailures };
 }
 
 // Send a generated file URL to the background download handler.
@@ -1022,24 +1383,16 @@ function getSeriesWorkFilename(work, position, totalWorks) {
 }
 
 // Merge loaded works into the selected bundle DOCX and download it.
-async function downloadBundle(loadedById, seriesList, standalone) {
-  const series =
-    seriesList.length === 1 && standalone === 0 ? seriesList[0] : null;
-  const works = [...loadedById.values()];
-  const seriesAuthor =
+async function downloadBundle(works, series) {
+  const author =
     series?.author ||
-    [...new Set(works.map((work) => work.author).filter(Boolean))].join(", ");
-  const filename = series
-    ? [series.title, seriesAuthor, "series"]
-        .filter(Boolean)
-        .map(safeFilename)
-        .join("_") + ".docx"
-    : [works[0].title, works[0].author, "bundle"]
-        .filter(Boolean)
-        .map(safeFilename)
-        .join("_") + ".docx";
+    [...new Set(works.map((w) => w.author).filter(Boolean))].join(", ");
+  const arr = series
+    ? [series.title, author, "series"]
+    : [works[0].title, works[0].author, "bundle"];
+  const filename = arr.filter(Boolean).map(safeFilename).join("_") + ".docx";
 
-  await downloadDoc(mergeWorks(works, series), filename, true);
+  await downloadDoc(mergeWorks(works, series), filename, !series);
 }
 
 // Package a series' separate DOCX files into a named ZIP download.
@@ -1055,49 +1408,36 @@ async function downloadSeriesZip(series, works) {
   await downloadFile(url, filename, false);
 }
 
-// Load selected jobs and download standalone works, retaining series and bundle works.
+// Load selected jobs and retain works needed for bundles and series archives.
 async function loadSelectedWorks(
   jobs,
   items,
-  { bundle, seriesWorkIds, notInSeries, setStatus },
+  { bundle, seriesWorkIds, notInSeries, setStatus, delayMs },
 ) {
   const loadedById = new Map();
-  const tally = { downloaded: 0, skipped: 0, failed: 0 };
-
-  await forEachPaced(jobs, async ({ id, title, author }, index) => {
-    setStatus(`${index + 1}/${jobs.length}: ${title}`);
-    try {
-      const work = await loadWork(id);
-      if (notInSeries && work.tags?.series?.length) {
-        setStatus(`Skipping ${title} (in series)`);
-        tally.skipped++;
-      } else if (bundle || seriesWorkIds.has(id)) {
-        loadedById.set(id, work);
-      } else {
-        await downloadDoc(
-          workToDocument(work),
-          getWorkFilename(title, author),
-          jobs.length === 1,
-        );
-        tally.downloaded++;
-      }
-
+  const { retainedWorks, tally } = await processWorkJobs(jobs, {
+    bundle,
+    notInSeries,
+    setStatus,
+    statusForWork: (title, index, total) => `${index + 1}/${total}: ${title}`,
+    shouldRetainWork: (id) => seriesWorkIds.has(id),
+    onWorkSkipped: (title) => setStatus(`Skipping ${title} (in series)`),
+    onWorkProcessed: (id) => {
       const checkbox = items.find(
         (item) =>
           item.dataset.type === DOWNLOAD_TYPE.WORK && item.dataset.id === id,
       );
       if (checkbox) checkbox.checked = false;
-    } catch (error) {
-      tally.failed++;
-      createNotifPopup(`sadge :(: ${error}`);
-      setStatus(`Failed: ${title}`);
-    }
+    },
+    errorMessage: (title, error) => `Could not download "${title}": ${error}`,
+    delayMs,
   });
 
+  for (const work of retainedWorks) loadedById.set(work.id, work);
   return { loadedById, tally };
 }
 
-// Download each selected series as a ZIP containing its successfully loaded works.
+// Download each selected series as a bundle docx or a ZIP of separate files.
 async function downloadSeriesZips(seriesList, loadedById, setStatus, tally) {
   for (const series of seriesList) {
     const works = series.workIds
@@ -1106,62 +1446,100 @@ async function downloadSeriesZips(seriesList, loadedById, setStatus, tally) {
         position: index + 1,
       }))
       .filter(({ work }) => work);
-    if (!works.length) continue;
+    if (!works.length) {
+      if (!tally.skipped)
+        recordFailure(tally, `${series.title} (series: no works loaded)`);
+      continue;
+    }
 
-    setStatus(`Building ZIP: ${series.title}`);
+    setStatus(`Building ${series.bundle ? "bundle" : "ZIP"}: ${series.title}`);
     try {
-      await downloadSeriesZip(series, works);
+      if (series.bundle && works.length > 1) {
+        await downloadBundle(
+          works.map(({ work }) => work),
+          series,
+        );
+      } else {
+        await downloadSeriesZip(series, works);
+      }
       tally.downloaded += works.length;
     } catch (error) {
-      createNotifPopup(`Cannot ZIP series "${series.title}": ${error}`);
-      tally.failed += works.length;
+      recordFailure(tally, `${series.title} (series)`, works.length);
+      createNotifPopup(`Cannot build series "${series.title}": ${error}`);
     }
   }
 }
 
-// Report the final download counts in the panel.
-function setDownloadSummary({ downloaded, skipped, failed }, setStatus) {
-  setStatus(
+// Report the final counts, plus the name of everything that failed.
+const MAX_LISTED_FAILURES = 5;
+
+function setDownloadSummary(
+  { downloaded, skipped, failed, failedItems },
+  setStatus,
+) {
+  let text =
     `Done: ${downloaded} downloaded` +
-      (skipped ? `, ${skipped} skipped` : "") +
-      (failed ? `, ${failed} failed` : ""),
-  );
+    (skipped ? `, ${skipped} skipped` : "") +
+    (failed ? `, ${failed} failed` : "");
+
+  if (failedItems.length) {
+    const shown = failedItems.slice(0, MAX_LISTED_FAILURES);
+    const more = failedItems.length - shown.length;
+    text += `. Failed: ${shown.join("; ")}`;
+    if (more > 0) text += `; and ${more} more (see console)`;
+    console.warn("AO3 download failures:", failedItems);
+  }
+  setStatus(text);
 }
 
 // Download selected works individually, as series ZIPs, or as one merged bundle.
 export async function downloadSelectedWorks(
   items,
-  { bundle: bundleRequested, notInSeries, setStatus },
-) {
-  const { jobs, seriesList, standalone } = await expandDownloadSelection(
-    items,
+  {
+    bundle: bundleRequested,
+    notInSeries,
     setStatus,
-  );
-  if (!jobs.length) return;
+    delayMs = DOWNLOAD_DELAY_MS,
+  },
+) {
+  const { jobs, seriesList, standalone, readFailures } =
+    await expandDownloadSelection(items, setStatus, delayMs);
 
-  const bundle = bundleRequested && jobs.length > 1;
+  if (!jobs.length) {
+    if (readFailures.length) {
+      const tally = createTally();
+      readFailures.forEach((name) => recordFailure(tally, name));
+      setDownloadSummary(tally, setStatus);
+    }
+    return;
+  }
+
+  const bundle = bundleRequested && standalone > 1;
   const seriesWorkIds = new Set(seriesList.flatMap((series) => series.workIds));
   const { loadedById, tally } = await loadSelectedWorks(jobs, items, {
     bundle,
     seriesWorkIds,
     notInSeries,
     setStatus,
+    delayMs,
   });
 
-  if (bundle && loadedById.size > 1) {
-    setStatus("Building bundle...");
-    try {
-      await downloadBundle(loadedById, seriesList, standalone);
-      tally.downloaded += loadedById.size;
-    } catch (error) {
-      createNotifPopup(`Cannot bundle :(: ${error}`);
-      setStatus("Failed to build bundle");
-      tally.failed += loadedById.size;
-      return;
+  readFailures.forEach((name) => recordFailure(tally, name));
+
+  if (bundle) {
+    const works = [...loadedById]
+      .filter(([id]) => !seriesWorkIds.has(id))
+      .map(([, work]) => work);
+    if (works.length > 1) {
+      await downloadWorksBundle(works, {
+        label: "selected works",
+        setStatus,
+        tally,
+        errorMessage: (error) => `Could not bundle selected works: ${error}`,
+      });
     }
-  } else if (seriesList.length) {
-    await downloadSeriesZips(seriesList, loadedById, setStatus, tally);
   }
 
+  await downloadSeriesZips(seriesList, loadedById, setStatus, tally);
   setDownloadSummary(tally, setStatus);
 }

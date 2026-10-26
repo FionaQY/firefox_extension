@@ -1,9 +1,15 @@
-/* globals browser */
-import { downloadSelectedWorks, forEachPaced } from "./helper/download.js";
+/* globals */
+import {
+  downloadAllListingWorks,
+  downloadSelectedWorks,
+  forEachPaced,
+  getBundleIds,
+  setBundleId,
+} from "./helper/download.js";
 import { getWorkUrl, textOf } from "./helper/commons.js";
 import { workInfo } from "./helper/extractor.js";
 import { bookmarkWork } from "./helper/bookmark.js";
-import { getButton, createNotifPopup } from "./helper/popup.js";
+import { getButton, createNotifPopup, getSettings } from "./helper/popup.js";
 import {
   createLabeledCheckbox,
   MOBILE_MAX_WIDTH,
@@ -14,11 +20,13 @@ const BOOKMARK_CREATED = "created";
 
 const CLS = {
   CHECK: "ao3-dl-check",
+  SERIES_BUNDLE: "ao3-dl-series-bundle",
   HIDDEN: "ao3-hidden",
   ROW: "ao3-dl-row",
   SELECTION_ROW: "ao3-dl-selection-row",
   DOWNLOAD_ROW: "ao3-dl-download-row",
   BOOKMARK_ROW: "ao3-dl-bookmark-row",
+  PAGE_DOWNLOAD_ROW: "ao3-dl-page-download-row",
 };
 
 const ID = {
@@ -28,9 +36,38 @@ const ID = {
   PRIVATE: "ao3-bm-private",
   NOT_SERIES: "ao3-dl-not-in-series",
   DOWNLOAD: "ao3-dl-btn",
+  PAGE_DOWNLOAD: "ao3-dl-page-download-btn",
   BOOKMARK: "ao3-bm-btn",
   STATUS: "ao3-dl-status",
 };
+
+const PAGE = {
+  AUTHOR_WORKS: /^\/users\/[^/]+\/(?:pseuds\/[^/]+\/)?works\/?$/,
+  BOOKMARKS: /^\/users\/[^/]+\/(?:pseuds\/[^/]+\/)?(?:bookmarks|series)\/?$/,
+  // Bare paths, only valid when filtered to a user via ?user_id=
+  FILTERED_WORKS: /^\/works\/?$/,
+  FILTERED_BOOKMARKS: /^\/bookmarks\/?$/,
+};
+
+/** Return the page-wide download action for supported AO3 listing pages. */
+function getPageDownloadAction() {
+  const { pathname, search } = location;
+  const hasUser = new URLSearchParams(search).has("user_id");
+
+  if (
+    PAGE.AUTHOR_WORKS.test(pathname) ||
+    (hasUser && PAGE.FILTERED_WORKS.test(pathname))
+  ) {
+    return { buttonLabel: "Download all works", itemLabel: "author's works" };
+  }
+  if (
+    PAGE.BOOKMARKS.test(pathname) ||
+    (hasUser && PAGE.FILTERED_BOOKMARKS.test(pathname))
+  ) {
+    return { buttonLabel: "Download all bookmarks", itemLabel: "bookmarks" };
+  }
+  return null;
+}
 
 const SEL = {
   BLURB: ".work.blurb.group, li.blurb.group",
@@ -60,6 +97,35 @@ function seriesInfo(el) {
   return null;
 }
 
+/** Add the "Bundle" checkbox (series only), TODO: make it look nicer **/
+function addSeriesBundleCheckbox(container, seriesId) {
+  const label = document.createElement("label");
+  label.style.cssText =
+    "position:absolute;top:60px;right:12px;z-index:10;cursor:pointer;font-size:12px";
+
+  const bundleCb = document.createElement("input");
+  bundleCb.type = "checkbox";
+  bundleCb.className = CLS.SERIES_BUNDLE;
+  let changed = false;
+
+  getBundleIds()
+    .then((ids) => {
+      if (!changed) bundleCb.checked = ids.has(seriesId);
+    })
+    .catch((error) => {
+      createNotifPopup(`Could not load saved bundle choice: ${error.message}`);
+    });
+  bundleCb.addEventListener("change", () => {
+    changed = true;
+    setBundleId(seriesId, bundleCb.checked).catch((error) => {
+      createNotifPopup(`Could not save bundle choice: ${error.message}`);
+    });
+  });
+
+  label.append(bundleCb, " Bundle");
+  container.appendChild(label);
+}
+
 /** Add the selection checkbox and its work/series metadata to a page item. */
 function addCheckbox(container, data) {
   const cb = document.createElement("input");
@@ -76,6 +142,8 @@ function addCheckbox(container, data) {
 
   container.style.position = "relative";
   container.appendChild(cb);
+
+  if (data.type === TYPE.SERIES) addSeriesBundleCheckbox(container, data.id);
 }
 
 /** Add selection checkboxes to work and series blurbs, including new content. */
@@ -142,7 +210,7 @@ async function bookmarkSelected(items, { ui, general, setStatus }) {
  * ========================================================================== */
 
 /** Create the floating panel and the controls enabled by current settings. */
-function buildPanel({ downloadOn, bookmarkOn }) {
+function buildPanel({ downloadOn, bookmarkOn, pageDownload }) {
   const compact = window.innerWidth <= MOBILE_MAX_WIDTH;
   // Create a panel action button with its initial selection count.
   const actionButton = (id, label) => {
@@ -159,12 +227,16 @@ function buildPanel({ downloadOn, bookmarkOn }) {
   };
   const status = document.createElement("span");
   status.id = ID.STATUS;
+  const pageDownloadButton = pageDownload
+    ? getButton("primary", compact, pageDownload.buttonLabel)
+    : null;
+  if (pageDownloadButton) pageDownloadButton.id = ID.PAGE_DOWNLOAD;
 
   const panel = document.createElement("div");
   panel.id = ID.PANEL;
   panel.append(
     ...[
-      row(CLS.SELECTION_ROW, createLabeledCheckbox(ID.ALL, "All")),
+      row(CLS.SELECTION_ROW, createLabeledCheckbox(ID.ALL, "All in page")),
       downloadOn &&
         row(
           CLS.DOWNLOAD_ROW,
@@ -178,6 +250,9 @@ function buildPanel({ downloadOn, bookmarkOn }) {
           createLabeledCheckbox(ID.PRIVATE, "Private"),
           actionButton(ID.BOOKMARK, "Bookmark"),
         ),
+      downloadOn &&
+        pageDownload &&
+        row(CLS.PAGE_DOWNLOAD_ROW, pageDownloadButton),
       status,
     ].filter(Boolean),
   );
@@ -195,6 +270,7 @@ function getPanelControls(panel) {
     private: find(ID.PRIVATE),
     notSeries: find(ID.NOT_SERIES),
     download: find(ID.DOWNLOAD),
+    pageDownload: find(ID.PAGE_DOWNLOAD),
     bookmark: find(ID.BOOKMARK),
   };
 }
@@ -216,6 +292,7 @@ function refreshPanelCounts(ui) {
 /** Disable panel actions and item checkboxes while a workflow is running. */
 function setPanelBusy(ui, busy) {
   if (ui.download) ui.download.disabled = busy;
+  if (ui.pageDownload) ui.pageDownload.disabled = busy;
   if (ui.bookmark) ui.bookmark.disabled = busy;
   getSelectionCheckboxes().forEach((checkbox) => (checkbox.disabled = busy));
 }
@@ -234,7 +311,7 @@ function withBusy(fn, ui) {
 }
 
 /** Connect selection, download, and bookmark interactions to panel controls. */
-function wirePanel(ui, general) {
+function wirePanel(ui, general, pageDownload) {
   // Return the selected work and series checkboxes on the page.
   const selected = () =>
     getSelectionCheckboxes().filter((checkbox) => checkbox.checked);
@@ -249,9 +326,9 @@ function wirePanel(ui, general) {
     if (event.target.classList?.contains(CLS.CHECK)) refresh();
   });
   ui.all.addEventListener("change", () => {
-    getSelectionCheckboxes()
-      .filter((checkbox) => checkbox.dataset.type === TYPE.WORK)
-      .forEach((checkbox) => (checkbox.checked = ui.all.checked));
+    getSelectionCheckboxes().forEach(
+      (checkbox) => (checkbox.checked = ui.all.checked),
+    );
     refresh();
   });
   ui.download?.addEventListener(
@@ -266,6 +343,24 @@ function wirePanel(ui, general) {
       ui,
     ),
   );
+  ui.pageDownload?.addEventListener(
+    "click",
+    withBusy(async () => {
+      const { itemLabel } = pageDownload;
+      try {
+        await downloadAllListingWorks(window.location.href, {
+          label: itemLabel,
+          bundle: Boolean(ui.bundle?.checked),
+          notInSeries: Boolean(ui.notSeries?.checked),
+          setStatus,
+        });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        createNotifPopup(`Could not download ${itemLabel}: ${reason}`);
+        setStatus(`Could not download ${itemLabel}`);
+      }
+    }, ui),
+  );
   ui.bookmark?.addEventListener(
     "click",
     withBusy(
@@ -279,11 +374,12 @@ function wirePanel(ui, general) {
 
 /** Load settings, observe dynamic page content, and display the download panel. */
 async function openDownloadButton() {
-  const { settings = {} } = await browser.storage.local.get("settings");
+  const settings = await getSettings();
   const general = settings.general ?? {};
   const downloadOn = Boolean(general.downloadWorks);
   const bookmarkOn = Boolean(general.bookmarkWorks);
   if (!downloadOn && !bookmarkOn) return;
+  const pageDownload = getPageDownloadAction();
 
   injectCheckboxes();
   new MutationObserver(injectCheckboxes).observe(document.body, {
@@ -291,9 +387,9 @@ async function openDownloadButton() {
     subtree: true,
   });
 
-  const panel = buildPanel({ downloadOn, bookmarkOn });
+  const panel = buildPanel({ downloadOn, bookmarkOn, pageDownload });
   document.body.appendChild(panel);
-  wirePanel(getPanelControls(panel), general);
+  wirePanel(getPanelControls(panel), general, pageDownload);
 }
 
 (() => {

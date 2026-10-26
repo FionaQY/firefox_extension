@@ -13,6 +13,19 @@ const MODE_MAP = {
   settings: "settings_mode",
 };
 
+function isAo3(url) {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return (
+      (protocol === "https:" || protocol === "http:") &&
+      (hostname === "archiveofourown.org" ||
+        hostname.endsWith(".archiveofourown.org"))
+    );
+  } catch {
+    return false;
+  }
+}
+
 browser.browserAction.onClicked.addListener((tab) => {
   browser.tabs.sendMessage(tab.id, { action: "showPopup" });
 });
@@ -104,6 +117,9 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status != "complete" || !tab.url) return;
 
+  if (!tab.url || !isAo3(tab.url)) {
+    return;
+  }
   if (pendingInjection && pendingInjection.tabId == tabId) {
     injectScript(tabId, "scroll", "shrink_works");
   } else if (tab.url.includes("/works/")) {

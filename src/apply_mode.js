@@ -1,4 +1,4 @@
-/* globals browser */
+/* globals */
 import { getLangAbb } from "./helper/extractor";
 import {
   getBookmarkParams,
@@ -9,7 +9,7 @@ import {
   addValue,
   addMissingId,
 } from "./helper/params";
-import { createNotifPopup } from "./helper/popup";
+import { createNotifPopup, getSettings } from "./helper/popup";
 
 (() => {
   const currentUrl = window.location.href;
@@ -200,7 +200,7 @@ import { createNotifPopup } from "./helper/popup";
   }
 
   async function formParams(baseUrl, isBookmark) {
-    const { settings = {} } = await browser.storage.local.get("settings");
+    const settings = await getSettings();
     let filters = settings.filters || [];
     let searchParams = isBookmark
       ? getBookmarkParams(new URL(baseUrl))

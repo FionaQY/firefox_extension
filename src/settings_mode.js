@@ -1,4 +1,4 @@
-/* globals */
+/* globals browser */
 
 import {
   saveSettings,
@@ -14,8 +14,11 @@ import {
   optionsPopupHelper,
   resetInputs,
 } from "./helper/popup_fields";
+import { getBundleIds } from "./helper/download";
 (() => {
   removeModePopup();
+
+  const BUNDLE_KEY = "bundleSeriesIds";
 
   const fields = {
     populateBookmark: {
@@ -122,7 +125,12 @@ import {
         onClick: async (e) => {
           const btn = e.target;
           const currentSettings = await getSettings();
-          const json = JSON.stringify(currentSettings, null, 5);
+          const { [BUNDLE_KEY]: bundleIds } = await getBundleIds();
+          const exportData = {
+            ...currentSettings,
+            [BUNDLE_KEY]: bundleIds || currentSettings[BUNDLE_KEY] || [],
+          };
+          const json = JSON.stringify(exportData, null, 5);
           await navigator.clipboard.writeText(json);
           if (btn) {
             const originalText = btn.textContent;
@@ -142,13 +150,36 @@ import {
           if (confirm("This will override all settings and filters.")) {
             try {
               const imported = JSON.parse(text);
-              if (typeof imported !== "object" || imported === null) {
+              if (
+                typeof imported !== "object" ||
+                imported === null ||
+                Array.isArray(imported)
+              ) {
                 throw new Error("Invalid settings format");
               }
-              await saveSettings(imported);
+              const importedSettings = { ...imported };
+              const hasBundleIds = Object.hasOwn(importedSettings, BUNDLE_KEY);
+              const bundleIds = importedSettings[BUNDLE_KEY];
+              delete importedSettings[BUNDLE_KEY];
+
+              if (
+                hasBundleIds &&
+                (!Array.isArray(bundleIds) ||
+                  !bundleIds.every((id) => typeof id === "string"))
+              ) {
+                throw new Error("Invalid saved series bundle choices");
+              }
+
+              const storageData = { settings: importedSettings };
+              if (hasBundleIds) storageData[BUNDLE_KEY] = bundleIds;
+              await browser.storage.local.set(storageData);
               removeModePopup();
-            } catch {
-              createNotifPopup("Invalid settings format");
+            } catch (error) {
+              createNotifPopup(
+                error instanceof SyntaxError
+                  ? "Invalid settings format"
+                  : `Could not import settings: ${error.message}`,
+              );
             }
           }
         },

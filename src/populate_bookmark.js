@@ -1,6 +1,6 @@
-/* globals browser */
+/* globals */
 import { getWorkUrl, getSeriesUrl } from "./helper/commons";
-import { createNotifPopup } from "./helper/popup";
+import { createNotifPopup, getSettings } from "./helper/popup";
 import { getBookmarkNotes } from "./helper/bookmark";
 
 const SELECTORS = {
@@ -33,7 +33,7 @@ const SELECTORS = {
   }
 
   async function populateBookmark() {
-    const { settings = {} } = await browser.storage.local.get("settings");
+    const settings = await getSettings();
     if (!settings.general?.populateBookmark) return;
 
     const bookmarkTextBox = document.querySelector(SELECTORS.BOOKMARK_NOTES);
@@ -60,7 +60,11 @@ const SELECTORS = {
     if (handleBookmarkClick.listenerAdded) return;
 
     document.addEventListener("click", (e) => {
-      if (e.target.matches(SELECTORS.BOOKMARK_OPEN_LINK) && isVisible()) {
+      if (
+        e.target instanceof Element &&
+        e.target.closest(SELECTORS.BOOKMARK_OPEN_LINK) &&
+        isVisible()
+      ) {
         populateBookmark();
       }
     });

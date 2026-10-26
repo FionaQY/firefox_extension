@@ -9,6 +9,7 @@ This is a personal Firefox extension I built for myself. It may not be polished 
 - Apply saved filters
 - Hide/Shrink works with undesired features
 - Download works as book-formatted DOCX files with configurable fonts, font sizes, margins, and appendix metadata
+- Download all works from an author's works listing or all bookmarked works from a bookmarks listing, including later pages
 
 Use the **Document Format** popup mode to adjust DOCX fonts, font sizes, page margins, and whether tags and relationships appear in the appendix. Font names should be installed on the device used to open the document; the defaults match the included Word macro.
 <img height="300" alt="image" src="https://github.com/user-attachments/assets/91fe17b0-c9bc-4a08-be49-58a46d26c31d" />
