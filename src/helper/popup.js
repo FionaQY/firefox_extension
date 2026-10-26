@@ -20,6 +20,7 @@ export const MODE_ID = {
   HIDE: "hide",
   SEARCH: "search",
   DOWNLOAD: "download",
+  STATUS: "status",
 };
 
 export const MODE_OPTIONS = {
@@ -32,6 +33,7 @@ export const MODE_OPTIONS = {
   [MODE_ID.DOWNLOAD]: { icon: "📥", label: "Download Docx" },
   [MODE_ID.FORMAT]: { icon: "📖", label: "Format Docx" },
   [MODE_ID.SETTINGS]: { icon: "⚙️", label: "Settings" },
+  [MODE_ID.STATUS]: { icon: "📊", label: "Download Status" },
 };
 
 const CLASS = {

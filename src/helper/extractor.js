@@ -5,7 +5,7 @@ import {
   stripLabel,
   textOf,
   toInteger,
-} from "./commons.js";
+} from "./commons";
 
 export const WORK_BLURB_SELECTOR = ".work.blurb.group";
 

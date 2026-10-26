@@ -14,7 +14,7 @@ import {
   optionsPopupHelper,
   resetInputs,
 } from "./helper/popup_fields";
-import { getBundleIds } from "./helper/download";
+import { getBundleIds } from "./helper/bundle_ids";
 (() => {
   removeModePopup();
 

@@ -11,6 +11,7 @@ const MODE_MAP = {
   download: "download_mode",
   format: "format_docx_mode",
   settings: "settings_mode",
+  status: "status_mode",
 };
 
 function isAo3(url) {

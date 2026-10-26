@@ -1,6 +1,6 @@
-import { fetchDoc, stripLabel, BASE_URL } from "./commons.js";
-import { getWorkInfo, getSeriesInfo } from "./extractor.js";
-import { parseHtmlFragment } from "./popup.js";
+import { fetchDoc, stripLabel, BASE_URL } from "./commons";
+import { getWorkInfo, getSeriesInfo } from "./extractor";
+import { parseHtmlFragment } from "./popup";
 
 const SELECTORS = {
   FORM: "form#new_bookmark, #bookmark_form_placement form",

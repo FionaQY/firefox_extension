@@ -15,10 +15,9 @@
   "description": "Adds features to better my ao3 experience",
 
   "background": {
-    "scripts": ["background.js"],
-    "persistent": false
+    "scripts": ["background.js", "background/download_worker.bundle.js"],
+    "persistent": true
   },
-
   "icons": {
     "16": "icons/border-16.png",
     "24": "icons/border-24.png",

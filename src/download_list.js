@@ -1,19 +1,11 @@
-/* globals */
-import {
-  downloadAllListingWorks,
-  downloadSelectedWorks,
-  forEachPaced,
-  getBundleIds,
-  setBundleId,
-} from "./helper/download.js";
-import { getWorkUrl, textOf } from "./helper/commons.js";
-import { workInfo } from "./helper/extractor.js";
-import { bookmarkWork } from "./helper/bookmark.js";
-import { getButton, createNotifPopup, getSettings } from "./helper/popup.js";
-import {
-  createLabeledCheckbox,
-  MOBILE_MAX_WIDTH,
-} from "./helper/popup_fields.js";
+/* globals browser */
+import { getBundleIds, setBundleId } from "./helper/bundle_ids";
+import { getWorkUrl, textOf } from "./helper/commons";
+import { workInfo } from "./helper/extractor";
+import { bookmarkWork } from "./helper/bookmark";
+import { getButton, createNotifPopup, getSettings } from "./helper/popup";
+import { createLabeledCheckbox, MOBILE_MAX_WIDTH } from "./helper/popup_fields";
+import { forEachPaced } from "./helper/download_tasks";
 
 const TYPE = { WORK: "work", SERIES: "series" };
 const BOOKMARK_CREATED = "created";
@@ -39,6 +31,7 @@ const ID = {
   PAGE_DOWNLOAD: "ao3-dl-page-download-btn",
   BOOKMARK: "ao3-bm-btn",
   STATUS: "ao3-dl-status",
+  STATUS_BTN: "ao3-dl-status-btn",
 };
 
 const PAGE = {
@@ -205,6 +198,36 @@ async function bookmarkSelected(items, { ui, general, setStatus }) {
   );
 }
 
+function toTaskItem(checkbox) {
+  const { type, id, title, author = "" } = checkbox.dataset;
+  const item = { type, id, title, author };
+  if (type === TYPE.SERIES) {
+    item.bundle = Boolean(
+      checkbox.parentElement?.querySelector(`.${CLS.SERIES_BUNDLE}`)?.checked,
+    );
+  }
+  return item;
+}
+
+function describeItems(items) {
+  if (items.length === 1) {
+    const [item] = items;
+    return `${item.type === TYPE.SERIES ? "Series" : "Work"}: ${item.title}`;
+  }
+  const series = items.filter((i) => i.type === TYPE.SERIES).length;
+  const works = items.length - series;
+  return [
+    `${items.length} items`,
+    `(${[works && `${works} works`, series && `${series} series`]
+      .filter(Boolean)
+      .join(", ")})`,
+  ].join(" ");
+}
+
+function enqueueDownload(task) {
+  return browser.runtime.sendMessage({ action: "enqueueDownload", task });
+}
+
 /* ==========================================================================
  * PANEL UI
  * ========================================================================== */
@@ -231,12 +254,18 @@ function buildPanel({ downloadOn, bookmarkOn, pageDownload }) {
     ? getButton("primary", compact, pageDownload.buttonLabel)
     : null;
   if (pageDownloadButton) pageDownloadButton.id = ID.PAGE_DOWNLOAD;
+  const statusButton = getButton("secondary", compact, "Download Status");
+  statusButton.id = ID.STATUS_BTN;
 
   const panel = document.createElement("div");
   panel.id = ID.PANEL;
   panel.append(
     ...[
-      row(CLS.SELECTION_ROW, createLabeledCheckbox(ID.ALL, "All in page")),
+      row(
+        CLS.SELECTION_ROW,
+        createLabeledCheckbox(ID.ALL, "All in page"),
+        statusButton,
+      ),
       downloadOn &&
         row(
           CLS.DOWNLOAD_ROW,
@@ -265,6 +294,7 @@ function getPanelControls(panel) {
   const find = (id) => panel.querySelector(`#${id}`);
   return {
     status: find(ID.STATUS),
+    statusButton: find(ID.STATUS_BTN),
     all: find(ID.ALL),
     bundle: find(ID.BUNDLE),
     private: find(ID.PRIVATE),
@@ -312,15 +342,16 @@ function withBusy(fn, ui) {
 
 /** Connect selection, download, and bookmark interactions to panel controls. */
 function wirePanel(ui, general, pageDownload) {
-  // Return the selected work and series checkboxes on the page.
   const selected = () =>
     getSelectionCheckboxes().filter((checkbox) => checkbox.checked);
-  // Display progress text in the panel's status element.
   const setStatus = (text) => {
     ui.status.textContent = text;
   };
-  // Refresh action labels to reflect the live selection.
   const refresh = () => refreshPanelCounts(ui);
+  const options = () => ({
+    bundle: Boolean(ui.bundle?.checked),
+    notInSeries: Boolean(ui.notSeries?.checked),
+  });
 
   document.addEventListener("change", (event) => {
     if (event.target.classList?.contains(CLS.CHECK)) refresh();
@@ -331,36 +362,46 @@ function wirePanel(ui, general, pageDownload) {
     );
     refresh();
   });
-  ui.download?.addEventListener(
-    "click",
-    withBusy(
-      () =>
-        downloadSelectedWorks(selected(), {
-          bundle: Boolean(ui.bundle?.checked),
-          notInSeries: Boolean(ui.notSeries?.checked),
-          setStatus,
-        }),
-      ui,
-    ),
-  );
-  ui.pageDownload?.addEventListener(
-    "click",
-    withBusy(async () => {
-      const { itemLabel } = pageDownload;
-      try {
-        await downloadAllListingWorks(window.location.href, {
-          label: itemLabel,
-          bundle: Boolean(ui.bundle?.checked),
-          notInSeries: Boolean(ui.notSeries?.checked),
-          setStatus,
-        });
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        createNotifPopup(`Could not download ${itemLabel}: ${reason}`);
-        setStatus(`Could not download ${itemLabel}`);
-      }
-    }, ui),
-  );
+
+  ui.download?.addEventListener("click", async () => {
+    const checkboxes = selected();
+    if (!checkboxes.length) {
+      setStatus("Nothing selected");
+      return;
+    }
+    const items = checkboxes.map(toTaskItem);
+    try {
+      await enqueueDownload({
+        kind: "items",
+        label: describeItems(items),
+        items,
+        options: options(),
+      });
+      checkboxes.forEach((checkbox) => (checkbox.checked = false));
+      ui.all.checked = false;
+      refresh();
+      setStatus('Queued. Follow progress in "Download status".');
+    } catch (error) {
+      createNotifPopup(`Could not queue download: ${error.message}`);
+    }
+  });
+
+  ui.pageDownload?.addEventListener("click", async () => {
+    const { buttonLabel, itemLabel } = pageDownload;
+    const heading = document.querySelector("h2.heading")?.textContent.trim();
+    try {
+      await enqueueDownload({
+        kind: "listing",
+        label: `${buttonLabel}${heading ? `: ${heading}` : ""}`,
+        listingLabel: itemLabel,
+        url: window.location.href,
+        options: options(),
+      });
+      setStatus('Queued. Follow progress in "Download status".');
+    } catch (error) {
+      createNotifPopup(`Could not queue ${itemLabel}: ${error.message}`);
+    }
+  });
   ui.bookmark?.addEventListener(
     "click",
     withBusy(
@@ -368,10 +409,19 @@ function wirePanel(ui, general, pageDownload) {
       ui,
     ),
   );
+  ui.statusButton?.addEventListener("click", async () => {
+    try {
+      await browser.runtime.sendMessage({
+        action: "executeMode",
+        mode: "status",
+      });
+    } catch (error) {
+      createNotifPopup(`Could not open download status: ${error.message}`);
+    }
+  });
 
   refresh();
 }
-
 /** Load settings, observe dynamic page content, and display the download panel. */
 async function openDownloadButton() {
   const settings = await getSettings();
