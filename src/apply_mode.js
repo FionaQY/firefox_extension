@@ -1,5 +1,5 @@
 /* globals */
-import { getLangAbb } from "./helper/extractor";
+import { normLang } from "./helper/extractor";
 import {
   getBookmarkParams,
   buildQuery,
@@ -136,7 +136,7 @@ import { createNotifPopup, getSettings } from "./helper/popup";
 
     // languagesList
     const languagesList = languagesRaw
-      .map((x) => getLangAbb(x))
+      .map((x) => normLang(x))
       .filter((code) => code.trim().length != 0)
       .map((code) => `${langPref}:${code}`)
       .filter((entry) => !queries.includes(entry));
@@ -145,7 +145,7 @@ import { createNotifPopup, getSettings } from "./helper/popup";
 
     // excluLanguagesList
     const excluLanguagesList = excluLanguagesRaw
-      .map((x) => getLangAbb(x))
+      .map((x) => normLang(x))
       .filter((code) => code.trim().length != 0)
       .map((x) => `${exLangPref}:${x}`)
       .filter((x) => !queries.includes(x));

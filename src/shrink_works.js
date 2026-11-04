@@ -1,7 +1,7 @@
 /* globals browser */
 
 import {
-  getLangAbb,
+  normLang,
   extractAllValues,
   WORK_BLURB_SELECTOR,
 } from "./helper/extractor";
@@ -11,6 +11,26 @@ import { getWorkUrl, textOf } from "./helper/commons";
 const SELECTORS = {
   TAG_LINKS: "ul.tags.commas li a",
 };
+
+const splitList = (value) =>
+  String(value ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+const toLimit = (value) => {
+  if (value === "" || value == null) return null;
+  const n = Number(String(value).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+};
+
+const wildcardToRegex = (pattern) =>
+  new RegExp(
+    "^" +
+      pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") +
+      "$",
+    "i",
+  );
 
 (() => {
   browser.runtime.onMessage.addListener(async (msg) => {
@@ -32,70 +52,54 @@ const SELECTORS = {
 
   function isUndesired(work, workSettings) {
     const stats = extractAllValues(work);
+    const reasons = new Set();
 
-    const words = stats["word_count"];
-    const hideWordUnder = workSettings["hideWordUnder"];
-    const hideWordOver = workSettings["hideWordOver"];
-    const reasons = [];
-    if (hideWordUnder.length != 0 && words < hideWordUnder) {
-      reasons.push(`words < ${hideWordUnder}`);
-    }
-    if (hideWordOver.length != 0 && words > hideWordOver) {
-      reasons.push(`words > ${hideWordOver}`);
-    }
+    // Word count
+    const words = stats.word_count;
+    const under = toLimit(workSettings.hideWordUnder);
+    const over = toLimit(workSettings.hideWordOver);
+    if (under !== null && words < under) reasons.add(`words < ${under}`);
+    if (over !== null && words > over) reasons.add(`words > ${over}`);
 
-    const hideLanguages = workSettings["hideLanguage"]
-      ?.split(",")
-      .filter((x) => x.trim().length > 0);
-    for (const lang of hideLanguages) {
-      if (stats["language"] == getLangAbb(lang)) {
-        reasons.push(`Language: ${lang}`);
+    const workLang = stats.language;
+    if (workLang) {
+      for (const lang of splitList(workSettings.hideLanguage)) {
+        if (normLang(lang) === normLang(workLang)) reasons.add(`Language: ${lang}`);
+      }
+
+      const showLanguages = splitList(workSettings.showLanguage);
+      const allowed = showLanguages.map(normLang);
+      if (allowed.length > 0 && !allowed.includes(workLang)) {
+        reasons.add(`Language: not ${showLanguages.join(", ")}`);
       }
     }
 
-    const showLanguages = workSettings["showLanguage"]
-      ?.split(",")
-      .filter((x) => x.trim().length > 0);
-    if (showLanguages.length > 0) {
-      if (!showLanguages.some((x) => getLangAbb(x) == stats["language"])) {
-        reasons.push(`Language: not ${showLanguages.join(", ")}`);
-      }
-    }
-
-    const tags = Array.from(work.querySelectorAll(SELECTORS.TAG_LINKS)).map(
-      textOf,
-    );
-    const excludeTags = workSettings["hideTags"]
-      ?.split(",")
-      .map((x) => x.trim())
-      .filter((x) => x.length > 0);
-    for (const ex of excludeTags) {
-      const pattern = new RegExp(
-        "^" +
-          ex.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") +
-          "$",
-        "i",
-      );
+    // Tags
+    const tags = Array.from(work.querySelectorAll(SELECTORS.TAG_LINKS), textOf)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    for (const ex of splitList(workSettings.hideTags)) {
+      const pattern = wildcardToRegex(ex);
       for (const tag of tags) {
-        if (pattern.test(tag.trim())) {
-          reasons.push(`Tag: ${tag}`);
-        }
-      }
-    }
-    const excludeAuthors = workSettings["hideAuthor"]
-      ?.split(",")
-      .map((x) => x.trim())
-      .filter((x) => x.length > 0);
-    for (const author of excludeAuthors) {
-      if (stats["authors_to_sort_on"].includes(author)) {
-        reasons.push(`Author: ${author}`);
+        if (pattern.test(tag)) reasons.add(`Tag: ${tag}`);
       }
     }
 
-    return reasons.map((x) => x.trim()).join(", ");
+    // Authors (exact, case-insensitive match)
+    const workAuthors = stats.authors.map((a) => a.toLowerCase());
+    for (const author of splitList(workSettings.hideAuthor)) {
+      if (workAuthors.includes(author.toLowerCase())) {
+        reasons.add(`Author: ${author}`);
+      }
+    }
+
+    return [...reasons].join(", ");
   }
 
   function shrink(work, reason, hideEntirely) {
+    if (work.dataset.ao3Shrunk) return;
+    work.dataset.ao3Shrunk = "true";
+
     if (hideEntirely) {
       work.classList.add("ao3-hidden");
       return;

@@ -125,7 +125,7 @@ import { getBundleIds } from "./helper/bundle_ids";
         onClick: async (e) => {
           const btn = e.target;
           const currentSettings = await getSettings();
-          const { [BUNDLE_KEY]: bundleIds } = await getBundleIds();
+          const bundleIds = [...(await getBundleIds())];
           const exportData = {
             ...currentSettings,
             [BUNDLE_KEY]: bundleIds || currentSettings[BUNDLE_KEY] || [],

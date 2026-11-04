@@ -417,9 +417,6 @@ export function extractWorkData(doc, href) {
 
 const getText = (el, selector) => textOf(el.querySelector(selector));
 
-const getAttr = (el, selector, attr) =>
-  el.querySelector(selector)?.getAttribute(attr) || "";
-
 const toDate = (raw) => {
   const date = new Date(raw);
   return Number.isNaN(date.getTime()) ? raw : date;
@@ -428,11 +425,12 @@ const toDate = (raw) => {
 export function extractAllValues(work) {
   const link = work.querySelector(BLURB_SELECTORS.workLink);
   const stats = extractStats(work);
+  const authors = getAuthors(work);
 
   return {
     id: link?.getAttribute("href")?.match(/\/works\/(\d+)/)?.[1] || "",
     title: textOf(link),
-    language: getAttr(work, BLURB_SELECTORS.language, "lang"),
+    language: normLang(getText(work, BLURB_SELECTORS.language)),
     word_count: toInteger(stats.Words),
     chapters: stats.Chapters,
     comments_count: toInteger(stats.Comments),
@@ -440,7 +438,8 @@ export function extractAllValues(work) {
     bookmarks_count: toInteger(stats.Bookmarks),
     hits: toInteger(stats.Hits),
     revised_at: toDate(getText(work, BLURB_SELECTORS.publishedOrUpdatedDate)),
-    authors_to_sort_on: getText(work, BLURB_SELECTORS.author),
+    authors,
+    authors_to_sort_on: authors.join(", "),
   };
 }
 
@@ -463,146 +462,14 @@ export function workInfo(work) {
   };
 }
 
-// ---------- language ----------
+const getAuthors = (work) =>
+  Array.from(work.querySelectorAll(BLURB_SELECTORS.author), (a) =>
+    textOf(a),
+  ).filter(Boolean);
 
-const languageCodeMap = {
-  english: "en",
-  español: "es",
-  spanish: "es",
-  français: "fr",
-  french: "fr",
-  deutsch: "de",
-  german: "de",
-  italiano: "it",
-  italian: "it",
-  português: "pt",
-  portuguese: "pt",
-  中文: "zh",
-  chinese: "zh",
-  日本語: "ja",
-  japanese: "ja",
-  한국어: "ko",
-  korean: "ko",
-  русский: "ru",
-  russian: "ru",
-  polski: "pl",
-  polish: "pl",
-  nederlands: "nl",
-  dutch: "nl",
-  svenska: "sv",
-  swedish: "sv",
-  norsk: "no",
-  norwegian: "no",
-  dansk: "da",
-  danish: "da",
-  suomi: "fi",
-  finnish: "fi",
-  čeština: "cs",
-  czech: "cs",
-  magyar: "hu",
-  hungarian: "hu",
-  türkçe: "tr",
-  turkish: "tr",
-  العربية: "ar",
-  arabic: "ar",
-  עברית: "he",
-  hebrew: "he",
-  ελληνικά: "el",
-  greek: "el",
-  "bahasa indonesia": "id",
-  indonesian: "id",
-  ไทย: "th",
-  thai: "th",
-  "việt nam": "vi",
-  vietnamese: "vi",
-  հայերեն: "hy",
-  armenian: "hy",
-  bosanski: "bs",
-  bosnian: "bs",
-  български: "bg",
-  bulgarian: "bg",
-  català: "ca",
-  catalan: "ca",
-  hrvatski: "hr",
-  croatian: "hr",
-  esperanto: "eo",
-  eesti: "et",
-  estonian: "et",
-  gaeilge: "ga",
-  irish: "ga",
-  íslenska: "is",
-  icelandic: "is",
-  lietuvių: "lt",
-  lithuanian: "lt",
-  latviešu: "lv",
-  latvian: "lv",
-  македонски: "mk",
-  macedonian: "mk",
-  "bahasa melayu": "ms",
-  malay: "ms",
-  română: "ro",
-  romanian: "ro",
-  slovenčina: "sk",
-  slovak: "sk",
-  slovenščina: "sl",
-  slovenian: "sl",
-  српски: "sr",
-  serbian: "sr",
-  українська: "uk",
-  ukrainian: "uk",
-  afrikaans: "af",
-  shqip: "sq",
-  albanian: "sq",
-  euskera: "eu",
-  basque: "eu",
-  беларуская: "be",
-  belarusian: "be",
-  বাংলা: "bn",
-  bengali: "bn",
-  ქართული: "ka",
-  georgian: "ka",
-  ગુજરાતી: "gu",
-  gujarati: "gu",
-  हिन्दी: "hi",
-  hindi: "hi",
-  latin: "la",
-  മലയാളം: "ml",
-  malayalam: "ml",
-  मराठी: "mr",
-  marathi: "mr",
-  नेपाली: "ne",
-  nepali: "ne",
-  ਪੰਜਾਬੀ: "pa",
-  punjabi: "pa",
-  سنڌي: "sd",
-  sindhi: "sd",
-  සිංහල: "si",
-  sinhala: "si",
-  தமிழ்: "ta",
-  tamil: "ta",
-  తెలుగు: "te",
-  telugu: "te",
-  اردو: "ur",
-  urdu: "ur",
-  cymraeg: "cy",
-  welsh: "cy",
-  gaelic: "gd",
-  "scottish gaelic": "gd",
-  yiddish: "yi",
-};
-
-// Convert an AO3 language name or code to a language abbreviation.
-export function getLangAbb(lang) {
-  const normalized = lang
+export const normLang = (s) =>
+  String(s || "")
+    .normalize("NFC")
     .toLowerCase()
-    .trim()
-    .replace(/[^\w\s]/g, "");
-  if (/^[a-z]{2,3}(-[a-z]{2,3})?$/i.test(normalized)) {
-    return normalized;
-  }
-  if (languageCodeMap[normalized]) {
-    return languageCodeMap[normalized];
-  }
-  console.warn(`Unrecognized language: "${lang}"`);
-  return "";
-}
+    .replace(/\s+/g, " ")
+    .trim();
