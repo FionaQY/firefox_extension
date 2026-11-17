@@ -1,9 +1,5 @@
 /* globals browser */
-import {
-  isValid,
-  extractRelevantData,
-  WORK_BLURB_SELECTOR,
-} from "./helper/extractor";
+import { isValid, extractRelevantData, WORK_BLURB_SELECTOR } from "./ao3/work";
 
 (() => {
   browser.runtime.onMessage.addListener(async (msg) => {

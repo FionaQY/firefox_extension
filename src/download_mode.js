@@ -1,7 +1,7 @@
 /* globals browser */
-import { workToDocument, documentToDataUrl } from "./helper/docx_builder";
-import { safeFilename } from "./helper/commons";
-import { extractWorkData } from "./helper/extractor";
+import { workToDocument, documentToDataUrl } from "./download/docx_builder";
+import { safeFilename } from "./utils/text";
+import { extractWorkData } from "./ao3/work";
 
 (async () => {
   const work = extractWorkData(document, window.location.href);

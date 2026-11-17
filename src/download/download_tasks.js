@@ -1,13 +1,25 @@
 /* globals browser */
-import { BASE_URL, fetchDoc, safeFilename, textOf } from "./commons";
-import { extractWorkData, getSeriesInfo, workInfo } from "./extractor";
-import { getBundleIds } from "./bundle_ids";
+import { BASE_URL, fetchDoc, textOf } from "../ao3/page.js";
+import { safeFilename } from "../utils/text";
+import {
+  blurbSeries,
+  extractWorkData,
+  getSeriesInfo,
+  workInfo,
+} from "../ao3/work.js";
+import { getBundleIds } from "../storage/bundles.js";
 import {
   documentToBlob,
   documentsToZipBlob,
   mergeWorks,
   workToDocument,
 } from "./docx_builder";
+import { loadSettings } from "../storage/settings.js";
+import {
+  getActiveRules,
+  pickFolderForWorks,
+  withFolder,
+} from "./folder_rules.js";
 
 /*
  * ctx = {
@@ -33,6 +45,7 @@ const TYPE = { WORK: "work", SERIES: "series" };
 const SERIES_SELECTORS = {
   WORK_BLURB: "li.work.blurb.group",
   NEXT_PAGE: "ol.pagination li.next a",
+  TITLE: "h2.heading",
 };
 const LISTING_SELECTORS = {
   WORK_BLURBS: ".work.blurb.group, li.blurb.group",
@@ -107,6 +120,14 @@ function getSeriesWorkFilename(work, position, totalWorks) {
   return `${order}_${getWorkFilename(work.title, work.author)}`;
 }
 
+/** Folder for a set of works (and the series they belong to, if any). */
+function folderFor(ctx, works, series) {
+  const facts = series?.author
+    ? [{ author: series.author, tags: {} }, ...works]
+    : works;
+  return pickFolderForWorks(ctx.folderRules, facts);
+}
+
 /** Save a Blob through the downloads API and free the object URL afterwards. */
 async function saveBlob(blob, filename, saveAs) {
   const blobUrl = URL.createObjectURL(blob);
@@ -136,27 +157,38 @@ async function downloadDoc(document, filename, saveAs) {
   await saveBlob(await documentToBlob(document), filename, saveAs);
 }
 
-async function downloadBundle(works, series) {
+async function downloadBundle(works, series, ctx) {
   const author =
     series?.author ||
     [...new Set(works.map((w) => w.author).filter(Boolean))].join(", ");
   const arr = series
     ? [series.title, author, "series"]
     : [works[0].title, works[0].author, "bundle"];
-  const filename = arr.filter(Boolean).map(safeFilename).join("_") + ".docx";
+  const folder = folderFor(ctx, works, series);
+  const filename = withFolder(
+    arr.filter(Boolean).map(safeFilename).join("_") + ".docx",
+    folder,
+  );
 
-  await downloadDoc(mergeWorks(works, series), filename, !series);
+  await downloadDoc(mergeWorks(works, series), filename, !series && !folder);
 }
 
-async function downloadSeriesZip(series, works) {
+async function downloadSeriesZip(series, works, ctx) {
   const entries = works.map(({ work, position }) => ({
     path: getSeriesWorkFilename(work, position, series.workIds.length),
     document: workToDocument(work),
   }));
   const blob = await documentsToZipBlob(entries);
-  const filename =
+  const folder = folderFor(
+    ctx,
+    works.map(({ work }) => work),
+    series,
+  );
+  const filename = withFolder(
     [series.title, series.author].filter(Boolean).map(safeFilename).join("_") +
-    ".zip";
+      ".zip",
+    folder,
+  );
   await saveBlob(blob, filename, false);
 }
 
@@ -172,11 +204,15 @@ async function fetchSeriesWorks(id, onPage, ctx, delayMs = DOWNLOAD_DELAY_MS) {
   const seriesUrl = `${BASE_URL}/series/${id}`;
   const works = [];
   let info = null;
+  let title = "";
 
   for (let page = 1; page <= MAX_SERIES_PAGES; page++) {
     ensureActive(ctx);
     const doc = await fetchDoc(`${seriesUrl}?page=${page}`);
-    if (page === 1) info = getSeriesInfo(doc, seriesUrl);
+    if (page === 1) {
+      info = getSeriesInfo(doc, seriesUrl);
+      title = textOf(doc.querySelector(SERIES_SELECTORS.TITLE));
+    }
 
     const found = [...doc.querySelectorAll(SERIES_SELECTORS.WORK_BLURB)]
       .map((item) => workInfo(item))
@@ -188,16 +224,22 @@ async function fetchSeriesWorks(id, onPage, ctx, delayMs = DOWNLOAD_DELAY_MS) {
     await pause(ctx, delayMs);
   }
 
-  return { works, info };
+  return { works, info, title };
 }
 
-/** Crawl every page of an author/bookmark listing and return plain items. */
-async function collectListingItems(url, label, ctx) {
+/** Crawl a listing's pages and return plain items (works, and series if grouping). */
+async function collectListingItems(
+  url,
+  label,
+  ctx,
+  { maxPages = Infinity, groupSeries = false } = {},
+) {
   const startUrl = new URL(url);
   const works = new Map();
   const seriesMap = new Map();
   const visitedPages = new Set();
   let pageUrl = startUrl.href;
+  let pagesRead = 0;
 
   while (pageUrl) {
     ensureActive(ctx);
@@ -212,6 +254,7 @@ async function collectListingItems(url, label, ctx) {
       throw new Error("AO3 listing pagination repeated a page");
     }
     visitedPages.add(currentPage.href);
+    pagesRead++;
 
     ctx.setStatus(
       `Reading ${label} (page ${currentPage.searchParams.get("page") || 1})`,
@@ -220,7 +263,13 @@ async function collectListingItems(url, label, ctx) {
     for (const blurb of doc.querySelectorAll(LISTING_SELECTORS.WORK_BLURBS)) {
       const info = workInfo(blurb);
       if (info) {
-        if (!works.has(info.id)) works.set(info.id, info);
+        // A work in a series goes into the series set instead of the works.
+        const partOf = groupSeries ? blurbSeries(blurb)[0] : null;
+        if (partOf) {
+          if (!seriesMap.has(partOf.id)) seriesMap.set(partOf.id, partOf);
+        } else if (!works.has(info.id)) {
+          works.set(info.id, info);
+        }
         continue;
       }
       const link = blurb.querySelector(LISTING_SELECTORS.SERIES_LINK);
@@ -234,12 +283,14 @@ async function collectListingItems(url, label, ctx) {
     pageUrl = nextLink
       ? new URL(nextLink.getAttribute("href"), currentPage).href
       : "";
+    if (pageUrl && pagesRead >= maxPages) pageUrl = "";
     if (pageUrl) await pause(ctx, LISTING_DELAY_MS);
   }
 
   if (!works.size && !seriesMap.size) {
     throw new Error(`No works found in ${label}`);
   }
+  ctx.setStatus(`Found ${works.size} works and ${seriesMap.size} series`);
 
   const savedBundle = await getBundleIds();
   return [
@@ -255,60 +306,9 @@ async function collectListingItems(url, label, ctx) {
 
 /* ---------- workflow ---------- */
 
-async function expandSelection(items, ctx, delayMs) {
-  const jobs = new Map();
-  const seriesList = [];
-  const readFailures = [];
-  let standalone = 0;
-  let readAnySeries = false;
-
-  for (const item of items) {
-    ensureActive(ctx);
-    const { type, id, title, author } = item;
-
-    if (type === TYPE.SERIES) {
-      if (readAnySeries) await pause(ctx, delayMs);
-      readAnySeries = true;
-
-      ctx.setStatus(`Reading series: ${title}`);
-      try {
-        const { works, info } = await fetchSeriesWorks(
-          id,
-          (page, count) =>
-            ctx.setStatus(
-              `Reading series: ${title} (page ${page}, ${count} works)`,
-            ),
-          ctx,
-          delayMs,
-        );
-        seriesList.push({
-          title,
-          summary: info?.summary ?? "",
-          author: info?.author ?? "",
-          workIds: works.map((work) => work.id),
-          bundle: Boolean(item.bundle),
-        });
-        for (const work of works) {
-          if (!jobs.has(work.id)) jobs.set(work.id, work);
-        }
-      } catch (error) {
-        if (error instanceof CancelledError) throw error;
-        readFailures.push(`${title} (series)`);
-        ctx.logError(`Cannot read series "${title}": ${error}`);
-        ctx.setStatus(`Failed to read series: ${title}`);
-      }
-    } else if (!jobs.has(id)) {
-      jobs.set(id, { id, title, author });
-      standalone++;
-    }
-  }
-
-  return { jobs: [...jobs.values()], seriesList, standalone, readFailures };
-}
-
 export async function processWorkJobs(
   jobs,
-  { bundle, notInSeries, shouldRetainWork, ctx, delayMs },
+  { bundle, notInSeries, shouldRetainWork, ctx, delayMs, prefix = "" },
 ) {
   const retainedWorks = [];
   const tally = createTally();
@@ -317,7 +317,7 @@ export async function processWorkJobs(
     ctx,
     jobs,
     async ({ id, title, author }, index) => {
-      ctx.setStatus(`${index + 1}/${jobs.length}: ${title}`);
+      ctx.setStatus(`${prefix}${index + 1}/${jobs.length}: ${title}`);
       try {
         const work = await loadWork(id);
         if (notInSeries && work.tags?.series?.length) {
@@ -329,10 +329,14 @@ export async function processWorkJobs(
         if (bundle || shouldRetainWork(id)) {
           retainedWorks.push({ ...work, id });
         } else {
+          const folder = pickFolderForWorks(ctx.folderRules, [work]);
           await downloadDoc(
             workToDocument(work),
-            getWorkFilename(work.title || title, work.author || author),
-            jobs.length === 1,
+            withFolder(
+              getWorkFilename(work.title || title, work.author || author),
+              folder,
+            ),
+            jobs.length === 1 && !folder,
           );
           tally.downloaded++;
         }
@@ -348,38 +352,88 @@ export async function processWorkJobs(
   return { retainedWorks, tally };
 }
 
-async function downloadSeriesOutputs(seriesList, loadedById, tally, ctx) {
-  for (const series of seriesList) {
-    ensureActive(ctx);
-    const works = series.workIds
-      .map((id, index) => ({ work: loadedById.get(id), position: index + 1 }))
-      .filter(({ work }) => work);
-    if (!works.length) {
-      if (!tally.skipped) {
-        recordFailure(tally, `${series.title} (series: no works loaded)`);
-      }
-      continue;
-    }
+function mergeTally(into, from) {
+  into.downloaded += from.downloaded;
+  into.skipped += from.skipped;
+  into.failed += from.failed;
+  into.failedItems.push(...from.failedItems);
+}
 
-    ctx.setStatus(
-      `Building ${series.bundle ? "bundle" : "ZIP"}: ${series.title}`,
+/** Read one series, load its works, save it as a ZIP (or bundle), then free memory. */
+async function downloadOneSeries(item, ctx, tally, delayMs) {
+  const label = item.title || `Series ${item.id}`;
+  ctx.setStatus(`Reading series: ${label}`);
+
+  let read;
+  try {
+    read = await fetchSeriesWorks(
+      item.id,
+      (page, count) =>
+        ctx.setStatus(
+          `Reading series: ${label} (page ${page}, ${count} works)`,
+        ),
+      ctx,
+      delayMs,
     );
-    try {
-      if (series.bundle && works.length > 1) {
-        await downloadBundle(
-          works.map(({ work }) => work),
-          series,
-        );
-      } else {
-        await downloadSeriesZip(series, works);
-      }
-      tally.downloaded += works.length;
-    } catch (error) {
-      recordFailure(tally, `${series.title} (series)`, works.length);
-      ctx.logError(`Cannot build series "${series.title}": ${error}`);
+  } catch (error) {
+    if (error instanceof CancelledError) throw error;
+    recordFailure(tally, `${label} (series)`);
+    ctx.logError(`Cannot read series "${label}": ${error}`);
+    return;
+  }
+
+  const series = {
+    title: item.title || read.title || label,
+    summary: read.info?.summary ?? "",
+    author: read.info?.author ?? "",
+    workIds: read.works.map((work) => work.id),
+    bundle: Boolean(item.bundle),
+  };
+
+  const { retainedWorks, tally: part } = await processWorkJobs(read.works, {
+    bundle: false,
+    notInSeries: false,
+    shouldRetainWork: () => true,
+    ctx,
+    delayMs,
+    prefix: `${series.title}: `,
+  });
+  mergeTally(tally, part);
+
+  const byId = new Map(retainedWorks.map((work) => [work.id, work]));
+  const works = series.workIds
+    .map((id, index) => ({ work: byId.get(id), position: index + 1 }))
+    .filter(({ work }) => work);
+  if (!works.length) {
+    if (!part.failed) {
+      recordFailure(tally, `${series.title} (series: no works loaded)`);
     }
+    return;
+  }
+
+  ctx.setStatus(
+    `Building ${series.bundle ? "bundle" : "ZIP"}: ${series.title}`,
+  );
+  try {
+    if (series.bundle && works.length > 1) {
+      await downloadBundle(
+        works.map(({ work }) => work),
+        series,
+        ctx,
+      );
+    } else {
+      await downloadSeriesZip(series, works, ctx);
+    }
+    tally.downloaded += works.length;
+  } catch (error) {
+    recordFailure(tally, `${series.title} (series)`, works.length);
+    ctx.logError(`Cannot build series "${series.title}": ${error}`);
   }
 }
+
+const uniqueById = (list) => [
+  ...new Map(list.map((item) => [item.id, item])).values(),
+];
 
 async function downloadSelectedWorks(
   items,
@@ -387,68 +441,71 @@ async function downloadSelectedWorks(
   ctx,
   delayMs = DOWNLOAD_DELAY_MS,
 ) {
-  const { jobs, seriesList, standalone, readFailures } = await expandSelection(
-    items,
-    ctx,
-    delayMs,
-  );
+  const tally = createTally();
+  const standalone = uniqueById(items.filter((i) => i.type === TYPE.WORK));
+  const allSeries = uniqueById(items.filter((i) => i.type === TYPE.SERIES));
 
-  if (!jobs.length) {
-    const tally = createTally();
-    readFailures.forEach((name) => recordFailure(tally, name));
-    return tally;
-  }
+  // "Not in series" means series are left out entirely.
+  if (notInSeries) tally.skipped += allSeries.length;
+  const seriesItems = notInSeries ? [] : allSeries;
 
-  const bundle = bundleRequested && standalone > 1;
-  const seriesWorkIds = new Set(seriesList.flatMap((s) => s.workIds));
-  const { retainedWorks, tally } = await processWorkJobs(jobs, {
-    bundle,
-    notInSeries,
-    shouldRetainWork: (id) => seriesWorkIds.has(id),
-    ctx,
-    delayMs,
-  });
-  readFailures.forEach((name) => recordFailure(tally, name));
+  // 1. Standalone works first.
+  if (standalone.length) {
+    const bundle = bundleRequested && standalone.length > 1;
+    const { retainedWorks, tally: part } = await processWorkJobs(standalone, {
+      bundle,
+      notInSeries,
+      shouldRetainWork: () => false,
+      ctx,
+      delayMs,
+    });
+    mergeTally(tally, part);
 
-  const loadedById = new Map(retainedWorks.map((work) => [work.id, work]));
-
-  if (bundle) {
-    const works = retainedWorks.filter((work) => !seriesWorkIds.has(work.id));
-    if (works.length > 1) {
+    if (retainedWorks.length) {
       ctx.setStatus("Building selected works bundle...");
       try {
-        await downloadBundle(works, null);
-        tally.downloaded += works.length;
+        await downloadBundle(retainedWorks, null, ctx);
+        tally.downloaded += retainedWorks.length;
       } catch (error) {
-        recordFailure(tally, "selected works bundle", works.length);
+        recordFailure(tally, "selected works bundle", retainedWorks.length);
         ctx.logError(`Could not bundle selected works: ${error}`);
       }
     }
   }
 
-  await downloadSeriesOutputs(seriesList, loadedById, tally, ctx);
+  // 2. Then each series, one at a time.
+  for (const [i, item] of seriesItems.entries()) {
+    if (i > 0 || standalone.length) await pause(ctx, delayMs);
+    await downloadOneSeries(item, ctx, tally, delayMs);
+  }
+
   return tally;
 }
 
 /** Entry point: run one queued task. Returns the final tally. */
 export async function runTask(task, ctx) {
+  const settings = await loadSettings();
+  ctx.folderRules = getActiveRules(settings.folders);
   const options = task.options || {};
+  const notInSeries = Boolean(options.notInSeries);
   let items = task.items || [];
 
   if (task.kind === "listing") {
+    const limit = Number(options.maxPages);
     items = await collectListingItems(
       task.url,
       task.listingLabel || "listing",
       ctx,
+      {
+        maxPages: limit >= 1 ? limit : Infinity,
+        groupSeries: Boolean(options.groupSeries) && !notInSeries,
+      },
     );
   }
 
   const tally = await downloadSelectedWorks(
     items,
-    {
-      bundle: Boolean(options.bundle),
-      notInSeries: Boolean(options.notInSeries),
-    },
+    { bundle: Boolean(options.bundle), notInSeries },
     ctx,
   );
   ctx.setStatus(summarize(tally));

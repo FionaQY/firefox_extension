@@ -1,12 +1,9 @@
 /* globals browser */
 
-import {
-  normLang,
-  extractAllValues,
-  WORK_BLURB_SELECTOR,
-} from "./helper/extractor";
-import { createNotifPopup, getSettings } from "./helper/popup";
-import { getWorkUrl, textOf } from "./helper/commons";
+import { normLang, extractAllValues, WORK_BLURB_SELECTOR } from "./ao3/work";
+import { createNotifPopup } from "./ui/popup";
+import { getSettings } from "./storage/settings";
+import { getWorkUrl, textOf } from "./ao3/page";
 
 const SELECTORS = {
   TAG_LINKS: "ul.tags.commas li a",
@@ -64,7 +61,8 @@ const wildcardToRegex = (pattern) =>
     const workLang = stats.language;
     if (workLang) {
       for (const lang of splitList(workSettings.hideLanguage)) {
-        if (normLang(lang) === normLang(workLang)) reasons.add(`Language: ${lang}`);
+        if (normLang(lang) === normLang(workLang))
+          reasons.add(`Language: ${lang}`);
       }
 
       const showLanguages = splitList(workSettings.showLanguage);

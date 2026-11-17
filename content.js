@@ -1,12 +1,12 @@
 /* globals browser */
 import {
   createNotifPopup,
-  getSettings,
   openModePopup,
   MODE_ID,
   MODE_OPTIONS,
-} from "./src/helper/popup";
-import { MOBILE_MAX_WIDTH } from "./src/helper/popup_fields";
+} from "./src/ui/popup";
+import { getSettings } from "./src/storage/settings";
+import { MOBILE_MAX_WIDTH } from "./src/ui/popup_fields";
 
 const ACTION = { EXECUTE_MODE: "executeMode" };
 const CLASS = {

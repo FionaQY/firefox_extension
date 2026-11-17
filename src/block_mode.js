@@ -6,10 +6,10 @@ import {
   getParams,
   addValue,
   addMissingId,
-} from "./helper/params";
-import { getWorkUrl, fetchDoc, textOf } from "./helper/commons";
-import { isValid, extractRelevantData } from "./helper/extractor";
-import { createNotifPopup } from "./helper/popup";
+} from "./ao3/search_params";
+import { getWorkUrl, fetchDoc, textOf } from "./ao3/page";
+import { isValid, extractRelevantData } from "./ao3/work";
+import { createNotifPopup } from "./ui/popup";
 
 const SELECTORS = {
   WORK: ".work",

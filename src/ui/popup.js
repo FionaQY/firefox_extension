@@ -1,5 +1,3 @@
-/* globals browser */
-
 const SELECTORS = {
   POPUP_BY_ID_SUFFIX: '[id$="-popup"]',
 };
@@ -12,7 +10,6 @@ const ID = {
 
 export const MODE_ID = {
   SETTINGS: "settings",
-  FORMAT: "format",
   BLOCK: "block",
   FORGOT: "forgot",
   APPLY: "apply",
@@ -20,6 +17,7 @@ export const MODE_ID = {
   HIDE: "hide",
   SEARCH: "search",
   DOWNLOAD: "download",
+  DOWNLOADS: "downloads",
   STATUS: "status",
 };
 
@@ -31,9 +29,8 @@ export const MODE_OPTIONS = {
   [MODE_ID.HIDE]: { icon: "🫣", label: "Hide Works" },
   [MODE_ID.SEARCH]: { icon: "🔍", label: "Search Bar" },
   [MODE_ID.DOWNLOAD]: { icon: "📥", label: "Download Docx" },
-  [MODE_ID.FORMAT]: { icon: "📖", label: "Format Docx" },
+  [MODE_ID.DOWNLOADS]: { icon: "📥📥📥", label: "Mass Downloads" },
   [MODE_ID.SETTINGS]: { icon: "⚙️", label: "Settings" },
-  [MODE_ID.STATUS]: { icon: "📊", label: "Download Status" },
 };
 
 const CLASS = {
@@ -44,6 +41,7 @@ const CLASS = {
   BAR_BUTTON: "ao3-bar-button",
   CLOSE_BUTTON: "ao3-close-button",
   POPUP_CONTAINER: "ao3-popup-container",
+  MODE_CONTENT: "ao3-mode-content",
 };
 
 const NOTIFICATION = { DURATION_MS: 3000, EDGE_PADDING: 10 };
@@ -137,6 +135,7 @@ export function createPopupContainer(id, isMobile, options = {}) {
   popup.appendChild(createCloseButton(isMobile, options.onClose));
 
   if (options.content) {
+    options.content.classList.add(CLASS.MODE_CONTENT);
     popup.appendChild(options.content);
   }
 
@@ -155,22 +154,4 @@ export function openModePopup(isMobile, options = {}) {
   const popup = createPopupContainer(MODE_POPUP_ID, isMobile, options);
   document.body.appendChild(popup);
   return popup;
-}
-
-export async function getSettings() {
-  const { settings = {} } = await browser.storage.local.get("settings");
-  return settings;
-}
-
-export async function saveSettings(settings) {
-  await browser.storage.local.set({ settings });
-}
-
-export function parseHtmlFragment(html) {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const fragment = document.createDocumentFragment();
-  for (const node of Array.from(doc.body.childNodes)) {
-    fragment.appendChild(node);
-  }
-  return fragment;
 }

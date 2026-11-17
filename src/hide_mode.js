@@ -1,17 +1,13 @@
 /* eslint-disable no-unused-vars */
 /* globals browser */
 /* eslint-enable no-unused-vars */
-import {
-  saveSettings,
-  getSettings,
-  openModePopup,
-  removeModePopup,
-} from "./helper/popup";
+import { openModePopup, removeModePopup } from "./ui/popup";
+import { getSettings, saveSettings } from "./storage/settings";
 import {
   MOBILE_MAX_WIDTH,
   optionsPopupHelper,
   resetInputs,
-} from "./helper/popup_fields";
+} from "./ui/popup_fields";
 
 (() => {
   removeModePopup();

@@ -1,7 +1,7 @@
 /* globals */
 
-import { MODE_POPUP_ID, openModePopup, removeModePopup } from "./helper/popup";
-import { createSearchBar, MOBILE_MAX_WIDTH } from "./helper/popup_fields";
+import { MODE_POPUP_ID, openModePopup, removeModePopup } from "./ui/popup";
+import { createSearchBar, MOBILE_MAX_WIDTH } from "./ui/popup_fields";
 
 (() => {
   removeModePopup();

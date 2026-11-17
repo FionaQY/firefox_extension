@@ -1,7 +1,8 @@
 /* globals */
-import { getWorkUrl, getSeriesUrl } from "./helper/commons";
-import { createNotifPopup, getSettings } from "./helper/popup";
-import { getBookmarkNotes } from "./helper/bookmark";
+import { getWorkUrl, getSeriesUrl } from "./ao3/page";
+import { createNotifPopup } from "./ui/popup";
+import { getSettings } from "./storage/settings";
+import { getBookmarkNotes } from "./ao3/bookmark";
 
 const SELECTORS = {
   BOOKMARK_FORM: "#bookmark_form_placement",

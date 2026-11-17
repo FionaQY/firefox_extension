@@ -51,12 +51,15 @@ firefox-extension/
 ├── background.js
 ├── content.bundle.js
 ├── src/
-│   └── helper/
-│       ├── popup.js          # Popup and other extension UI
-│       ├── extractor.js      # AO3 page parsing and metadata extraction
-│       ├── download.js       # DOCX content and book-layout generation
-│       ├── document_format.js # Shared DOCX font defaults and settings
-│       └── commons.js       # Shared text, URL, and page-loading helpers
+│   ├── ao3/
+│   │   ├── page.js           # AO3 URLs, page loading, and page text
+│   │   ├── work.js           # Work/series page and listing extraction
+│   │   ├── search_params.js  # AO3 work/bookmark search parameters
+│   │   └── bookmark.js       # Bookmark form parsing and submission
+│   ├── download/             # Download queue, folder rules, and DOCX generation
+│   ├── storage/              # Settings, download-task, and bundle persistence
+│   ├── ui/                   # Popup components and form controls
+│   └── utils/                # Shared text and filename helpers
 ├── content_scripts/
 ├── icons/
 ```

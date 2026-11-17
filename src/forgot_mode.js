@@ -1,13 +1,10 @@
 /* globals */
 
-import {
-  createNotifPopup,
-  parseHtmlFragment,
-  createPopupContainer,
-} from "./helper/popup";
-import { MOBILE_MAX_WIDTH } from "./helper/popup_fields";
-import { fetchDoc, getWorkUrl } from "./helper/commons";
-import { extractWorkSummary } from "./helper/extractor";
+import { createNotifPopup, createPopupContainer } from "./ui/popup";
+import { parseHtmlFragment } from "./ui/html";
+import { MOBILE_MAX_WIDTH } from "./ui/popup_fields";
+import { fetchDoc, getWorkUrl } from "./ao3/page";
+import { extractWorkSummary } from "./ao3/work";
 
 const SUMMARY_POPUP = {
   ID: "ao3-qof-summary-popup",

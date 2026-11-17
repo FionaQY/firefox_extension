@@ -1,3 +1,5 @@
+import { collapseWhitespace } from "../utils/text";
+
 export const BASE_URL = "https://archiveofourown.org";
 
 export const BREAK_MARK = "\uE000";
@@ -5,6 +7,8 @@ export const BREAK_MARK = "\uE000";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const HTTP_RATE_LIMITED = 429;
 const IFRAME_CLASS = "ao3-offscreen-iframe";
+const WORK_PATH = /\/works\/(\d+)(?:\/chapters\/(\d+))?/;
+const SERIES_PATH = /\/series\/(\d+)/;
 
 const SELECTORS = {
   IMAGE: "img",
@@ -13,12 +17,6 @@ const SELECTORS = {
 };
 
 const RE = {
-  WORK_PATH: /\/works\/(\d+)(?:\/chapters\/(\d+))?/,
-  SERIES_PATH: /\/series\/(\d+)/,
-  WHITESPACE: /\s+/g,
-  NON_DIGITS: /[^\d]/g,
-  INVALID_FILENAME_CHARS: /[\\/:*?"<>|]/g,
-  REGEX_SPECIAL_CHARS: /[.*+?^${}()|[\]\\]/g,
   TRAILING_SLASH: /\/$/,
   NON_NAVIGABLE_HREF: /^(mailto|javascript):/i,
 };
@@ -47,11 +45,7 @@ export class HttpError extends Error {
 /* ==========================================================================
  * TEXT HELPERS
  * ========================================================================== */
-const collapseWhitespace = (value) => value.replace(RE.WHITESPACE, " ");
-
 const stripTrailingSlash = (url) => url.replace(RE.TRAILING_SLASH, "");
-
-const escapeRegExp = (value) => value.replace(RE.REGEX_SPECIAL_CHARS, "\\$&");
 
 // Resolves relative AO3 paths against BASE_URL; absolute URLs pass through.
 const toAbsoluteUrl = (href) => new URL(href, BASE_URL).href;
@@ -107,51 +101,11 @@ export function textOf(element, rich = false) {
     .join("\n");
 }
 
-export function normalizeText(value) {
-  return collapseWhitespace(String(value ?? ""))
-    .trim()
-    .toLowerCase();
-}
-
-export function sameText(left, right) {
-  return normalizeText(left) === normalizeText(right);
-}
-
-export function stripLabel(value, label) {
-  if (!value) return "";
-  const repeatedLabel = new RegExp(`^(?:\\s*${escapeRegExp(label)}\\s*)+`, "i");
-  return value.replace(repeatedLabel, "").trim();
-}
-
-export function toInteger(value) {
-  return parseInt(String(value ?? "").replace(RE.NON_DIGITS, ""), 10) || 0;
-}
-
-export function safeFilename(value) {
-  return String(value ?? "")
-    .replace(RE.INVALID_FILENAME_CHARS, "_")
-    .trim();
-}
-
-/* ==========================================================================
- * HTML HELPERS
- * ========================================================================== */
-const HTML_ESCAPES = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
-};
-
-export const escapeHtml = (value) =>
-  String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
-
 /* ==========================================================================
  * URLS & LOADING PAGES
  * ========================================================================== */
 export function getWorkUrl(url, withChapter = true) {
-  const match = url.match(RE.WORK_PATH);
+  const match = url.match(WORK_PATH);
   if (!match) return "";
 
   const [, workId, chapterId] = match;
@@ -160,7 +114,7 @@ export function getWorkUrl(url, withChapter = true) {
 }
 
 export function getSeriesUrl(url) {
-  const match = url.match(RE.SERIES_PATH);
+  const match = url.match(SERIES_PATH);
   return match ? `${BASE_URL}/series/${match[1]}` : "";
 }
 

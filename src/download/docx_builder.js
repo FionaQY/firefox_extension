@@ -12,9 +12,10 @@ import {
   ImageRun,
 } from "docx";
 import JSZip from "jszip";
-import { sameText, stripLabel, toInteger } from "./commons";
+import { sameText, stripLabel, toInteger } from "../utils/text";
 import { getDocxFormat } from "./document_format";
-import { loadSettings } from "./settings_store";
+import { loadSettings } from "../storage/settings";
+import { HR_MARK } from "../ao3/work";
 
 const TAG_KEYS = [
   "rating",
@@ -258,23 +259,82 @@ const SCENE_BREAKS = new Set([
   "---",
   "✦",
   ".::.",
-  "—",
-  "**",
   "****",
   "*****",
   "******",
   "*******",
-  "*",
-  ".",
 ]);
+
+// Inline formatting markers written by the extractor: ⟦i⟧ ... ⟦/i⟧ etc.
+const FORMAT_TOKEN = /\u27E6(\/?)([ibus])\u27E7/g;
+const stripMarks = (s) => String(s).replace(FORMAT_TOKEN, "");
+
+// Split text into lines, closing and reopening any formatting that spans a
+// line break so each line has balanced markers.
+function splitStoryParagraphs(value) {
+  const open = [];
+  const out = [];
+
+  for (const raw of String(value || "").split(/\n+/)) {
+    let line = open.map((k) => `\u27E6${k}\u27E7`).join("") + raw;
+
+    for (const m of raw.matchAll(FORMAT_TOKEN)) {
+      if (m[1] === "/") {
+        const idx = open.lastIndexOf(m[2]);
+        if (idx >= 0) open.splice(idx, 1);
+      } else {
+        open.push(m[2]);
+      }
+    }
+
+    line += [...open]
+      .reverse()
+      .map((k) => `\u27E6/${k}\u27E7`)
+      .join("");
+    line = line.trim();
+    if (stripMarks(line).trim()) out.push(line);
+  }
+  return out;
+}
+
+// Turn marker text into TextRuns. Nested tags work via counters.
+function makeRuns(text, base) {
+  const depth = { i: 0, b: 0, u: 0, s: 0 };
+  const runs = [];
+
+  const push = (chunk) => {
+    if (!chunk) return;
+    runs.push(
+      new TextRun({
+        ...base,
+        text: chunk,
+        italics: depth.i > 0 || undefined,
+        bold: base.bold || depth.b > 0 || undefined,
+        strike: depth.s > 0 || undefined,
+        underline: depth.u > 0 ? {} : undefined,
+      }),
+    );
+  };
+
+  let last = 0;
+  for (const m of text.matchAll(FORMAT_TOKEN)) {
+    push(text.slice(last, m.index));
+    depth[m[2]] = Math.max(0, depth[m[2]] + (m[1] === "/" ? -1 : 1));
+    last = m.index + m[0].length;
+  }
+  push(text.slice(last));
+  return runs;
+}
 
 // Normalize story paragraph spacing and scene-break markers.
 function normalizeStoryParagraph(value) {
   const source = String(value)
     .replace(/\u00a0/g, " ")
     .replace(/ {2,}/g, " ")
+    .replace(/ +((?:\u27E6[ibus]\u27E7)+) +/g, " $1")
+    .replace(/ +((?:\u27E6\/[ibus]\u27E7)+) +/g, "$1 ")
     .trim();
-  if (SCENE_BREAKS.has(source)) return "***";
+  if (SCENE_BREAKS.has(stripMarks(source).trim())) return "***";
   return source.replace(/--/g, "—");
 }
 
@@ -414,15 +474,12 @@ function makeTextParagraph(text, font, size, options = {}) {
   } = options;
 
   return new Paragraph({
-    children: [
-      new TextRun({
-        text,
-        font: { name: font },
-        size: Math.round(size * 2),
-        bold,
-        color: "000000",
-      }),
-    ],
+    children: makeRuns(text, {
+      font: { name: font },
+      size: Math.round(size * 2),
+      bold,
+      color: "000000",
+    }),
     alignment,
     spacing: {
       before,
@@ -577,12 +634,31 @@ function makeImageParagraph({ data, type, width, height }) {
   });
 }
 
-// Turn one story paragraph into text paragraphs and image paragraphs.
+// Centered scene-break paragraph (AO3 <hr> and text separators like "~~~").
+function makeSceneBreak(font, sizes) {
+  return makeTextParagraph("***", font, sizes.body, {
+    alignment: AlignmentType.CENTER,
+    before: 120,
+    after: 120,
+    line: sizes.body * BODY_LINE_HEIGHT * 20,
+    keepLines: true,
+  });
+}
+
+function makeStoryParagraph(rawText, fonts, sizes) {
+  const text = normalizeStoryParagraph(rawText);
+  if (!stripMarks(text).trim()) return [];
+  return [
+    text === "***"
+      ? makeSceneBreak(fonts.body, sizes)
+      : makeBodyParagraph(text, fonts.body, sizes),
+  ];
+}
+
+// Turn one story line into text paragraphs, scene breaks and image paragraphs.
 function makeStoryParagraphs(rawText, fonts, sizes, images) {
-  if (!IMG_RE.test(rawText)) {
-    const text = normalizeStoryParagraph(rawText);
-    return text ? [makeBodyParagraph(text, fonts.body, sizes)] : [];
-  }
+  if (rawText === HR_MARK) return makeStoryParagraph("***", fonts, sizes);
+  if (!IMG_RE.test(rawText)) return makeStoryParagraph(rawText, fonts, sizes);
 
   const out = [];
   for (const part of rawText.split(IMG_SPLIT)) {
@@ -595,8 +671,7 @@ function makeStoryParagraphs(rawText, fonts, sizes, images) {
           : makeBodyParagraph("[image]", fonts.body, sizes),
       );
     } else {
-      const text = normalizeStoryParagraph(part);
-      if (text) out.push(makeBodyParagraph(text, fonts.body, sizes));
+      out.push(...makeStoryParagraph(part, fonts, sizes));
     }
   }
   return out;
@@ -611,7 +686,7 @@ function makeChapterSection(chapter, fonts, sizes, page, footers, images) {
   const children = [
     makeHeading(chapter.heading, 1),
     ...chapter.paragraphs
-      .flatMap(splitParagraphs)
+      .flatMap(splitStoryParagraphs)
       .flatMap((text) => makeStoryParagraphs(text, fonts, sizes, images)),
   ];
 
@@ -626,12 +701,12 @@ function makeChapterSection(chapter, fonts, sizes, page, footers, images) {
 function makeAppendixSection(appendix, fonts, sizes, page, format, footers) {
   const children = [
     makeHeading("Author's Notes", 1),
-    makeNoteParagraph(
-      "A collection of Notes and Summaries from the original published works on archiveofourown.org",
-      fonts.body,
-      sizes,
-      { fontSize: sizes.body },
-    ),
+    // makeNoteParagraph(
+    //   "A collection of Notes and Summaries from the original published works on archiveofourown.org",
+    //   fonts.body,
+    //   sizes,
+    //   { fontSize: sizes.body },
+    // ),
     new Paragraph(""),
   ];
 

@@ -1,5 +1,5 @@
 /* globals */
-import { normLang } from "./helper/extractor";
+import { normLang } from "./ao3/work";
 import {
   getBookmarkParams,
   buildQuery,
@@ -8,12 +8,14 @@ import {
   getParams,
   addValue,
   addMissingId,
-} from "./helper/params";
-import { createNotifPopup, getSettings } from "./helper/popup";
+} from "./ao3/search_params";
+import { createNotifPopup } from "./ui/popup";
+import { getSettings } from "./storage/settings";
+import { getWorkUrl } from "./ao3/page";
 
 (() => {
   const currentUrl = window.location.href;
-  const workUrl = window.getWorkUrl(currentUrl);
+  const workUrl = getWorkUrl(currentUrl);
   if (workUrl != "") {
     // if a work page
     createNotifPopup("Cannot apply filters on this page");

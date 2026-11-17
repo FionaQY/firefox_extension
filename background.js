@@ -9,9 +9,8 @@ const MODE_MAP = {
   hide: "hide_mode",
   search: "search_mode",
   download: "download_mode",
-  format: "format_docx_mode",
+  downloads: "downloads_mode",
   settings: "settings_mode",
-  status: "status_mode",
 };
 
 function isAo3(url) {
@@ -21,6 +20,18 @@ function isAo3(url) {
       (protocol === "https:" || protocol === "http:") &&
       (hostname === "archiveofourown.org" ||
         hostname.endsWith(".archiveofourown.org"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isInternetArchive(url) {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return (
+      (protocol === "https:" || protocol === "http:") &&
+      (hostname === "web.archive.org" || hostname.endsWith(".archive.org"))
     );
   } catch {
     return false;
@@ -73,7 +84,7 @@ async function downloadDoc(msg) {
 const handlers = {
   async executeMode(msg, sender, tab) {
     const script = MODE_MAP[msg.mode];
-    if (!script) return;
+    if (!script) throw new Error(`Unknown mode: ${msg.mode}`);
 
     const tabId = sender.tab?.id ?? tab?.id;
     if (tabId == null) throw new Error("Could not find the active tab");
@@ -118,7 +129,7 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status != "complete" || !tab.url) return;
 
-  if (!tab.url || !isAo3(tab.url)) {
+  if (!tab.url || (!isAo3(tab.url) && !isInternetArchive(tab.url))) {
     return;
   }
   if (pendingInjection && pendingInjection.tabId == tabId) {

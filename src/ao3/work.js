@@ -1,11 +1,5 @@
-import {
-  BASE_URL,
-  BREAK_MARK,
-  escapeHtml,
-  stripLabel,
-  textOf,
-  toInteger,
-} from "./commons";
+import { BASE_URL, BREAK_MARK, textOf } from "./page";
+import { escapeHtml, stripLabel, toInteger } from "../utils/text";
 
 export const WORK_BLURB_SELECTOR = ".work.blurb.group";
 
@@ -108,6 +102,22 @@ const STAT_FIELDS = [
 
 const CHAPTER_NUMBER_PREFIX = /^Chapter\s+\d+\s*:?\s*/i;
 const AO3_NOTES_PLACEHOLDER = /\(See the end of the (?:chapter|work)\b/i;
+
+export const HR_MARK = "\u27E6HR\u27E7";
+
+// HTML tag -> marker key (i = italic, b = bold, u = underline, s = strike)
+const FORMAT_TAGS = {
+  em: "i",
+  i: "i",
+  strong: "b",
+  b: "b",
+  u: "u",
+  s: "s",
+  strike: "s",
+  del: "s",
+};
+const FORMAT_SELECTOR = Object.keys(FORMAT_TAGS).join(",");
+const FORMAT_MARKER_RE = /\u27E6\/?[ibus]\u27E7/g;
 
 const makeLink = (url, text) =>
   `<a href="${escapeHtml(url)}">${escapeHtml(text)}</a>`;
@@ -279,17 +289,26 @@ function paragraphText(paragraph) {
     }
     img.replaceWith(clone.ownerDocument.createTextNode(marker));
   });
+  clone.querySelectorAll(FORMAT_SELECTOR).forEach((el) => {
+    const key = FORMAT_TAGS[el.tagName.toLowerCase()];
+    el.before(clone.ownerDocument.createTextNode(`\u27E6${key}\u27E7`));
+    el.after(clone.ownerDocument.createTextNode(`\u27E6/${key}\u27E7`));
+  });
   return textOf(clone, true);
 }
 
-// Collect story paragraphs while excluding summaries and notes.
+// Collect story paragraphs and scene breaks while excluding summaries and notes.
 function getStoryParagraphs(userstuff) {
   if (!userstuff) return [];
 
-  return Array.from(userstuff.querySelectorAll(CONTENT_SELECTORS.paragraph))
-    .filter((paragraph) => !paragraph.closest(NOTE_SELECTORS.summaryOrNotes))
-    .map((paragraph) => paragraphText(paragraph))
-    .filter(Boolean);
+  return Array.from(
+    userstuff.querySelectorAll(`${CONTENT_SELECTORS.paragraph}, hr`),
+  )
+    .filter((el) => !el.closest(NOTE_SELECTORS.summaryOrNotes))
+    .map((el) => (el.tagName === "HR" ? HR_MARK : paragraphText(el)))
+    .filter(
+      (line) => line === HR_MARK || line.replace(FORMAT_MARKER_RE, "").trim(),
+    );
 }
 
 // Read the configured work statistics from a document or work blurb.
@@ -460,6 +479,16 @@ export function workInfo(work) {
     title,
     author: authors_to_sort_on || LABELS.DEFAULT_AUTHOR,
   };
+}
+
+// Series a listing blurb says the work belongs to ("Part 2 of <series>").
+export function blurbSeries(blurb) {
+  return [...blurb.querySelectorAll("ul.series a[href^='/series/']")].flatMap(
+    (link) => {
+      const id = link.getAttribute("href")?.match(/\/series\/(\d+)/)?.[1];
+      return id ? [{ id, title: textOf(link) }] : [];
+    },
+  );
 }
 
 const getAuthors = (work) =>

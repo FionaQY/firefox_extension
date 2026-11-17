@@ -1,20 +1,19 @@
 /* globals browser */
 
 import {
-  saveSettings,
-  getSettings,
   createNotifPopup,
   openModePopup,
   removeModePopup,
   MODE_ID,
   MODE_OPTIONS,
-} from "./helper/popup";
+} from "./ui/popup";
+import { getSettings, saveSettings } from "./storage/settings";
 import {
   MOBILE_MAX_WIDTH,
   optionsPopupHelper,
   resetInputs,
-} from "./helper/popup_fields";
-import { getBundleIds } from "./helper/bundle_ids";
+} from "./ui/popup_fields";
+import { getBundleIds } from "./storage/bundles";
 (() => {
   removeModePopup();
 
@@ -196,9 +195,11 @@ import { getBundleIds } from "./helper/bundle_ids";
           const popupOptions = Array.from(showCol.childNodes)
             .filter((x) => x.id.length !== 0)
             .map((x) => x.id);
-          settings.popupOptions = popupOptions;
-          settings.general = generalSettings;
-          await saveSettings(settings);
+
+          const fresh = await getSettings();
+          fresh.popupOptions = popupOptions;
+          fresh.general = { ...(fresh.general || {}), ...generalSettings };
+          await saveSettings(fresh);
           removeModePopup();
         },
       },
@@ -206,10 +207,12 @@ import { getBundleIds } from "./helper/bundle_ids";
         text: "Reset",
         variant: "danger",
         onClick: async () => {
-          if (!confirm("Are you sure you want to reset Settings?")) return;
-          delete settings.general;
-          delete settings.popupOptions;
-          await saveSettings(settings);
+          if (!confirm("Reset these options and the mode layout?")) return;
+
+          const fresh = await getSettings();
+          for (const key of Object.keys(fields)) delete fresh.general?.[key];
+          delete fresh.popupOptions;
+          await saveSettings(fresh);
 
           resetInputs(contentContainer, inputsMap);
           populateCols({}, showCol, hideCol);

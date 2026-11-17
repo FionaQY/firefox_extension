@@ -1,6 +1,6 @@
 /* globals browser */
-import { mutateTasks, readTasks, updateTask } from "../src/helper/task_store";
-import { CancelledError, runTask } from "../src/helper/download_tasks";
+import { mutateTasks, readTasks, updateTask } from "../src/storage/tasks";
+import { CancelledError, runTask } from "../src/download/download_tasks";
 
 const FINISHED = new Set(["done", "partial", "failed", "cancelled"]);
 

@@ -1,11 +1,14 @@
 /* globals browser */
-import { getBundleIds, setBundleId } from "./helper/bundle_ids";
-import { getWorkUrl, textOf } from "./helper/commons";
-import { workInfo } from "./helper/extractor";
-import { bookmarkWork } from "./helper/bookmark";
-import { getButton, createNotifPopup, getSettings } from "./helper/popup";
-import { createLabeledCheckbox, MOBILE_MAX_WIDTH } from "./helper/popup_fields";
-import { forEachPaced } from "./helper/download_tasks";
+import { getBundleIds, setBundleId } from "./storage/bundles";
+import { getWorkUrl, textOf } from "./ao3/page";
+import { workInfo } from "./ao3/work";
+import { bookmarkWork } from "./ao3/bookmark";
+import { getButton, createNotifPopup } from "./ui/popup";
+import { getSettings } from "./storage/settings";
+import { createLabeledCheckbox, MOBILE_MAX_WIDTH } from "./ui/popup_fields";
+import { forEachPaced } from "./download/download_tasks";
+import { DOWNLOADS_TAB, DOWNLOADS_TAB_KEY } from "./download/download_tabs";
+import { MODE_ID } from "./ui/popup";
 
 const TYPE = { WORK: "work", SERIES: "series" };
 const BOOKMARK_CREATED = "created";
@@ -411,9 +414,12 @@ function wirePanel(ui, general, pageDownload) {
   );
   ui.statusButton?.addEventListener("click", async () => {
     try {
+      await browser.storage.local.set({
+        [DOWNLOADS_TAB_KEY]: DOWNLOADS_TAB.QUEUE,
+      });
       await browser.runtime.sendMessage({
         action: "executeMode",
-        mode: "status",
+        mode: MODE_ID.DOWNLOADS,
       });
     } catch (error) {
       createNotifPopup(`Could not open download status: ${error.message}`);

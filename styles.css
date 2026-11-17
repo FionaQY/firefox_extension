@@ -111,6 +111,16 @@ mark.ao3-search-highlight,
   flex: 1;
 }
 
+/* Shared content surface for mode popups. */
+.ao3-mode-content {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  color: var(--ao3-text);
+  font-family: inherit;
+  line-height: 1.4;
+}
+
 /* Notification Popup */
 /* Compact toast-style notification used for quick user feedback. */
 .ao3-notif-popup {
@@ -887,4 +897,348 @@ li.blurb.group {
   white-space: normal;
   color: var(--ao3-text-muted) !important;
   overflow-wrap: anywhere !important;
+}
+
+/* Downloads mode */
+.ao3-popup-container.downloads {
+  display: flex;
+  flex-direction: column;
+}
+
+#ao3-qof-popup.ao3-popup-container.downloads.desktop {
+  width: min(460px, calc(100vw - 40px)) !important;
+  max-width: min(600px, calc(100vw - 40px)) !important;
+  height: min(420px, 65vh) !important;
+  max-height: 65vh !important;
+}
+
+#ao3-qof-popup.ao3-popup-container.downloads.mobile {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 60vh !important;
+  max-height: 65vh !important;
+}
+
+.ao3-popup-container.downloads > .ao3-mode-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ao3-downloads-content {
+  min-width: 0;
+  padding: 0.5em 0.4em 0.75em;
+}
+
+.ao3-tab-bar {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.6em;
+  margin-bottom: 0.5em;
+}
+
+.ao3-tab {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65em 0.5em;
+  text-align: center;
+}
+
+.ao3-tab.active {
+  background: var(--ao3-accent);
+  border-color: var(--ao3-accent);
+  color: var(--ao3-text-strong);
+}
+
+.ao3-tab-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.ao3-links-content,
+.ao3-status-content,
+.ao3-folder-content,
+.ao3-format-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+}
+
+/* Queue */
+.ao3-status-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.ao3-status-title {
+  flex: 1;
+  font-weight: bold;
+}
+
+.ao3-status-empty {
+  opacity: 0.7;
+  padding: 0.75em 0;
+}
+
+.ao3-status-row {
+  border-top: 1px solid var(--ao3-border);
+  padding: 0.5em 0;
+}
+
+.ao3-status-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.ao3-status-label {
+  flex: 1;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+
+.ao3-status-badge {
+  font-size: 0.75rem;
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: var(--ao3-surface-raised);
+  color: var(--ao3-text-strong);
+}
+
+.ao3-status-badge.running {
+  background: var(--ao3-accent);
+}
+
+.ao3-status-badge.done {
+  background: var(--ao3-success);
+}
+
+.ao3-status-badge.partial {
+  background: #b8860b;
+}
+
+.ao3-status-badge.failed {
+  background: var(--ao3-danger);
+}
+
+.ao3-status-progress {
+  margin: 0.3em 0;
+  color: var(--ao3-text-muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.ao3-status-tally {
+  margin-bottom: 0.3em;
+  color: var(--ao3-text-muted);
+  font-size: 0.75rem;
+}
+
+.ao3-status-errors {
+  margin: 0.3em 0;
+  font-size: 0.75rem;
+  color: var(--ao3-text-muted);
+}
+
+.ao3-status-actions {
+  display: flex;
+  gap: 0.4em;
+}
+
+/* Folders */
+.ao3-folder-hint,
+.ao3-links-hint {
+  margin: 0.5em 0 0.75em;
+  font-size: 0.8rem;
+  color: var(--ao3-text-muted);
+}
+
+.ao3-folder-empty {
+  opacity: 0.7;
+  padding: 0.5em 0;
+}
+
+.ao3-folder-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  margin-bottom: 0.4em;
+  padding: 0.5em;
+  background: var(--ao3-surface);
+  border: 1px solid var(--ao3-border);
+  border-radius: 6px;
+}
+
+.ao3-folder-row.drag-over {
+  border-color: var(--ao3-accent);
+}
+
+/* One line inside a folder card */
+.ao3-folder-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.ao3-folder-line .ao3-field-container {
+  flex: none;
+  width: auto;
+  padding-bottom: 0;
+}
+
+.ao3-folder-handle {
+  cursor: grab;
+  user-select: none;
+  padding: 0 0.25em;
+}
+
+.ao3-folder-name {
+  flex: 1;
+  min-width: 110px;
+  width: auto;
+}
+
+.ao3-folder-line .ao3-folder-type {
+  width: auto;
+}
+
+.ao3-folder-button {
+  padding: 0.2em 0.6em;
+}
+
+.ao3-folder-values {
+  flex: 1;
+  min-width: 140px;
+  width: auto;
+  box-sizing: border-box;
+}
+
+/* Third line: the values box or dropdown, full width */
+.ao3-folder-values {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ao3-folder-dropdown {
+  position: relative;
+}
+
+.ao3-folder-summary {
+  cursor: pointer;
+  list-style: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ao3-folder-summary::-webkit-details-marker {
+  display: none;
+}
+
+.ao3-folder-options {
+  margin-top: 0.3em;
+  padding: 0.4em 0.5em;
+  background: var(--ao3-surface);
+  border: 1px solid var(--ao3-border-strong);
+  border-radius: 4px;
+}
+
+.ao3-folder-add {
+  margin: 0.4em 0.4em 0 0;
+}
+
+/* Second line: type | regex | values, never wraps */
+.ao3-folder-detail {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4em;
+}
+
+.ao3-folder-detail.no-regex {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.ao3-folder-detail .ao3-folder-type {
+  width: auto;
+}
+
+.ao3-folder-detail .ao3-folder-values {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ao3-folder-regex {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  color: var(--ao3-text-muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Links */
+.ao3-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3em 0.4em;
+  margin-bottom: 0.5em;
+}
+
+.ao3-link-row .ao3-link-input {
+  flex: 1;
+  min-width: 140px;
+  width: auto;
+}
+
+.ao3-link-badge {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--ao3-text-muted);
+}
+
+.ao3-link-badge:empty {
+  display: none;
+}
+
+.ao3-link-badge.work,
+.ao3-link-badge.series,
+.ao3-link-badge.listing {
+  color: var(--ao3-success);
+}
+
+.ao3-link-badge.invalid {
+  color: var(--ao3-danger);
+}
+
+.ao3-links-add {
+  margin: 0.25em 0 0.75em;
+}
+
+.ao3-links-submit {
+  margin-top: 0.5em;
+  background: var(--ao3-accent);
+  color: var(--ao3-text-strong);
+}
+
+/* Format */
+.ao3-format-hint {
+  margin: 0.25em 0 0.5em;
+  font-size: 0.8rem;
+  color: var(--ao3-text-muted);
+}
+
+.ao3-format-actions {
+  display: flex;
+  gap: 0.5em;
+  margin-top: 0.5em;
 }
