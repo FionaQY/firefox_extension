@@ -34,7 +34,9 @@ const MESSAGE = {
 
 const SELECTOR = {
   RESETTABLE_INPUTS: "input, select, textarea",
+  POPUP_CONTAINER: ".ao3-popup-container",
 };
+const BUTTON_VARIANTS = new Set(["primary", "danger", "neutral", "success"]);
 
 function createInput(config) {
   let input;
@@ -158,6 +160,70 @@ export function resetInputs(container, inputsMap) {
   });
 }
 
+export function createButton(
+  text,
+  {
+    variant = "neutral",
+    classes = [],
+    isMobile = window.innerWidth <= MOBILE_MAX_WIDTH,
+    onClick,
+  } = {},
+) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = text;
+  const safeVariant = BUTTON_VARIANTS.has(variant) ? variant : "neutral";
+  button.classList.add("ao3-button", `ao3-${safeVariant}`, ...classes);
+  if (isMobile) button.classList.add("mobile");
+  if (onClick) button.addEventListener("click", onClick);
+  return button;
+}
+
+export function createCloseButton(isMobile, onClose) {
+  const button = createButton("×", {
+    classes: ["ao3-close-button", isMobile ? CLASS.MOBILE : CLASS.DESKTOP],
+    isMobile,
+    onClick:
+      onClose ||
+      ((event) =>
+        event.currentTarget.closest(SELECTOR.POPUP_CONTAINER)?.remove()),
+  });
+  button.setAttribute("aria-label", "Close");
+  button.title = "Close";
+  return button;
+}
+
+export function createButtonBar(buttons, isMobile) {
+  const bar = document.createElement("div");
+  bar.classList.add("ao3-button-bar");
+  for (const definition of buttons) {
+    bar.appendChild(
+      createButton(definition.text, {
+        variant: definition.variant || "neutral",
+        classes: ["ao3-bar-button"],
+        isMobile,
+        onClick: definition.onClick,
+      }),
+    );
+  }
+  return bar;
+}
+
+export function createButtonGroup(buttons, isMobile) {
+  const group = document.createElement("div");
+  group.classList.add("ao3-action-group");
+  for (const definition of buttons) {
+    group.appendChild(
+      createButton(definition.text, {
+        variant: definition.variant || "neutral",
+        isMobile,
+        onClick: definition.onClick,
+      }),
+    );
+  }
+  return group;
+}
+
 export function createSearchBar(options = {}) {
   const {
     inputPlaceholder = "",
@@ -184,19 +250,17 @@ export function createSearchBar(options = {}) {
   container.appendChild(input);
 
   for (const buttonDefinition of buttons) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = buttonDefinition.text;
-    button.classList.add(CLASS.SEARCH_BUTTON);
-    if (isMobile) button.classList.add(CLASS.MOBILE);
-    if (buttonDefinition.variant) {
-      button.classList.add(`ao3-${buttonDefinition.variant}`);
-    }
-    if (buttonDefinition.active) button.classList.add(CLASS.ACTIVE);
-    if (buttonDefinition.onClick) {
-      button.addEventListener("click", buttonDefinition.onClick);
-    }
-    container.appendChild(button);
+    container.appendChild(
+      createButton(buttonDefinition.text, {
+        variant: buttonDefinition.variant || "neutral",
+        classes: [
+          CLASS.SEARCH_BUTTON,
+          ...(buttonDefinition.active ? [CLASS.ACTIVE] : []),
+        ],
+        isMobile,
+        onClick: buttonDefinition.onClick,
+      }),
+    );
   }
 
   return container;

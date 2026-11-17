@@ -2,6 +2,7 @@
 
 import { normLang, extractAllValues, WORK_BLURB_SELECTOR } from "./ao3/work";
 import { createNotifPopup } from "./ui/popup";
+import { createButton } from "./ui/popup_fields";
 import { getSettings } from "./storage/settings";
 import { getWorkUrl, textOf } from "./ao3/page";
 
@@ -105,9 +106,9 @@ const wildcardToRegex = (pattern) =>
     const header = document.createElement("div");
     header.classList.add("ao3-shrink-header");
 
-    const toggle = document.createElement("button");
-    toggle.textContent = "Show/Hide Work";
-    toggle.classList.add("ao3-shrink-toggle");
+    const toggle = createButton("Show/Hide Work", {
+      classes: ["ao3-shrink-toggle"],
+    });
 
     const label = document.createElement("span");
     label.textContent = reason;

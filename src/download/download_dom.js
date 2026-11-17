@@ -1,3 +1,5 @@
+import { createButton, createButtonGroup } from "../ui/popup_fields";
+
 export function el(tag, className = "", text = null) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -5,11 +7,16 @@ export function el(tag, className = "", text = null) {
   return node;
 }
 
-export function button(text, onClick, extraClass = "") {
-  const b = el("button", `ao3-control-button ${extraClass}`.trim(), text);
-  b.type = "button";
-  b.addEventListener("click", onClick);
-  return b;
+export function button(text, onClick, extraClass = "", variant = "neutral") {
+  return createButton(text, {
+    variant,
+    classes: extraClass.split(/\s+/).filter(Boolean),
+    onClick,
+  });
+}
+
+export function buttonGroup(buttons, isMobile) {
+  return createButtonGroup(buttons, isMobile);
 }
 
 export function checkboxField(text) {

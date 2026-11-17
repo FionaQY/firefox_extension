@@ -2,6 +2,7 @@
 
 import { MODE_POPUP_ID, openModePopup, removeModePopup } from "./ui/popup";
 import { createSearchBar, MOBILE_MAX_WIDTH } from "./ui/popup_fields";
+import { createButton } from "./ui/popup_fields";
 
 (() => {
   removeModePopup();
@@ -142,6 +143,11 @@ import { createSearchBar, MOBILE_MAX_WIDTH } from "./ui/popup_fields";
       const scrollWheel = document.createElement("div");
       scrollWheel.className = "ao3-search-picker-wheel";
 
+      const closePicker = () => {
+        overlay.remove();
+        pickerItems = [];
+      };
+
       matches.forEach((_, idx) => {
         const item = document.createElement("div");
         item.textContent = `${idx + 1} / ${matches.length}`;
@@ -159,8 +165,18 @@ import { createSearchBar, MOBILE_MAX_WIDTH } from "./ui/popup_fields";
       scrollWheel.addEventListener("scroll", () => {
         clearTimeout(scrollTimer);
         scrollTimer = setTimeout(() => {
-          const itemHeight = 30;
-          const targetIdx = Math.round(scrollWheel.scrollTop / itemHeight);
+          const wheelRect = scrollWheel.getBoundingClientRect();
+          const center = wheelRect.top + wheelRect.height / 2;
+          const targetIdx = pickerItems.reduce(
+            (closest, item, idx) => {
+              const rect = item.getBoundingClientRect();
+              const distance = Math.abs(rect.top + rect.height / 2 - center);
+              return distance < closest.distance
+                ? { index: idx, distance }
+                : closest;
+            },
+            { index: -1, distance: Infinity },
+          ).index;
           if (
             targetIdx >= 0 &&
             targetIdx < matches.length &&
@@ -171,20 +187,16 @@ import { createSearchBar, MOBILE_MAX_WIDTH } from "./ui/popup_fields";
         }, 80);
       });
 
-      const closeBtn = document.createElement("button");
-      closeBtn.textContent = "Done";
-      closeBtn.className = "ao3-search-picker-close";
-      closeBtn.onclick = () => closePicker();
+      const closeBtn = createButton("Done", {
+        variant: "primary",
+        classes: ["ao3-search-picker-close"],
+        onClick: closePicker,
+      });
 
       pickerBox.appendChild(title);
       pickerBox.appendChild(scrollWheel);
       pickerBox.appendChild(closeBtn);
       overlay.appendChild(pickerBox);
-
-      const closePicker = () => {
-        overlay.remove();
-        pickerItems = [];
-      };
 
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay) closePicker();
@@ -193,7 +205,7 @@ import { createSearchBar, MOBILE_MAX_WIDTH } from "./ui/popup_fields";
       document.body.appendChild(overlay);
 
       setTimeout(() => {
-        scrollWheel.scrollTop = currentIndex * 30;
+        pickerItems[currentIndex]?.scrollIntoView({ block: "center" });
       }, 10);
     }
 

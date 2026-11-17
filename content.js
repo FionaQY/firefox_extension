@@ -6,7 +6,7 @@ import {
   MODE_OPTIONS,
 } from "./src/ui/popup";
 import { getSettings } from "./src/storage/settings";
-import { MOBILE_MAX_WIDTH } from "./src/ui/popup_fields";
+import { createButton, MOBILE_MAX_WIDTH } from "./src/ui/popup_fields";
 
 const ACTION = { EXECUTE_MODE: "executeMode" };
 const CLASS = {
@@ -35,10 +35,11 @@ function createModeButton(mode, isMobile, popup) {
   const { icon = "", label = "" } = MODE_OPTIONS[mode] || {};
   const deviceClass = isMobile ? CLASS.MOBILE : CLASS.DESKTOP;
 
-  const button = document.createElement("button");
-  button.type = "button";
+  const button = createButton("", {
+    classes: [CLASS.MODE_BUTTON, deviceClass],
+    isMobile,
+  });
   button.dataset.mode = mode;
-  button.classList.add(CLASS.MODE_BUTTON, deviceClass);
 
   const iconElement = document.createElement("div");
   iconElement.textContent = icon;
@@ -47,7 +48,7 @@ function createModeButton(mode, isMobile, popup) {
   const labelElement = document.createElement("div");
   labelElement.textContent = label;
   labelElement.classList.add(CLASS.MODE_LABEL, deviceClass);
-  button.append(iconElement, labelElement);
+  button.replaceChildren(iconElement, labelElement);
 
   button.addEventListener("click", () => {
     browser.runtime

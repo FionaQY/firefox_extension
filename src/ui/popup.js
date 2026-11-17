@@ -1,6 +1,4 @@
-const SELECTORS = {
-  POPUP_BY_ID_SUFFIX: '[id$="-popup"]',
-};
+import { createButtonBar, createCloseButton } from "./popup_fields";
 
 export const MODE_POPUP_ID = "ao3-qof-popup";
 
@@ -37,9 +35,7 @@ const CLASS = {
   MOBILE: "mobile",
   DESKTOP: "desktop",
   NOTIFICATION: "ao3-notif-popup",
-  BUTTON_BAR: "ao3-button-bar",
-  BAR_BUTTON: "ao3-bar-button",
-  CLOSE_BUTTON: "ao3-close-button",
+  POPUP_HEADER: "ao3-popup-header",
   POPUP_CONTAINER: "ao3-popup-container",
   MODE_CONTENT: "ao3-mode-content",
 };
@@ -82,45 +78,6 @@ export function createNotifPopup(message) {
   document.body.addEventListener("click", clickHandler, { once: true });
 }
 
-export function getButton(variant, isMobile, text) {
-  const butt = document.createElement("button");
-  butt.type = "button";
-  butt.textContent = text;
-  butt.classList.add(CLASS.BAR_BUTTON, `ao3-${variant || "neutral"}`);
-  if (isMobile) {
-    butt.classList.add(CLASS.MOBILE);
-  }
-  return butt;
-}
-
-export function createCloseButton(isMobile, onClose) {
-  const btn = document.createElement("button");
-  btn.textContent = "×";
-  btn.classList.add(
-    CLASS.CLOSE_BUTTON,
-    isMobile ? CLASS.MOBILE : CLASS.DESKTOP,
-  );
-  btn.onclick = () => {
-    if (onClose) onClose();
-    else {
-      const popup = btn.closest(SELECTORS.POPUP_BY_ID_SUFFIX);
-      if (popup) popup.remove();
-    }
-  };
-  return btn;
-}
-
-export function createButtonBar(buttons, isMobile) {
-  const container = document.createElement("div");
-  container.classList.add(CLASS.BUTTON_BAR);
-  buttons.forEach((btnDef) => {
-    const btn = getButton(btnDef.variant, isMobile, btnDef.text);
-    btn.addEventListener("click", btnDef.onClick);
-    container.appendChild(btn);
-  });
-  return container;
-}
-
 export function createPopupContainer(id, isMobile, options = {}) {
   const popup = document.createElement("div");
   popup.id = id;
@@ -132,7 +89,10 @@ export function createPopupContainer(id, isMobile, options = {}) {
     popup.classList.add(...options.extraClasses);
   }
 
-  popup.appendChild(createCloseButton(isMobile, options.onClose));
+  const header = document.createElement("div");
+  header.classList.add(CLASS.POPUP_HEADER);
+  header.appendChild(createCloseButton(isMobile, options.onClose));
+  popup.appendChild(header);
 
   if (options.content) {
     options.content.classList.add(CLASS.MODE_CONTENT);

@@ -285,7 +285,12 @@ export function buildLinksView({ isMobile, switchTab }) {
     }
   }
 
-  const downloadButton = button("Download", submit, "ao3-links-submit");
+  const downloadButton = button(
+    "Download",
+    submit,
+    "ao3-links-submit",
+    "primary",
+  );
 
   element.append(
     hint,

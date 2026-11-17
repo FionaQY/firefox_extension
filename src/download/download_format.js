@@ -2,7 +2,7 @@ import { createNotifPopup } from "../ui/popup";
 import { getSettings, saveSettings } from "../storage/settings";
 import { optionsPopupHelper } from "../ui/popup_fields";
 import { DEFAULT_DOCX_SETTINGS, DOCX_SETTING_KEYS } from "./document_format";
-import { el, button } from "./download_dom";
+import { el, buttonGroup } from "./download_dom";
 
 const fontField = (key, label) => [key, { label, type: "text" }];
 const sizeField = (key, label, step = "0.5") => [
@@ -107,10 +107,12 @@ export function buildFormatView({ isMobile }) {
         "Font sizes are in points; margins and gutter are in inches. " +
           "Font names must be installed where the DOCX is opened.",
       );
-      const actions = el("div", "ao3-format-actions");
-      actions.append(
-        button("Save", save, "ao3-primary"),
-        button("Reset", reset, "ao3-danger"),
+      const actions = buttonGroup(
+        [
+          { text: "Save", variant: "primary", onClick: save },
+          { text: "Reset", variant: "danger", onClick: reset },
+        ],
+        isMobile,
       );
 
       element.replaceChildren(hint, content, actions);

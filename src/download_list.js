@@ -3,7 +3,8 @@ import { getBundleIds, setBundleId } from "./storage/bundles";
 import { getWorkUrl, textOf } from "./ao3/page";
 import { workInfo } from "./ao3/work";
 import { bookmarkWork } from "./ao3/bookmark";
-import { getButton, createNotifPopup } from "./ui/popup";
+import { createNotifPopup } from "./ui/popup";
+import { createButton } from "./ui/popup_fields";
 import { getSettings } from "./storage/settings";
 import { createLabeledCheckbox, MOBILE_MAX_WIDTH } from "./ui/popup_fields";
 import { forEachPaced } from "./download/download_tasks";
@@ -240,7 +241,11 @@ function buildPanel({ downloadOn, bookmarkOn, pageDownload }) {
   const compact = window.innerWidth <= MOBILE_MAX_WIDTH;
   // Create a panel action button with its initial selection count.
   const actionButton = (id, label) => {
-    const btn = getButton("primary", compact, `${label} (0)`);
+    const btn = createButton(`${label} (0)`, {
+      variant: "primary",
+      classes: ["ao3-bar-button"],
+      isMobile: compact,
+    });
     btn.id = id;
     return btn;
   };
@@ -254,10 +259,18 @@ function buildPanel({ downloadOn, bookmarkOn, pageDownload }) {
   const status = document.createElement("span");
   status.id = ID.STATUS;
   const pageDownloadButton = pageDownload
-    ? getButton("primary", compact, pageDownload.buttonLabel)
+    ? createButton(pageDownload.buttonLabel, {
+        variant: "primary",
+        classes: ["ao3-bar-button"],
+        isMobile: compact,
+      })
     : null;
   if (pageDownloadButton) pageDownloadButton.id = ID.PAGE_DOWNLOAD;
-  const statusButton = getButton("secondary", compact, "Download Status");
+  const statusButton = createButton("Download Status", {
+    variant: "neutral",
+    classes: ["ao3-bar-button"],
+    isMobile: compact,
+  });
   statusButton.id = ID.STATUS_BTN;
 
   const panel = document.createElement("div");

@@ -6,7 +6,7 @@ import {
   isValidPattern,
   normalizeFolderType,
 } from "./folder_rules";
-import { el, button, checkboxField } from "./download_dom";
+import { el, button, buttonGroup, checkboxField } from "./download_dom";
 
 const newId = () =>
   globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
@@ -250,17 +250,21 @@ export function buildFoldersView({ isMobile }) {
       "Unmatched downloads stay in the root.",
   );
 
-  const addButton = button(
-    "＋ Add folder",
-    () => {
-      state.rules.push(toDraft({}));
-      renderRows();
-    },
-    "ao3-folder-add",
+  const actions = buttonGroup(
+    [
+      {
+        text: "＋ Add folder",
+        onClick: () => {
+          state.rules.push(toDraft({}));
+          renderRows();
+        },
+      },
+      { text: "Save folders", variant: "primary", onClick: save },
+    ],
+    isMobile,
   );
-  const saveButton = button("Save folders", save, "ao3-folder-add");
 
-  element.append(enabled.label, hint, list, addButton, saveButton);
+  element.append(enabled.label, hint, list, actions);
   renderRows();
 
   // Saved rules load after the first paint.

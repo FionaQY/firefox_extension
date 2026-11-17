@@ -6,7 +6,7 @@ import { buildQueueView } from "./download/download_queue";
 import { buildFoldersView } from "./download/download_folders";
 import { buildFormatView } from "./download/download_format";
 import { DOWNLOADS_TAB, DOWNLOADS_TAB_KEY } from "./download/download_tabs";
-import { el } from "./download/download_dom";
+import { el, button } from "./download/download_dom";
 
 const TABS = [
   { id: DOWNLOADS_TAB.LINKS, label: "Links", build: buildLinksView },
@@ -26,7 +26,9 @@ const TABS = [
 
   const content = el("div", "ao3-downloads-content");
   const tabBar = el("div", "ao3-tab-bar");
+  tabBar.setAttribute("role", "tablist");
   const body = el("div", "ao3-tab-body");
+  body.setAttribute("role", "tabpanel");
   content.append(tabBar, body);
 
   const tabButtons = new Map();
@@ -36,16 +38,17 @@ const TABS = [
     current?.dispose?.();
     const tab = TABS.find((t) => t.id === id) ?? TABS[0];
     for (const [tabId, btn] of tabButtons) {
-      btn.classList.toggle("active", tabId === tab.id);
+      const isActive = tabId === tab.id;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-selected", String(isActive));
     }
     current = tab.build({ isMobile, switchTab: show });
     body.replaceChildren(current.element);
   }
 
   for (const tab of TABS) {
-    const btn = el("button", "ao3-control-button ao3-tab", tab.label);
-    btn.type = "button";
-    btn.addEventListener("click", () => show(tab.id));
+    const btn = button(tab.label, () => show(tab.id), "ao3-tab");
+    btn.setAttribute("role", "tab");
     tabButtons.set(tab.id, btn);
     tabBar.append(btn);
   }
@@ -54,9 +57,6 @@ const TABS = [
 
   openModePopup(isMobile, {
     content,
-    buttons: [
-      { text: "Close", variant: "neutral", onClick: () => removeModePopup() },
-    ],
     extraClasses: isMobile ? ["downloads"] : ["downloads", "flush-bottom"],
   });
 })();
