@@ -1,6 +1,6 @@
 /* globals */
 
-import { createNotifPopup, createPopupContainer } from "./ui/popup";
+import { createNotifPopup, openModePopup } from "./ui/popup";
 import { parseHtmlFragment } from "./ui/html";
 import { MOBILE_MAX_WIDTH } from "./ui/popup_fields";
 import { fetchDoc, getWorkUrl } from "./ao3/page";
@@ -23,7 +23,7 @@ const MESSAGE = {
   SUMMARY_REQUEST: (url) => `Getting summary from ${url}...`,
 };
 
-(() => {
+(async () => {
   const currentUrl = window.location.href;
   const workUrl = getWorkUrl(currentUrl, false);
   if (!workUrl) {
@@ -87,21 +87,17 @@ const MESSAGE = {
     return content;
   }
 
-  async function showSummaryPopup() {
-    const summaryData = await loadSummary();
-    if (!summaryData) return;
-    if (!summaryData.summary) {
-      createNotifPopup(MESSAGE.SUMMARY_FAILED);
-      return;
-    }
-
-    const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
-    const popup = createPopupContainer(SUMMARY_POPUP.ID, isMobile, {
-      content: createSummaryContent(summaryData),
-      extraClasses: [SUMMARY_POPUP.EXTRA_CLASS],
-    });
-    document.body.appendChild(popup);
+  const summaryData = await loadSummary();
+  if (!summaryData) return;
+  if (!summaryData.summary) {
+    createNotifPopup(MESSAGE.SUMMARY_FAILED);
+    return;
   }
 
-  showSummaryPopup();
+  const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
+  openModePopup(isMobile, {
+    content: createSummaryContent(summaryData),
+    extraClasses: [SUMMARY_POPUP.EXTRA_CLASS],
+    width: window.innerWidth,
+  });
 })();

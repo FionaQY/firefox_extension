@@ -78,7 +78,7 @@ export function createNotifPopup(message) {
   document.body.addEventListener("click", clickHandler, { once: true });
 }
 
-export function createPopupContainer(id, isMobile, options = {}) {
+function createPopupContainer(id, isMobile, options = {}) {
   const popup = document.createElement("div");
   popup.id = id;
   popup.classList.add(
@@ -110,7 +110,6 @@ export function removeModePopup() {
 }
 
 export function openModePopup(isMobile, options = {}) {
-  removeModePopup();
   const popup = createPopupContainer(MODE_POPUP_ID, isMobile, options);
   document.body.appendChild(popup);
   return popup;

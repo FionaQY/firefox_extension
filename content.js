@@ -8,7 +8,11 @@ import {
 import { getSettings } from "./src/storage/settings";
 import { createButton, MOBILE_MAX_WIDTH } from "./src/ui/popup_fields";
 
-const ACTION = { EXECUTE_MODE: "executeMode" };
+const ACTION = {
+  EXECUTE_MODE: "executeMode",
+  SHOW_POPUP: "showPopup",
+  DOWNLOAD_TASK_FINISHED: "downloadTaskFinished",
+};
 const CLASS = {
   MOBILE: "mobile",
   DESKTOP: "desktop",
@@ -105,8 +109,10 @@ async function showPopup() {
 
   injectStyles();
   browser.runtime.onMessage.addListener(async (msg) => {
-    if (msg.action === "showPopup") {
+    if (msg.action === ACTION.SHOW_POPUP) {
       await showPopup();
+    } else if (msg.action === ACTION.DOWNLOAD_TASK_FINISHED) {
+      createNotifPopup(msg.message);
     }
   });
 })();

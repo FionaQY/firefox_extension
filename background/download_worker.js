@@ -1,7 +1,6 @@
 /* globals browser */
 import { mutateTasks, readTasks, updateTask } from "../src/storage/tasks";
 import { CancelledError, runTask } from "../src/download/download_tasks";
-
 const FINISHED = new Set(["done", "partial", "failed", "cancelled"]);
 
 const cancelled = new Set();
@@ -12,6 +11,25 @@ const newId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 const emptyTally = () => ({ downloaded: 0, skipped: 0, failed: 0 });
+
+async function notifyFinished(task, status) {
+  const message = `Download task "${task.label}" finished with status: ${status}`;
+  try {
+    const [activeTab] = await browser.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    if (activeTab?.id != null) {
+      await browser.tabs.sendMessage(activeTab.id, {
+        action: "downloadTaskFinished",
+        message,
+      });
+      return;
+    }
+  } catch (error) {
+    console.warn("Could not show download task popup in the active tab", error);
+  }
+}
 
 /* ---------- queue ---------- */
 
@@ -57,16 +75,17 @@ async function runOne(task) {
     finishedAt: null,
     progress: "Starting...",
   });
+  let task_status = "running";
 
   try {
     const tally = await runTask(task, makeContext(id));
-    const status = tally.failed
+    task_status = tally.failed
       ? tally.downloaded
         ? "partial"
         : "failed"
       : "done";
     await updateTask(id, {
-      status,
+      task_status,
       finishedAt: Date.now(),
       tally: {
         downloaded: tally.downloaded,
@@ -76,6 +95,7 @@ async function runOne(task) {
       failedItems: tally.failedItems,
     });
   } catch (error) {
+    task_status = "cancelled";
     if (error instanceof CancelledError) {
       await updateTask(id, {
         status: "cancelled",
@@ -83,9 +103,10 @@ async function runOne(task) {
         finishedAt: Date.now(),
       });
     } else {
+      task_status = "failed";
       console.error("AO3 download task failed", error);
       await updateTask(id, (t) => ({
-        status: "failed",
+        status: task_status,
         progress: `Failed: ${error?.message || error}`,
         finishedAt: Date.now(),
         errors: [...(t.errors || []), String(error?.message || error)].slice(
@@ -94,6 +115,7 @@ async function runOne(task) {
       }));
     }
   } finally {
+    await notifyFinished(task, task_status);
     cancelled.delete(id);
   }
 }

@@ -60,13 +60,11 @@ import {
       false,
     );
 
-    // Buttons
     const buttons = [
       {
         text: "Save",
         variant: "primary",
         onClick: async () => {
-          // Update workSettings
           for (const [key, { input, type }] of Object.entries(inputsMap)) {
             workSettings[key] =
               type === "checkbox" ? input.checked : input.value;
@@ -83,13 +81,11 @@ import {
           if (!confirm("Are you sure you want to reset?")) return;
           delete settings.workSettings;
           await saveSettings(settings);
-          // Reset all inputs
           resetInputs(contentContainer, inputsMap);
         },
       },
     ];
 
-    // Create popup
     openModePopup(isMobile, {
       content: contentContainer,
       buttons: buttons,
